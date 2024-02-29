@@ -1,0 +1,231 @@
+config("default_defs") {
+  defines = []
+
+  if (is_debug) {
+    defines += [ "_DEBUG" ]
+  } else {
+    defines += [ "NDEBUG" ]
+  }
+  if (is_win) {
+    defines += [
+      "WIN32",
+      "_WIN32",
+    ]
+  }
+}
+
+config("ccc_std") {
+  cflags_objc = []
+  cflags_objcc = []
+  cflags_c = []
+  cflags_cc = []
+  if (is_msvc && vs_version >= 150) {
+    cflags_c += [ "/std:$c_std" ]
+    cflags_cc += [ "/std:$cc_std" ]
+  } else if (is_mac) {
+    cflags_objc += [ "-std=$c_std" ]
+    cflags_objcc += [ "-std=$cc_std" ]
+  } else {
+    cflags_c += [ "-std=$c_std" ]
+    cflags_cc += [ "-std=$cc_std" ]
+  }
+}
+
+config("default_ldflags") {
+  ldflags = [ "-${compile_target_arch}" ]
+
+  if (is_posix) {
+    ldflags += [
+      "-Wl,-rpath=\$ORIGIN/",
+      "-Wl,-rpath-link=",
+    ]
+  }
+}
+
+config("default_cflags") {
+  cflags_objc = []
+  cflags_objcc = []
+  cflags_c = []
+  cflags_cc = []
+  common_flags = [
+    "-${compile_target_arch}",
+
+    #"-fvisibility=hidden",
+    "-pthread",
+  ]
+  if (enable_position_independent_code) {
+    common_flags += [ "-fPIC" ]
+  }
+  if (enable_compiler_logging && (is_clang || is_gnu)) {
+    common_flags += [ "-v" ]
+  }
+  if (is_debug) {
+    common_flags += [
+      "-g",
+      "-O0",
+    ]
+    if (enable_address_sanitizer) {
+      common_flags += [
+        "-fno-omit-frame-pointer",
+        "-fsanitize=address",
+
+        #"-fsanitize-address-use-after-free",
+      ]
+    }
+  } else {
+    common_flags += [
+      # Use the highest possible optimization level
+      "-Ofast",
+    ]
+  }
+  if (is_mac) {
+    cflags_objc += common_flags
+    cflags_objcc += common_flags
+  } else {
+    cflags_c += common_flags
+    cflags_cc += common_flags
+  }
+}
+config("default_lib_dirs") {
+  #lib_dirs = [
+  #  rebase_path("//bin/libs", root_out_dir),
+  # #rebase_path("//bin/third_party/libuv/lib", root_out_dir),
+  #]
+}
+config("default_libs") {
+  libs = []
+  if (is_win) {
+    if (is_msvc) {
+      libs = [
+        "ws2_32.lib",
+        "wininet.lib",
+        "Iphlpapi.lib",
+        "Ole32.lib",
+        "Dbghelp.lib",
+        "Userenv.lib",
+        "Shlwapi.lib",
+        "kernel32.lib",
+        "user32.lib",
+        "gdi32.lib",
+        "winspool.lib",
+        "comdlg32.lib",
+        "advapi32.lib",
+        "ole32.lib",
+        "shell32.lib",
+        "oleaut32.lib",
+        "uuid.lib",
+        "odbc32.lib",
+        "odbccp32.lib",
+        "dbghelp.lib",
+        "dnsapi.lib",
+        "gdi32.lib",
+        "msimg32.lib",
+        "shlwapi.lib",
+        "version.lib",
+        "usp10.lib",
+        "winmm.lib",
+        "winspool.lib",
+        "delayimp.lib",
+        "wldap32.lib",
+        "Crypt32.lib",
+        "Normaliz.lib",
+        "bcrypt.lib",
+      ]
+    } else {
+      libs += [
+        "ws2_32",
+        "wininet",
+        "Iphlpapi",
+        "Ole32",
+        "Dbghelp",
+        "Userenv",
+        "Shlwapi",
+        "kernel32",
+        "user32",
+        "gdi32",
+        "winspool",
+        "comdlg32",
+        "advapi32",
+        "ole32",
+        "shell32",
+        "oleaut32",
+        "uuid",
+        "odbc32",
+        "odbccp32",
+        "dbghelp",
+        "dnsapi",
+        "gdi32",
+        "msimg32",
+        "shlwapi",
+        "version",
+        "usp10",
+        "winmm",
+        "winspool",
+        "delayimp",
+        "wldap32",
+        "Crypt32",
+        "Normaliz",
+        "bcrypt",
+      ]
+    }
+  } else if (is_android) {
+    libs += [ "m" ]
+  } else if (is_linux) {
+    libs += [
+      "crypto",
+      "pthread",
+      "rt",
+    ]
+  }
+
+  if (!is_msvc) {
+    if (enable_posix_dlfcn) {
+      libs += [ "dl" ]
+    }
+    if (enable_address_sanitizer) {
+      libs += [ "asan" ]
+    }
+  }
+}
+
+config("default_project_includes") {
+  include_dirs = [ "//include" ]
+}
+config("default_configs") {
+  if (is_msvc) {
+    configs = [
+      ":ccc_std",
+      ":default_defs",
+      ":default_project_includes",
+      "//build/config/win/msvc:default",
+      "//build/config/win/msvc:optmize",
+      "//build/config/win/msvc:crt_link",
+      "//build/config/win/msvc:win_macros",
+      "//build/config/win/msvc:target_arch",
+    ]
+  } else {
+    configs = [
+      ":ccc_std",
+      ":default_ldflags",
+      ":default_defs",
+      ":default_cflags",
+      ":default_project_includes",
+    ]
+  }
+}
+config("default_executable_config") {
+  configs = [
+    ":default_libs",
+    ":default_configs",
+  ]
+}
+config("default_static_library_config") {
+  configs = [ ":default_configs" ]
+}
+config("default_shared_library_config") {
+  configs = [
+    ":default_libs",
+    ":default_configs",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+}

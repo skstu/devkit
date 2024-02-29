@@ -1,0 +1,70 @@
+declare_args() {
+  debug = true
+  build_logger = true
+
+  #['c89','c99','c11','c18','c23',]
+  c_std = "c89"
+
+  #['c++98','c++03','c++11','c++14','c++17','c++20','c++23',]
+  cc_std = "c++2a"
+
+  #['clang','msvc','gcc','rust',]
+  toolset = "rust"
+  clang_version = "18"
+}
+
+if (target_os == "") {
+  target_os = host_os
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+
+is_debug = debug == true
+is_build_log = build_logger == true
+is_win = current_os == "win" || current_os == "winuwp"
+is_fuchsia = current_os == "fuchsia"
+is_ios = current_os == "ios"
+is_mac = current_os == "mac"
+is_apple = is_ios || is_mac
+is_posix = !is_win && !is_fuchsia
+
+is_clang = toolset == "clang" || toolset == "clang18"
+is_gcc = toolset == "gcc"
+is_msvc = toolset == "msvc"
+is_rust = toolset == "rust"
+
+set_default_toolchain("//build/toolchain:$toolset")
+
+_default_configs = [
+  "//build/config:c_cc_defines",
+  "//build/config:c_std",
+  "//build/config:cc_std",
+  "//build/config:c_cc_defaults",
+]
+
+set_defaults("executable") {
+  configs = _default_configs
+  if (is_rust) {
+    _default_configs = []
+    _default_configs = [ "//build/config:rust_defaults" ]
+  }
+}
+set_defaults("static_library") {
+  configs = _default_configs
+}
+set_defaults("shared_library") {
+  configs = _default_configs
+}
+set_defaults("source_set") {
+  configs = _default_configs
+}
+set_defaults("rust_library") {
+  configs = _default_configs
+}

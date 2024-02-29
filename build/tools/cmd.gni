@@ -1,0 +1,30 @@
+template("cmd") {
+  action("$target_name") {
+    # inv_shell = ["cmd.exe /c","msys2_shell.cmd -c"]
+    assert(defined(invoker.inv_terminal), "Must specify inv_terminal")
+    assert(defined(invoker.inv_script_clean), "Must specify script_clean")
+    assert(defined(invoker.inv_script_install), "Must specify script_install")
+    assert(defined(invoker.inv_script_configure),
+           "Must specify script_configure")
+    assert(defined(invoker.inv_script_build), "Must specify script_build")
+
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "script",
+                             "args",
+                           ])
+
+    script = "//build/tools/cmd.py"
+
+    args = [
+      string_join(",", inv_terminal) + " ",
+      string_join(",", inv_script_configure) + " ",
+      string_join(",", inv_script_build) + " ",
+      string_join(",", inv_script_install) + " ",
+      string_join(",", inv_script_clean) + " ",
+    ]
+
+    outputs = [ "${target_out_dir}/${target_name}/aciton_outputs_file_1/" ]
+  }
+}

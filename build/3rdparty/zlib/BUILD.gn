@@ -1,0 +1,39 @@
+import("//build/tools/cmake.gni")
+
+cmake("zlib") {
+  source_dir = rebase_path("//3rdparty/zlib", root_build_dir)
+  build_dir = rebase_path(
+          "//$root_out_dir/zlib/build_${current_os}_${compile_configure_type}",
+          root_build_dir)
+  install_dir = rebase_path(
+          "//3rdparty/installed/${current_os}/${compile_configure_type}/zlib",
+          root_build_dir)
+
+  cmake_options_configure = [
+    "-G",
+    "Ninja",
+    "-DCMAKE_C_COMPILER=${cmake_c_compiler}",
+    "-DCMAKE_CXX_COMPILER=${cmake_cxx_compiler}",
+    "-DCMAKE_POSITION_INDEPENDENT_CODE=${cmake_position_independent_code}",
+    "-S",
+    source_dir,
+    "-B",
+    build_dir,
+    "-DCMAKE_INSTALL_PREFIX=${install_dir}",
+  ]
+
+  cmake_options_build = [
+    "--build",
+    build_dir,
+    "--config",
+    "${compile_configure_type}",
+  ]
+  cmake_options_install = [
+    "--install",
+    build_dir,
+    "--config",
+    "${compile_configure_type}",
+    "--prefix",
+    install_dir,
+  ]
+}

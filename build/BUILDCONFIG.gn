@@ -1,0 +1,142 @@
+declare_args() {
+  is_debug = true
+
+  # Specify compile arch ["x86","x64"]
+  compile_arch = ""
+
+  # Specify C standard library version
+  # Supported ['C89','C99','C11','C18','C23','gnu11']
+  c_std = "c89"
+
+  # Specify C++ standard library version
+  # Supported ['C++98','C++03','C++11','C++14','C++17','C++20','C++23',]
+  cc_std = "c++17"
+
+  # Supported ['gnu','clang','msvc',]
+  # If the parameter is empty, enable the default value
+  compiler_toolchain = "msvc"
+
+  # compile_enable_position_independent_code = false
+  # -DCMAKE_POSITION_INDEPENDENT_CODE=OFF|ON
+  enable_position_independent_code = true
+
+  # View compile option details
+  enable_compiler_logging = false
+
+  # Enable POSIX standard dynamic library loading
+  enable_posix_dlfcn = true
+
+  # Enable Asan
+  enable_address_sanitizer = false
+
+  # SKSTU core library
+  enable_static_library_sk = false
+}
+
+declare_args() {
+  vs_version = 0
+  clang_installed = false
+  msvc_installed = false
+  is_winxp = false  # targeting to Windows XP
+  static_link_crt = true  #is_win  # static or dynamic link crt
+  winver = "0x0A00"  # to define WINVER, _WIN32_WINNT and NTDDI_VERSION
+}
+
+if (target_os == "") {
+  target_os = host_os
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+
+compile_target_arch = compile_arch
+if (compile_target_arch == "") {
+  if (target_cpu == "x86") {
+    compile_target_arch = "m32"
+  } else {
+    compile_target_arch = "m64"
+  }
+}
+
+is_android = current_os == "android"
+is_chromeos = current_os == "chromeos"
+is_fuchsia = current_os == "fuchsia"
+is_ios = current_os == "ios"
+is_linux = current_os == "linux"
+is_mac = current_os == "mac"
+is_nacl = current_os == "nacl"
+is_win = current_os == "win" || current_os == "winuwp"
+is_apple = is_ios || is_mac
+is_posix = !is_win && !is_fuchsia
+
+# Compiler configure
+is_release = is_debug == false
+is_gnu = compiler_toolchain == "gnu"
+is_msvc = compiler_toolchain == "msvc"
+is_clang = compiler_toolchain == "clang"
+compile_configure_type = "release"
+if (is_debug) {
+  compile_configure_type = "debug"
+}
+
+# Configuration verification
+if (is_msvc) {
+  if (!is_win) {
+    assert("'MSVC' tool chain only supports windows platform.")
+  } else {
+    env = exec_script("//build/tools/msvc.py",
+                      [
+                        host_cpu,
+                        target_cpu,
+                        "false",  #"$is_winxp",
+                      ],
+                      "scope")
+    vs_version = env.VERSION
+    if (vs_version < 150) {
+      assert("'MSVC' version is too low.")
+    }
+  }
+}
+
+set_default_toolchain("//build/toolchain:$compiler_toolchain")
+
+set_defaults("executable") {
+  configs = [ "//build/config:default_executable_config" ]
+}
+set_defaults("static_library") {
+  configs = [ "//build/config:default_static_library_config" ]
+}
+set_defaults("shared_library") {
+  configs = [ "//build/config:default_shared_library_config" ]
+}
+set_defaults("source_set") {
+}
+cmake_msvc_a = ""
+cmake_c_compiler = ""
+cmake_cxx_compiler = ""
+cmake_position_independent_code = "OFF"
+if (is_msvc) {
+  cmake_msvc_a = "x64"
+  if (target_cpu == "x86") {
+    cmake_msvc_a = "Win32"
+  }
+}
+
+if (is_clang) {
+  cmake_c_compiler = "clang"
+  cmake_cxx_compiler = "clang++"
+} else if (is_gnu) {
+  cmake_c_compiler = "gcc"
+  cmake_cxx_compiler = "g++"
+}
+if (enable_position_independent_code) {
+  cmake_position_independent_code = "ON"
+}
+
+system_env = exec_script("//build/tools/env.py", [ "1" ], "scope")

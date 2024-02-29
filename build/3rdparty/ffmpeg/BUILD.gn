@@ -1,0 +1,93 @@
+import("//build/tools/cmd.gni")
+
+cmd("ffmpeg") {
+  #deps = [ "//3rdparty/build/x264:x264" ]
+
+  source_dir = system_env.ROOT_DIR + "/3rdparty/ffmpeg"
+
+  install_dir =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/ffmpeg"
+
+  x264_pkg_config_path = system_env.ROOT_DIR + "/3rdparty/installed/${current_os}/${compile_configure_type}/x264/lib/pkgconfig"
+  x264_lib_dir =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/x264/lib"
+  x264_include_dir =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/x264/include"
+
+  _compiler = ""
+  _toolchain = ""
+  if (is_clang) {
+    _compiler = "CC=clang"
+    _toolchain = "-clang64"
+  } else if (is_gnu) {
+    _compiler = "CC=gcc"
+    _toolchain = "-mingw64"
+  }
+
+  inv_terminal = []
+  if (is_win) {
+    inv_terminal += [
+      "c:/msys64/msys2_shell.cmd",
+      "-defterm",
+
+      #"-msys",
+      "${_toolchain}",
+      "-here",
+      "-no-start",
+      "-c",
+    ]
+    #inv_terminal += [
+    #  "c:/windows/system32/cmd.exe",
+    #  "/c",
+    #]
+  }
+  enable_debug = []
+  if (is_debug) {
+    enable_debug += [
+      "--enable-debug",
+      "--disable-optimizations",
+    ]
+  }
+  print(x264_pkg_config_path)
+  inv_script_configure = [
+                           "cd ${source_dir}",
+                           "&&",
+                           "${_compiler}",
+                           "PKG_CONFIG_PATH=${x264_pkg_config_path}",
+                           "&&",
+                           "./configure",
+                           "--prefix=${install_dir}",
+
+                           #"--toolchain=msvc",
+                           "--arch=x86_64",
+                           "--enable-yasm",
+                           "--enable-asm",
+                           "--enable-static",
+                           "--disable-shared",
+                           "--enable-libx264",
+                           "--enable-gpl",
+                           "--enable-nonfree",
+                           "--disable-htmlpages",
+                           "--extra-ldflags=-LIBPATH:${x264_lib_dir}",
+                           "--extra-cflags=-I/${x264_include_dir}",
+                         ] + enable_debug
+
+  inv_script_build = [
+    "cd ${source_dir}",
+    "&&",
+    "make -j4",
+  ]
+  inv_script_clean = [
+    "cd ${source_dir}",
+    "&&",
+    "make clean",
+  ]
+  inv_script_install = [
+    "cd ${source_dir}",
+    "&&",
+    "make install",
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Build With Ninja On Windows",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/out/test_sk.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/msys64/mingw64/bin/gdb.exe",
+      "setupCommands": [
+        {
+          "text": "set target-triple x86_64-pc-windows-gnu",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Compile Debug On GN"
+    },
+    {
+      "name": "Build With Ninja On Linux",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/out/test_sk",
+      "args": [
+        "-g",
+        "-args",
+        "-set print pretty on",
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        {
+          "description": "Enable neat printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Compile Debug On GN",
+    }
+  ]
+}

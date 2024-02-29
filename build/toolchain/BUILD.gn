@@ -1,0 +1,30 @@
+import("//build/toolchain/toolchain.gni")
+
+c_cc_toolchain("clang") {
+  cc = "clang"
+  cxx = "clang++"
+  ar = "llvm-ar"
+  as = "llvm-as"
+  ld = cxx
+}
+
+c_cc_toolchain("gnu") {
+  cc = "gcc"
+  cxx = "g++"
+  ar = "ar"
+  as = "as"
+  ld = cxx
+}
+
+msvc_toolchain("msvc") {
+  cc = "cl.exe"
+  cxx = "cl.exe"
+  ar = "lib.exe"
+  ld = "link.exe"
+  link = "link.exe"
+  as = "ml64.exe"
+  rc = "rc.exe"
+  if (target_cpu == "x86") {
+    as = "ml.exe"
+  }
+}

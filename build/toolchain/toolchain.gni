@@ -1,0 +1,321 @@
+template("c_cc_toolchain") {
+  toolchain(target_name) {
+    assert(defined(invoker.ar), "gcc_toolchain() must specify a \"ar\" value")
+    assert(defined(invoker.as), "gcc_toolchain() must specify a \"as\" value")
+    assert(defined(invoker.cc), "gcc_toolchain() must specify a \"cc\" value")
+    assert(defined(invoker.cxx), "gcc_toolchain() must specify a \"cxx\" value")
+    assert(defined(invoker.ld), "gcc_toolchain() must specify a \"ld\" value")
+
+    cc = invoker.cc
+    cxx = invoker.cxx
+    ar = invoker.ar
+    as = invoker.as
+    ld = invoker.ld
+
+    ext_flags = ""
+
+    tool("cc") {
+      command = "$cc $ext_flags {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+      description = "CC {{output}}"
+      outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+    }
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx $ext_flags {{defines}} {{include_dirs}} {{cflags_cc}} -c {{source}} -o {{output}}"
+      description = "CXX {{output}}"
+      outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+    }
+    tool("asm") {
+      depfile = "{{output}}.d"
+      command = "$as {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+      description = "ASM {{output}}"
+      outputs = [ "{{source_out_dir}}/{{source_name_part}}.o" ]
+    }
+    tool("alink") {
+      outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      rspfile = "{{output}}.rsp"
+      rspfile_content = "{{inputs}}"
+      command = "$ar -cr {{output}} @\"$rspfile\""
+      description = "ALINK {{output}}"
+      outputs = [ outfile ]
+
+      default_output_dir = "{{root_out_dir}}/libs"
+      default_output_extension = ".a"
+    }
+    tool("solink") {
+      soname = "{{target_output_name}}{{output_extension}}"
+      sofile = "{{output_dir}}/$soname"
+      rspfile = sofile + ".rsp"
+
+      #soname_flag = "-Wl,-soname=\"$soname\""
+      soname_flag = ""
+      command =
+          "$ld -shared $soname_flag {{ldflags}} -o \"$sofile\" @\"$rspfile\""
+      rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}} -Wl,--whole-archive {{rlibs}} -Wl,--no-whole-archive"
+      description = "SOLINK $sofile"
+
+      default_output_dir = "{{root_out_dir}}"
+      if (is_win) {
+        default_output_extension = ".dll"
+      } else {
+        default_output_extension = ".so"
+      }
+
+      #output_prefix = "lib"
+
+      # Since the above commands only updates the .TOC file when it changes, ask
+      # Ninja to check if the timestamp actually changed to know if downstream
+      # dependencies should be recompiled.
+      restat = true
+
+      # Tell GN about the output files. It will link to the sofile but use the
+      # tocfile for dependency management.
+      outputs = [ sofile ]
+      link_output = sofile
+      depend_output = sofile
+    }
+    tool("solink_module") {
+      soname = "{{target_output_name}}{{output_extension}}"  # e.g. "libfoo.so".
+      sofile = "{{output_dir}}/$soname"
+      rspfile = sofile + ".rsp"
+
+      #soname_flag = "-Wl,-soname=\"$soname\""
+      soname_flag = ""
+
+      #whole_archive_flag = "-Wl,--whole-archive"
+      #no_whole_archive_flag = "-Wl,--no-whole-archive"
+      whole_archive_flag = ""
+      no_whole_archive_flag = ""
+      command =
+          "$ld -shared {{ldflags}} -o \"$sofile\" $soname_flag @\"$rspfile\""
+      rspfile_content = "$whole_archive_flag {{inputs}} {{solibs}} $no_whole_archive_flag {{libs}} $whole_archive_flag {{rlibs}} $no_whole_archive_flag"
+      description = "SOLINK_MODULE $sofile"
+
+      default_output_dir = "{{root_out_dir}}"
+      if (is_win) {
+        default_output_extension = ".dll"
+      } else {
+        default_output_extension = ".so"
+      }
+
+      #output_prefix = "lib"
+      outputs = [ sofile ]
+    }
+    tool("link") {
+      exename = "{{target_output_name}}{{output_extension}}"
+      outfile = "{{output_dir}}/$exename"
+      rspfile = "$outfile.rsp"
+
+      default_output_dir = "{{root_out_dir}}"
+      start_group_flag = "-Wl,--start-group"
+      end_group_flag = "-Wl,--end-group "
+      link_command = "$ld {{ldflags}} -o \"$outfile\" $start_group_flag @\"$rspfile\" {{solibs}} $end_group_flag {{libs}}"
+      command = "$link_command"
+      description = "LINK $outfile"
+
+      #whole_archive_flag = "-Wl,--whole-archive"
+      #no_whole_archive_flag = "-Wl,--no-whole-archive"
+      whole_archive_flag = ""
+      no_whole_archive_flag = ""
+      rspfile_content =
+          "{{inputs}} $whole_archive_flag {{rlibs}} $no_whole_archive_flag "
+      outputs = [ outfile ]
+    }
+    tool("stamp") {
+      command = "touch {{output}}"
+      if (is_win) {
+        command = "cmd /c type nul > \"{{output}}\""
+      }
+      description = "STAMP {{output}}"
+    }
+    tool("copy") {
+      command = "cp -afd {{source}} {{output}}"
+      description = "COPY {{source}} {{output}}"
+    }
+  }
+}
+
+template("msvc_toolchain") {
+  toolchain(target_name) {
+    assert(defined(invoker.rc), "msvc_toolchain() must specify a \"rc\" value")
+    assert(defined(invoker.ar), "msvc_toolchain() must specify a \"ar\" value")
+    assert(defined(invoker.as), "msvc_toolchain() must specify a \"as\" value")
+    assert(defined(invoker.cc), "msvc_toolchain() must specify a \"cc\" value")
+    assert(defined(invoker.cxx),
+           "msvc_toolchain() must specify a \"cxx\" value")
+    assert(defined(invoker.ld), "msvc_toolchain() must specify a \"ld\" value")
+    assert(defined(invoker.link),
+           "msvc_toolchain() must specify a \"link\" value")
+
+    cc = invoker.cc
+    cxx = invoker.cxx
+    ar = invoker.ar
+    as = invoker.as
+    ld = invoker.ld
+    rc = invoker.rc
+    link = invoker.link
+
+    env = "environment." + host_cpu + "." + target_cpu
+    env_wrappper = "ninja -t msvc -e $env --"
+
+    # Make these apply to all tools below.
+    lib_switch = ""
+    lib_dir_switch = "/LIBPATH:"
+
+    # Object files go in this directory.
+    object_subdir = "{{target_out_dir}}/{{label_name}}"
+
+    tool("cc") {
+      precompiled_header_type = "msvc"
+      pdbname = "{{target_out_dir}}/{{label_name}}_c.pdb"
+
+      # Label names may have spaces in them so the pdbname must be quoted. The
+      # source and output don't need to be quoted because GN knows they're a
+      # full file name and will quote automatically when necessary.
+      depsformat = "msvc"
+      description = "CC {{output}}"
+      outputs = [ "$object_subdir/{{source_name_part}}.obj" ]
+
+      if (vs_version >= 120) {
+        command = "$env_wrappper $cc /c {{source}} /nologo {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /Fo{{output}} /Fd\"$pdbname\" /FS"
+      } else {
+        command = "$env_wrappper $cc /c {{source}} /nologo {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /Fo{{output}} /Fd\"$pdbname\""
+      }
+    }
+    tool("cxx") {
+      precompiled_header_type = "msvc"
+
+      # The PDB name needs to be different between C and C++ compiled files.
+      pdbname = "{{target_out_dir}}/{{label_name}}_cc.pdb"
+
+      # See comment in CC tool about quoting.
+      depsformat = "msvc"
+      description = "CXX {{output}}"
+      outputs = [ "$object_subdir/{{source_name_part}}.obj" ]
+
+      if (vs_version >= 120) {
+        command = "$env_wrappper $cxx /c {{source}} /Fo{{output}} /nologo {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /Fd\"$pdbname\" /FS"
+      } else {
+        command = "$env_wrappper $cxx /c {{source}} /Fo{{output}} /nologo {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /Fd\"$pdbname\""
+      }
+    }
+    tool("rc") {
+      if (vs_version >= 100) {
+        command = "$env_wrappper $rc /nologo {{defines}} {{include_dirs}} /fo{{output}} {{source}}"
+      } else {
+        command = "$env_wrappper $rc {{defines}} {{include_dirs}} /fo{{output}} {{source}}"
+      }
+      depsformat = "msvc"
+      outputs = [ "$object_subdir/{{source_name_part}}.res" ]
+      description = "RC {{output}}"
+    }
+    tool("asm") {
+      command = "$env_wrappper $as /nologo /c /Fo{{output}} {{defines}} {{include_dirs}} {{asmflags}} {{source}}"
+      description = "ASM {{output}}"
+      outputs = [ "$object_subdir/{{source_name_part}}.obj" ]
+    }
+    tool("alink") {
+      rspfile = "{{output}}.rsp"
+      command =
+          "$env_wrappper $ar /OUT:{{output}} /nologo {{arflags}} @$rspfile"
+      description = "LIB {{output}}"
+      outputs = [
+        # Ignore {{output_extension}} and always use .lib, there's no reason to
+        # allow targets to override this extension on Windows.
+        "{{output_dir}}/{{target_output_name}}.lib",
+      ]
+      default_output_extension = ".lib"
+      default_output_dir = "{{root_out_dir}}"
+
+      # The use of inputs_newline is to work around a fixed per-line buffer
+      # size in the linker.
+      rspfile_content = "{{inputs_newline}}"
+    }
+    tool("solink") {
+      # E.g. "foo.dll":
+      dllname = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      libname = "${dllname}.lib"  # e.g. foo.dll.lib
+      pdbname = "${dllname}.pdb"
+      rspfile = "${dllname}.rsp"
+
+      command = "$env_wrappper $ld {{ldflags}} /OUT:$dllname /nologo /IMPLIB:$libname /DLL /PDB:$pdbname @$rspfile"
+
+      default_output_extension = ".dll"
+      default_output_dir = "{{root_out_dir}}"
+      description = "LINK(DLL) {{output}}"
+      outputs = [
+        dllname,
+        libname,
+        pdbname,
+      ]
+      link_output = libname
+      depend_output = libname
+      runtime_outputs = [
+        dllname,
+        pdbname,
+      ]
+
+      # Since the above commands only updates the .lib file when it changes,
+      # ask Ninja to check if the timestamp actually changed to know if
+      # downstream dependencies should be recompiled.
+      restat = true
+
+      # The use of inputs_newline is to work around a fixed per-line buffer
+      # size in the linker.
+      rspfile_content = "{{libs}} {{solibs}} {{inputs_newline}} {{rlibs}}"
+    }
+    tool("solink_module") {
+      # E.g. "foo.dll":
+      dllname = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      pdbname = "${dllname}.pdb"
+      rspfile = "${dllname}.rsp"
+
+      command = "$env_wrappper $ld {{ldflags}} /OUT:$dllname /nologo /DLL /PDB:$pdbname @$rspfile"
+
+      default_output_extension = ".dll"
+      default_output_dir = "{{root_out_dir}}"
+      description = "LINK_MODULE(DLL) {{output}}"
+      outputs = [
+        dllname,
+        pdbname,
+      ]
+      runtime_outputs = outputs
+
+      # The use of inputs_newline is to work around a fixed per-line buffer
+      # size in the linker.
+      rspfile_content = "{{libs}} {{solibs}} {{inputs_newline}} {{rlibs}}"
+    }
+    tool("link") {
+      exename = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      pdbname = "$exename.pdb"
+      rspfile = "$exename.rsp"
+
+      command = "$env_wrappper $link {{ldflags}} /OUT:$exename /nologo /PDB:$pdbname @$rspfile"
+
+      default_output_extension = ".exe"
+      default_output_dir = "{{root_out_dir}}"
+      description = "LINK {{output}}"
+      outputs = [
+        exename,
+        pdbname,
+      ]
+      runtime_outputs = outputs
+
+      # The use of inputs_newline is to work around a fixed per-line buffer
+      # size in the linker.
+      rspfile_content = "{{inputs_newline}} {{libs}} {{solibs}} {{rlibs}}"
+    }
+
+    # These two are really entirely generic, but have to be repeated in
+    # each toolchain because GN doesn't allow a template to be used here.
+    # See //build/toolchain/toolchain.gni for details.
+    tool("stamp") {
+      command = "cmd /c type nul > \"{{output}}\""
+      description = "STAMP {{output}}"
+    }
+    tool("copy") {
+      command = "copy /Y {{source}} {{output}}"
+      description = "COPY {{source}} {{output}}"
+    }
+  }
+}

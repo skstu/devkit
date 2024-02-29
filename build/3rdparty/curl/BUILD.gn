@@ -1,0 +1,63 @@
+import("//build/tools/cmake.gni")
+
+cmake("curl") {
+  source_dir = system_env.ROOT_DIR + "/3rdparty/curl"
+  build_dir =
+      system_env.ROOT_DIR +
+      "/$root_out_dir/curl/build_${current_os}_${compile_configure_type}"
+
+  install_dir =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/curl"
+
+  OPENSSL_DIR_ROOT =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/openssl"
+  ZLIB_LIBRARY = system_env.ROOT_DIR + "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/lib/libz.a"
+  if (is_win) {
+    ZLIB_LIBRARY = system_env.ROOT_DIR + "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/lib/libzlibstatic.a"
+  }
+  ZLIB_INCLUDE_DIR =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/include"
+
+  cmake_options_configure = [
+    "-G",
+    "Ninja",
+    "-DCMAKE_C_COMPILER=${cmake_c_compiler}",
+    "-DCMAKE_CXX_COMPILER=${cmake_cxx_compiler}",
+    "-DCMAKE_POSITION_INDEPENDENT_CODE=${cmake_position_independent_code}",
+    "-S",
+    source_dir,
+    "-B",
+    build_dir,
+    "-DCMAKE_INSTALL_PREFIX=${install_dir}",
+    "-DBUILD_CURL_EXE=OFF",
+    "-DBUILD_SHARED_LIBS=OFF",
+    "-DBUILD_TESTING=OFF",
+    "-DBUILD_STATIC_CURL=ON",
+    "-DCURL_STATIC_CRT=ON",
+    "-DBUILD_STATIC_LIBS=ON",
+    "-DCURL_ZLIB=ON",
+    "-DZLIB_LIBRARY=${ZLIB_LIBRARY}",
+    "-DZLIB_INCLUDE_DIR=${ZLIB_INCLUDE_DIR}",
+    "-DCURL_USE_OPENSSL=ON",
+    "-DCURL_ENABLE_SSL=ON",
+    "-DOPENSSL_ROOT_DIR=\"${OPENSSL_DIR_ROOT}\"",
+  ]
+
+  cmake_options_build = [
+    "--build",
+    build_dir,
+    "--config",
+    "${compile_configure_type}",
+  ]
+  cmake_options_install = [
+    "--install",
+    build_dir,
+    "--config",
+    "${compile_configure_type}",
+    "--prefix",
+    install_dir,
+  ]
+}

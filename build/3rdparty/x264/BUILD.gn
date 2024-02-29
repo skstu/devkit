@@ -1,0 +1,66 @@
+import("//build/tools/cmd.gni")
+
+cmd("x264") {
+  source_dir = system_env.ROOT_DIR + "/3rdparty/x264"
+
+  install_dir =
+      system_env.ROOT_DIR +
+      "/3rdparty/installed/${current_os}/${compile_configure_type}/x264"
+
+  enable_pic = []
+  if (enable_position_independent_code) {
+    enable_pic += [ "--enable-pic" ]
+  }
+  enable_debug = []
+  if (is_debug) {
+    enable_debug += [ "--enable-debug" ]
+  }
+  inv_terminal = []
+  _compiler = ""
+  _toolchain = ""
+  if (is_clang) {
+    _compiler = "CC=clang"
+    _toolchain = "-clang64"
+  } else if (is_gnu) {
+    _compiler = "CC=gcc"
+    _toolchain = "-mingw64"
+  }
+  if (is_win) {
+    inv_terminal += [
+      "c:/msys64/msys2_shell.cmd",
+      "-defterm",
+
+      #"-msys",
+      "${_toolchain}",
+      "-here",
+      "-no-start",
+      "-c",
+    ]
+    #inv_terminal += [
+    #  "c:/windows/system32/cmd.exe",
+    #  "/c",
+    #]
+  }
+  inv_script_configure = [
+                           "cd ${source_dir}",
+                           "&&",
+                           "./configure",
+                           "--prefix=${install_dir}",
+                           "--enable-static",
+                         ] + enable_pic + enable_debug
+
+  inv_script_build = [
+    "cd ${source_dir}",
+    "&&",
+    "make -j4",
+  ]
+  inv_script_install = [
+    "cd ${source_dir}",
+    "&&",
+    "make install",
+  ]
+  inv_script_clean = [
+    "cd ${source_dir}",
+    "make clean",
+  ]
+}

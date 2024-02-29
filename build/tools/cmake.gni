@@ -1,0 +1,27 @@
+template("cmake") {
+  action("$target_name") {
+    assert(defined(invoker.cmake_options_configure),
+           "Must specify cmake_options_configure")
+    assert(defined(invoker.cmake_options_build),
+           "Must specify cmake_options_build")
+    assert(defined(invoker.cmake_options_install),
+           "Must specify cmake_options_install")
+
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "script",
+                             "args",
+                           ])
+
+    script = "//build/tools/cmake.py"
+
+    args = [
+      string_join(",", cmake_options_configure) + " ",
+      string_join(",", cmake_options_build) + " ",
+      string_join(",", cmake_options_install) + " ",
+    ]
+
+    outputs = [ "${target_out_dir}/${target_name}/aciton_outputs_file_1/" ]
+  }
+}

@@ -1,0 +1,14 @@
+group("3rdparty_group") {
+  deps = [
+    "//3rdparty/build/fmt:fmt",
+
+    #"//3rdparty/build/icu:icu",
+    "//3rdparty/build/libuv:libuv",
+
+    #"//3rdparty/build/zlib:zlib",
+    #"//3rdparty/build/openssl:openssl",
+    #"//3rdparty/build/curl:curl",
+    #"//3rdparty/build/ffmpeg:ffmpeg",
+    #"//3rdparty/build/x264:x264",
+  ]
+}

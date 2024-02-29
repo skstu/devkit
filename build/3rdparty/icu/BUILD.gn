@@ -1,0 +1,133 @@
+import("//build/tools/cmd.gni")
+
+cmd("icu") {
+  source_dir = system_env.ROOT_DIR + "/3rdparty/${target_name}/icu4c/source"
+
+  install_dir = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}"
+
+  inv_terminal = []
+  inv_script_configure = []
+
+  if (is_win) {
+    if (!is_msvc) {
+      if (is_debug) {
+        inv_script_configure += [
+          "cd ${source_dir}",
+          "&&",
+          "bash runConfigureICU",
+          "MinGW",
+          "--enable-debug",
+          "--disable-release",
+          "--prefix=${install_dir}",
+          "--enable-static",
+          "--disable-shared",
+          "--disable-renaming",
+          "&&",
+          "cd config",
+          "&&",
+          "del mh-unknown",
+          "&&",
+          "copy mh-cygwin64 mh-unknown",
+          "&&",
+          "cd ..",
+        ]
+      } else {
+        inv_script_configure += [
+          "cd ${source_dir}",
+          "&&",
+          "bash runConfigureICU",
+          "MinGW",
+          "--prefix=${install_dir}",
+          "--enable-static",
+          "--disable-shared",
+          "--disable-renaming",
+          "&&",
+          "cd config",
+          "&&",
+          "del mh-unknown",
+          "&&",
+          "copy mh-cygwin64 mh-unknown",
+          "&&",
+          "cd ..",
+        ]
+      }
+    } else {
+      if (is_debug) {
+        inv_script_configure += [
+          "cd ${source_dir}",
+          "&&",
+          "bash runConfigureICU",
+          "MSYS/MSVC",
+          "--enable-debug",
+          "--disable-release",
+          "--prefix=${install_dir}",
+          "--enable-static",
+          "--disable-shared",
+          "--disable-renaming",
+          "cd ..",
+        ]
+      } else {
+        inv_script_configure += [
+          "cd ${source_dir}",
+          "&&",
+          "bash runConfigureICU",
+          "MinGW",
+          "--prefix=${install_dir}",
+          "--enable-static",
+          "--disable-shared",
+          "--disable-renaming",
+          "&&",
+          "cd config",
+          "&&",
+          "del mh-unknown",
+          "&&",
+          "copy mh-cygwin64 mh-unknown",
+          "&&",
+          "cd ..",
+        ]
+      }
+    }
+  } else {
+    if (is_debug) {
+      inv_script_configure += [
+        "cd ${source_dir}",
+        "&&",
+        "./runConfigureICU",
+        "Linux",
+        "--enable-debug",
+        "--disable-release",
+        "--prefix=${install_dir}",
+        "--enable-static",
+        "--disable-shared",
+        "--disable-renaming",
+      ]
+    } else {
+      inv_script_configure += [
+        "cd ${source_dir}",
+        "&&",
+        "./runConfigureICU",
+        "Linux",
+        "--prefix=${install_dir}",
+        "--enable-static",
+        "--disable-shared",
+        "--disable-renaming",
+      ]
+    }
+  }
+
+  inv_script_build = [
+    "cd ${source_dir}",
+    "&&",
+    "make -j4",
+  ]
+  inv_script_clean = [
+    "cd ${source_dir}",
+    "&&",
+    "make clean",
+  ]
+  inv_script_install = [
+    "cd ${source_dir}",
+    "&&",
+    "make install",
+  ]
+}
