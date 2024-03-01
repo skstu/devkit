@@ -26,9 +26,3 @@
 [submodule "3rdparty/libyaml"]
 	path = 3rdparty/libyaml
 	url = git@github.com:yaml/libyaml.git
-[submodule "3rdparty/libxml2"]
-	path = 3rdparty/libxml2
-	url = git@github.com:GNOME/libxml2.git
-[submodule "3rdparty/libiconv"]
-	path = 3rdparty/libiconv
-	url = git@github.com:winlibs/libiconv.git
