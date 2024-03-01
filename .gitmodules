@@ -20,3 +20,12 @@
 [submodule "3rdparty/wxwidgets"]
 	path = 3rdparty/wxwidgets
 	url = git@github.com:wxWidgets/wxWidgets.git --recursive
+[submodule "3rdparty/cjson"]
+	path = 3rdparty/cjson
+	url = git@github.com:DaveGamble/cJSON.git
+[submodule "3rdparty/libyaml"]
+	path = 3rdparty/libyaml
+	url = git@github.com:yaml/libyaml.git
+[submodule "3rdparty/libxml2"]
+	path = 3rdparty/libxml2
+	url = git@github.com:GNOME/libxml2.git
