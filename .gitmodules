@@ -19,4 +19,4 @@
 	branch = maint/maint-74
 [submodule "3rdparty/wxwidgets"]
 	path = 3rdparty/wxwidgets
-	url = git@github.com:wxWidgets/wxWidgets.git
+	url = git@github.com:wxWidgets/wxWidgets.git --recursive
