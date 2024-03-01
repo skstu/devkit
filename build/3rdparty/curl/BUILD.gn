@@ -1,25 +1,18 @@
 import("//build/tools/cmake.gni")
 
 cmake("curl") {
-  source_dir = system_env.ROOT_DIR + "/3rdparty/curl"
-  build_dir =
-      system_env.ROOT_DIR +
-      "/$root_out_dir/curl/build_${current_os}_${compile_configure_type}"
+  build_dir = rebase_path(
+          "//$root_out_dir/3rdparty/${target_name}/build_${current_os}_${compiler_toolchain}_${current_cpu}_${compile_configure_type}",
+          root_build_dir)
+  source_dir = system_env.ROOT_DIR + "/3rdparty/${target_name}"
+  install_dir = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}"
 
-  install_dir =
-      system_env.ROOT_DIR +
-      "/3rdparty/installed/${current_os}/${compile_configure_type}/curl"
-
-  OPENSSL_DIR_ROOT =
-      system_env.ROOT_DIR +
-      "/3rdparty/installed/${current_os}/${compile_configure_type}/openssl"
-  ZLIB_LIBRARY = system_env.ROOT_DIR + "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/lib/libz.a"
+  OPENSSL_DIR_ROOT = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}"
+  ZLIB_LIBRARY = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/lib/libz.a"
   if (is_win) {
-    ZLIB_LIBRARY = system_env.ROOT_DIR + "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/lib/libzlibstatic.a"
+    ZLIB_LIBRARY = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/lib/libzlibstatic.a"
   }
-  ZLIB_INCLUDE_DIR =
-      system_env.ROOT_DIR +
-      "/3rdparty/installed/${current_os}/${compile_configure_type}/zlib/include"
+  ZLIB_INCLUDE_DIR = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/include"
 
   cmake_options_configure = [
     "-G",

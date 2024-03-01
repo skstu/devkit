@@ -33,24 +33,23 @@ cmd("openssl") {
   if (is_debug) {
     build_configure_type = "--debug"
   }
-  dir_source = rebase_path("//3rdparty/openssl", root_build_dir)
-  dir_install = rebase_path(
-          "//3rdparty/installed/${current_os}/${compile_configure_type}/openssl",
-          root_build_dir)
+  source_dir = system_env.ROOT_DIR + "/3rdparty/${target_name}"
+  install_dir = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}"
+
   inv_terminal = []
   inv_script_clean = [
-    "cd {}",
+    "cd ${source_dir}",
     "&&",
     "make clean",
   ]
   inv_script_install = [
-    "cd {}",
+    "cd ${source_dir}",
     "&&",
     "make install",
   ]
 
   inv_script_configure = [
-    "cd {}",
+    "cd ${source_dir}",
     "&&",
     "${build_configure}",
     "threads",
@@ -65,11 +64,11 @@ cmd("openssl") {
     "enable-md2",
     "enable-rc5",
     "${build_configure_type}",
-    "--prefix={}",
+    "--prefix=${install_dir}",
   ]
 
   inv_script_build = [
-    "cd {}",
+    "cd ${source_dir}",
     "&&",
     "make -j4",
   ]

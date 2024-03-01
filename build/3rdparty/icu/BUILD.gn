@@ -8,112 +8,80 @@ cmd("icu") {
   inv_terminal = []
   inv_script_configure = []
 
+  __configure_type = []
+  if (is_debug) {
+    __configure_type += [
+      "--enable-debug",
+      "--disable-release",
+    ]
+  }
+  icu_patch_file_srtest_cpp_path =
+      system_env.ROOT_DIR + "/build/3rdparty/icu/pathc/srtest.cpp"
+  icu_patch_file_srtest_cpp_path_to =
+      system_env.ROOT_DIR + "/3rdparty/icu/icu4c/source/extra/scrptrun"
+  icu_patch_file_srtest_cpp_path_to_filename =
+      icu_patch_file_srtest_cpp_path_to + "/srtest.cpp"
+
+  print(icu_patch_file_srtest_cpp_path)
+  print(icu_patch_file_srtest_cpp_path_to)
+  print(icu_patch_file_srtest_cpp_path_to_filename)
+
+  __icu_build_patch = []
+  __icu_configure_type = []
   if (is_win) {
-    if (!is_msvc) {
-      if (is_debug) {
-        inv_script_configure += [
-          "cd ${source_dir}",
-          "&&",
-          "bash runConfigureICU",
-          "MinGW",
-          "--enable-debug",
-          "--disable-release",
-          "--prefix=${install_dir}",
-          "--enable-static",
-          "--disable-shared",
-          "--disable-renaming",
-          "&&",
-          "cd config",
-          "&&",
-          "del mh-unknown",
-          "&&",
-          "copy mh-cygwin64 mh-unknown",
-          "&&",
-          "cd ..",
-        ]
-      } else {
-        inv_script_configure += [
-          "cd ${source_dir}",
-          "&&",
-          "bash runConfigureICU",
-          "MinGW",
-          "--prefix=${install_dir}",
-          "--enable-static",
-          "--disable-shared",
-          "--disable-renaming",
-          "&&",
-          "cd config",
-          "&&",
-          "del mh-unknown",
-          "&&",
-          "copy mh-cygwin64 mh-unknown",
-          "&&",
-          "cd ..",
-        ]
-      }
+    if (is_msvc) {
+      print("Please use MSVC to compile manually.")
+      print(
+          "cd ${source_dir} && bash runConfigureICU MSYS/MSVC " +
+          "--enable-debug --disable-release --prefix=${install_dir} " +
+          "--enable-static --disable-shared --disable-renaming && cd config " +
+          "&& del mh-unknown && copy mh-msys-msvc mh-unknown && cd .. && " + "del ${icu_patch_file_srtest_cpp_path_to_filename} && copy ${icu_patch_file_srtest_cpp_path} ${icu_patch_file_srtest_cpp_path_to}")
+
+      assert("MSVC tool chain is not supported.")
+
+      __icu_configure_type += [ "MSYS/MSVC" ]
+      __icu_build_patch += [
+        "&&",
+        "cd config",
+        "&&",
+        "del mh-unknown",
+        "&&",
+        "copy mh-msys-msvc mh-unknown",
+        "&&",
+        "cd ..",
+        "&&",
+        "del ${icu_patch_file_srtest_cpp_path_to_filename}",
+        "&&",
+        "copy ${icu_patch_file_srtest_cpp_path} ${icu_patch_file_srtest_cpp_path_to}",
+      ]
     } else {
-      if (is_debug) {
-        inv_script_configure += [
-          "cd ${source_dir}",
-          "&&",
-          "bash runConfigureICU",
-          "MSYS/MSVC",
-          "--enable-debug",
-          "--disable-release",
-          "--prefix=${install_dir}",
-          "--enable-static",
-          "--disable-shared",
-          "--disable-renaming",
-          "cd ..",
-        ]
-      } else {
-        inv_script_configure += [
-          "cd ${source_dir}",
-          "&&",
-          "bash runConfigureICU",
-          "MinGW",
-          "--prefix=${install_dir}",
-          "--enable-static",
-          "--disable-shared",
-          "--disable-renaming",
-          "&&",
-          "cd config",
-          "&&",
-          "del mh-unknown",
-          "&&",
-          "copy mh-cygwin64 mh-unknown",
-          "&&",
-          "cd ..",
-        ]
-      }
+      __icu_configure_type += [ "MinGW" ]
+      __icu_build_patch += [
+        "&&",
+        "cd config",
+        "&&",
+        "del mh-unknown",
+        "&&",
+        "copy mh-cygwin64 mh-unknown",
+        "&&",
+        "cd ..",
+      ]
     }
   } else {
-    if (is_debug) {
-      inv_script_configure += [
-        "cd ${source_dir}",
-        "&&",
-        "./runConfigureICU",
-        "Linux",
-        "--enable-debug",
-        "--disable-release",
-        "--prefix=${install_dir}",
-        "--enable-static",
-        "--disable-shared",
-        "--disable-renaming",
-      ]
-    } else {
-      inv_script_configure += [
-        "cd ${source_dir}",
-        "&&",
-        "./runConfigureICU",
-        "Linux",
-        "--prefix=${install_dir}",
-        "--enable-static",
-        "--disable-shared",
-        "--disable-renaming",
-      ]
-    }
+    __icu_configure_type += [ "Linux" ]
   }
+
+  inv_script_configure += [
+                            "cd ${source_dir}",
+                            "&&",
+                            "bash runConfigureICU",
+                          ] + __icu_configure_type + __configure_type +
+                          [
+                            "--prefix=${install_dir}",
+                            "--enable-static",
+                            "--disable-shared",
+                            "--disable-renaming",
+                          ] + __icu_build_patch
 
   inv_script_build = [
     "cd ${source_dir}",

@@ -1,13 +1,11 @@
 import("//build/tools/cmake.gni")
 
 cmake("zlib") {
-  source_dir = rebase_path("//3rdparty/zlib", root_build_dir)
   build_dir = rebase_path(
-          "//$root_out_dir/zlib/build_${current_os}_${compile_configure_type}",
+          "//$root_out_dir/3rdparty/${target_name}/build_${current_os}_${compiler_toolchain}_${current_cpu}_${compile_configure_type}",
           root_build_dir)
-  install_dir = rebase_path(
-          "//3rdparty/installed/${current_os}/${compile_configure_type}/zlib",
-          root_build_dir)
+  source_dir = system_env.ROOT_DIR + "/3rdparty/${target_name}"
+  install_dir = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}"
 
   cmake_options_configure = [
     "-G",

@@ -26,6 +26,7 @@ def cmd_clean(terminal, script_content):
 
 
 def cmd_configure(terminal, script_content):
+    # print(script_content)
     __execute(terminal, script_content)
     return
 
