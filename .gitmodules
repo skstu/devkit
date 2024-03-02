@@ -26,3 +26,6 @@
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp
 	url = git@github.com:jbeder/yaml-cpp.git
+[submodule "3rdparty/rapidjson"]
+	path = 3rdparty/rapidjson
+	url = git@github.com:Tencent/rapidjson.git
