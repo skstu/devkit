@@ -1,0 +1,3 @@
+group("tests_group") {
+  deps = [ "test_sk:test_sk" ]
+}

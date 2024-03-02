@@ -1,0 +1,4 @@
+executable("test_sk") {
+  sources = [ "main.cc" ]
+  deps = [ "//projects/sk:sk" ]
+}
