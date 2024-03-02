@@ -1,3 +1,18 @@
-static_library("sk") {
-  sources = [ "sk.cc" ]
+source_set("source_sk") {
+  sources = [
+    "compress.cc",
+    "sk.cc",
+    "stdafx.h",
+  ]
+  deps = [ "//build/deps:zlib" ]
+}
+
+if (enable_static_library_sk) {
+  static_library("sk") {
+    deps = [ ":source_sk" ]
+  }
+} else {
+  shared_library("sk") {
+    deps = [ ":source_sk" ]
+  }
 }

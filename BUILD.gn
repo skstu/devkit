@@ -3,14 +3,14 @@ build_3rdparty = false
 group("build_all") {
   if (build_3rdparty) {
     deps = [
-      "//build/3rdparty/cjson:cjson",
-      "//build/3rdparty/curl:curl",
-      "//build/3rdparty/fmt:fmt",
-      "//build/3rdparty/icu:icu",
-      "//build/3rdparty/libuv:libuv",
-      "//build/3rdparty/openssl:openssl",
-      "//build/3rdparty/wxwidgets:wxwidgets",
-      "//build/3rdparty/yaml-cpp:yaml-cpp",
+      #"//build/3rdparty/cjson:cjson",
+      #"//build/3rdparty/curl:curl",
+      #"//build/3rdparty/fmt:fmt",
+      #"//build/3rdparty/icu:icu",
+      #"//build/3rdparty/libuv:libuv",
+      #"//build/3rdparty/openssl:openssl",
+      #"//build/3rdparty/wxwidgets:wxwidgets",
+      #"//build/3rdparty/yaml-cpp:yaml-cpp",
       "//build/3rdparty/zlib:zlib",
     ]
   } else {

@@ -1,0 +1,4 @@
+source_set("zlib") {
+  include_dirs = [ "//bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [ "//bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/lib/libzlibstatic.a" ]
+}

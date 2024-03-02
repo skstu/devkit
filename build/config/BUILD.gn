@@ -184,7 +184,11 @@ config("default_libs") {
       libs += [ "dl" ]
     }
     if (enable_address_sanitizer) {
-      libs += [ "asan" ]
+      libs += [
+        "asan",
+        #"clang_rt.asan",
+        #"C:/msys64/clang64/lib/clang/17/lib/windows/libclang_rt.asan-x86_64.a",
+      ]
     }
   }
 }
@@ -221,7 +225,7 @@ config("default_executable_config") {
   ]
 }
 config("default_static_library_config") {
-  configs = [ ":default_configs" ]
+  configs = [ ":default_libs" ]
 }
 config("default_shared_library_config") {
   configs = [
@@ -229,4 +233,10 @@ config("default_shared_library_config") {
     ":default_configs",
   ]
   defines = [ "SHARED_IMPLEMENTATION" ]
+}
+config("default_source_set") {
+  configs = [
+    ":default_libs",
+    ":default_configs",
+  ]
 }

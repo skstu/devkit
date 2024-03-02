@@ -116,6 +116,7 @@ set_defaults("shared_library") {
   configs = [ "//build/config:default_shared_library_config" ]
 }
 set_defaults("source_set") {
+  configs = [ "//build/config:default_source_set" ]
 }
 cmake_msvc_a = ""
 cmake_c_compiler = ""

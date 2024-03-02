@@ -3,7 +3,7 @@ group("3rdparty_group") {
     "//3rdparty/build/fmt:fmt",
 
     #"//3rdparty/build/icu:icu",
-    "//3rdparty/build/libuv:libuv",
+    #"//3rdparty/build/libuv:libuv",
 
     #"//3rdparty/build/zlib:zlib",
     #"//3rdparty/build/openssl:openssl",
