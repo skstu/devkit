@@ -9,7 +9,8 @@ group("build_all") {
       #"//build/3rdparty/openssl:openssl",
       #"//build/3rdparty/zlib:zlib",
       #"//build/3rdparty/curl:curl",
-      "//build/3rdparty/wxwidgets:wxwidgets",
+      #"//build/3rdparty/wxwidgets:wxwidgets",
+      "//build/3rdparty/cjson:cjson",
     ]
   } else {
     deps = [
