@@ -69,6 +69,7 @@ config("default_cflags") {
         "-fno-omit-frame-pointer",
         "-fsanitize=address",
 
+        #-O1 -g -fsanitize=address -fno-omit-frame-pointer
         #"-fsanitize-address-use-after-free",
       ]
     }

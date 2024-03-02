@@ -26,6 +26,3 @@
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp
 	url = git@github.com:jbeder/yaml-cpp.git
-[submodule "3rdparty/libxml2"]
-	path = 3rdparty/libxml2
-	url = git@github.com:GNOME/libxml2.git

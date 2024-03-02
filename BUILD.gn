@@ -11,7 +11,8 @@ group("build_all") {
       #"//build/3rdparty/curl:curl",
       #"//build/3rdparty/wxwidgets:wxwidgets",
       #"//build/3rdparty/cjson:cjson",
-      "//build/3rdparty/yaml-cpp:yaml-cpp",
+      #"//build/3rdparty/yaml-cpp:yaml-cpp",
+      "//build/3rdparty/libxml2:libxml2",
     ]
   } else {
     deps = [
