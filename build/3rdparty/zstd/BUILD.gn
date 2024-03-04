@@ -1,7 +1,9 @@
+import("//build/deps/deps.gni")
 import("//build/tools/cmake.gni")
 
-cmake("libxml2") {
-  source_dir = rebase_path("//3rdparty/${target_name}", root_build_dir)
+cmake("zstd") {
+  source_dir =
+      rebase_path("//3rdparty/${target_name}/build/cmake", root_build_dir)
   build_dir = rebase_path(
           "//$root_out_dir/3rdparty/${target_name}/build_${current_os}_${compiler_toolchain}_${current_cpu}_${compile_configure_type}",
           root_build_dir)
@@ -21,12 +23,15 @@ cmake("libxml2") {
     "-B",
     build_dir,
     "-DCMAKE_INSTALL_PREFIX=${install_dir}",
-    "-DBUILD_SHARED_LIBS=OFF",
-    "-DLIBXML2_WITH_ICONV=OFF",
-    "-DLIBXML2_WITH_TESTS=OFF",
-    "-DLIBXML2_WITH_ZLIB=OFF",
-    "-DLIBXML2_WITH_PYTHON=OFF",
-    "-DLIBXML2_WITH_LZMA=OFF",
+    "-DZSTD_BUILD_COMPRESSION=ON",
+    "-DZSTD_BUILD_DECOMPRESSION=ON",
+    "-DZSTD_BUILD_STATIC=ON",
+    "-DZSTD_BUILD_SHARED=OFF",
+    "-DZSTD_BUILD_TESTS=OFF",
+    "-DZSTD_USE_STATIC_RUNTIME=OFF",
+    "-DZSTD_ZLIB_SUPPORT=ON",
+    "-DZLIB_LIBRARY=${ZLIB_LIBRARY}",
+    "-DZLIB_INCLUDE_DIR=${ZLIB_INCLUDE_DIR}",
   ]
 
   cmake_options_build = [

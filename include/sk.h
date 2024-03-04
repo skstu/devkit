@@ -81,6 +81,20 @@ typedef enum {
   SK_F_STATUS_RDLCK = 2,
 } sk_flock_status;
 
+typedef enum {
+  ICU_CONV_TYPE_UNKNOWN = 0,
+  ICU_CONV_TYPE_UTF8,
+  ICU_CONV_TYPE_UTF16,
+  ICU_CONV_TYPE_UTF16LE,
+  ICU_CONV_TYPE_UTF16BE,
+  ICU_CONV_TYPE_UTF32,
+  ICU_CONV_TYPE_UTF32LE,
+  ICU_CONV_TYPE_UTF32BE,
+  ICU_CONV_TYPE_ASCII,
+  ICU_CONV_TYPE_GBK,
+  ICU_CONV_TYPE_GB18030,
+} sk_icu_conv_type;
+
 typedef struct sk_tlock_s sk_tlock_t;
 typedef struct sk_flock_s sk_flock_t;
 typedef struct sk_file_s sk_file_t;
@@ -95,12 +109,15 @@ typedef void *(*sk_realloc_func)(void *ptr, size_t size);
 typedef void *(*sk_calloc_func)(size_t count, size_t size);
 typedef void (*sk_free_func)(void *ptr);
 
+SK_EXTERN int sk_library_startup(void);
+SK_EXTERN int sk_library_shutdown(void);
+SK_EXTERN void sk_mem_free(void **ptr);
+SK_EXTERN void *sk_mem_malloc(size_t len);
 SK_EXTERN int sk_translate_sys_error(int sys_errno);
 SK_EXTERN const char *sk_err_name(int err);
 SK_EXTERN const char *sk_strerror(int err);
 SK_EXTERN unsigned int sk_version(void);
 SK_EXTERN const char *sk_version_string(void);
-SK_EXTERN void sk_library_shutdown(void);
 SK_EXTERN int sk_get_pid(long *pid);
 SK_EXTERN int sk_get_propath(char **path, size_t *len);
 SK_EXTERN int sk_get_exepath(char **path, size_t *len);
@@ -132,18 +149,24 @@ SK_EXTERN int sk_file_close(sk_file_t **ph);
 SK_EXTERN int sk_file_read(sk_file_t *h, char **buf, size_t *len);
 SK_EXTERN int sk_file_write(sk_file_t *h, const char *buf, size_t len);
 
-SK_EXTERN int sk_zip_compress(const char *src, size_t nsrc, char **dest,
-                              size_t *ndest);
-SK_EXTERN int sk_zip_uncompress(const char *src, size_t nsrc, char **dest,
-                                size_t *ndest);
-SK_EXTERN int sk_gzip_compress(const char *src, size_t nsrc, char **dest,
-                               size_t *ndest);
-SK_EXTERN int sk_gzip_uncompress(const char *src, size_t nsrc, char **dest,
-                                 size_t *ndest);
-SK_EXTERN int sk_zstd_compress(const char *src, size_t nsrc, char **dest,
-                               size_t *ndest);
-SK_EXTERN int sk_zstd_uncompress(const char *src, size_t nsrc, char **dest,
-                                 size_t *ndest);
+SK_EXTERN int sk_comp_zip(const char *src, size_t srcLen, char **dst,
+                          size_t *dstLen);
+SK_EXTERN int sk_comp_unzip(const char *src, size_t srcLen, char **dst,
+                            size_t *dstLen);
+SK_EXTERN int sk_comp_gzip(const char *src, size_t srcLen, char **dst,
+                           size_t *dstLen);
+SK_EXTERN int sk_comp_ungzip(const char *src, size_t srcLen, char **dst,
+                             size_t *dstLen);
+SK_EXTERN int sk_comp_zstd(const char *src, size_t srcLen, char **dst,
+                           size_t *dstLen);
+SK_EXTERN int sk_comp_unzstd(const char *src, size_t srcLen, char **dst,
+                             size_t *dstLen);
+
+SK_EXTERN int sk_icu_convert(const char *, size_t, const char *, char **,
+                             size_t *);
+SK_EXTERN int sk_icu_detect_name(const char *textIn, size_t len, char **name);
+SK_EXTERN int sk_icu_detect_type(const char *textIn, size_t len,
+                                 sk_icu_conv_type *type);
 
 struct sk_tlock_s {
   void *data;

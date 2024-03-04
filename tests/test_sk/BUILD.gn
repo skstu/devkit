@@ -1,4 +1,12 @@
 executable("test_sk") {
-  sources = [ "main.cc" ]
+  sources = [
+    "comp.cc",
+    "icu.cc",
+    "main.cc",
+  ]
   deps = [ "//projects/sk:sk" ]
+  public_configs = [
+    "//build/deps:fmt",
+    "//build/deps:icu",
+  ]
 }

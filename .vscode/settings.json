@@ -110,7 +110,10 @@
     "errno.h": "c",
     "posix.h": "c",
     "pthread.h": "c",
-    "linux.h": "c"
+    "linux.h": "c",
+    "valarray": "c",
+    "zstd.h": "c",
+    "format.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

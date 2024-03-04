@@ -1,11 +1,12 @@
-#include <iostream>
-#include <sk.h>
+#include "stdafx.h"
 
 int main(int argc, char *argv[]) {
-  char *zip_compress_data = nullptr;
-  size_t zip_compress_data_len = 0;
-  sk_zip_compress("", 0, &zip_compress_data, &zip_compress_data_len);
-  std::cout << "Hello SK !" << std::endl;
+  std::string fmtstr = fmt::format("{}", 168);
+  std::cout << fmtstr << std::endl;
+  test_comp_zip();
+  test_comp_zstd();
+  test_comp_gzip();
 
+  test_icu();
   return 0;
 }

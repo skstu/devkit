@@ -1,12 +1,35 @@
 source_set("source_sk") {
   sources = [
-    "compress.cc",
-    "sk.cc",
-    "stdafx.h",
+    "comm.c",
+    "comp.c",
+    "icu.c",
+    "local.c",
+    "loop.c",
   ]
-  deps = [ "//build/deps:zlib" ]
+  if (is_win) {
+    sources += [
+      "win/core.c",
+      "win/file.c",
+      "win/flock.c",
+      "win/main.c",
+      "win/tlock.c",
+    ]
+  } else {
+    sources += [
+      "linux/core.c",
+      "linux/file.c",
+      "linux/flock.c",
+      "linux/main.c",
+      "linux/tlock.c",
+    ]
+  }
+  include_dirs = [ "//projects/sk" ]
+  public_configs = [
+    "//build/deps:zlib",
+    "//build/deps:zstd",
+    "//build/deps:icu",
+  ]
 }
-
 if (enable_static_library_sk) {
   static_library("sk") {
     deps = [ ":source_sk" ]

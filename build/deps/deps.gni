@@ -1,0 +1,5 @@
+ZLIB_LIBRARY = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/lib/libz.a"
+if (is_win) {
+  ZLIB_LIBRARY = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/lib/libzlibstatic.a"
+}
+ZLIB_INCLUDE_DIR = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib//${current_cpu}/${compile_configure_type}/include"

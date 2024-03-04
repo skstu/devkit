@@ -176,6 +176,8 @@ config("default_libs") {
       "crypto",
       "pthread",
       "rt",
+
+      #-lrt -ldl -lcrypt -lm   -lc
     ]
   }
 

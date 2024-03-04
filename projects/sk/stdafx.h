@@ -1,6 +1,17 @@
-#ifndef __PROJECTS_SK_STDAFX_H_
-#define __PROJECTS_SK_STDAFX_H_
+#ifndef __SRC_SK_AFX_H_
+#define __SRC_SK_AFX_H_
 
 #include <sk.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "version.h"
 
-#endif ///__PROJECTS_SK_STDAFX_H_
+#if defined(_WIN32)
+#include "win/win.h"
+#else
+#include "linux/linux.h"
+#endif
+
+#include "local.h"
+
+#endif /*__SRC_SK_AFX_H_*/

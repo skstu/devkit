@@ -1,1 +1,8 @@
 BasedOnStyle: LLVM
+AccessModifierOffset: -2
+#SortIncludes:    CaseSensitive
+SortIncludes: false
+#AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: None
+BreakBeforeBraces: Attach
+#BreakBeforeBraces: Allman

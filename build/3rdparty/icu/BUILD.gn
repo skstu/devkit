@@ -28,6 +28,7 @@ cmd("icu") {
 
   __icu_build_patch = []
   __icu_configure_type = []
+  __icu_envvar = []
   if (is_win) {
     if (is_msvc) {
       print("Please use MSVC to compile manually.")
@@ -68,10 +69,19 @@ cmd("icu") {
       ]
     }
   } else {
+    #__icu_configure_type += [ "Linux" ]
     __icu_configure_type += [ "Linux" ]
+    if (enable_position_independent_code) {
+      __icu_envvar += [
+        "export CFLAGS=\"-fPIC\"",
+        "&&",
+        "export CXXFLAGS=\"-fPIC\"",
+        "&&",
+      ]
+    }
   }
 
-  inv_script_configure += [
+  inv_script_configure += __icu_envvar + [
                             "cd ${source_dir}",
                             "&&",
                             "bash runConfigureICU",

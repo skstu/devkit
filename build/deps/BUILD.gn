@@ -1,8 +1,45 @@
-source_set("zlib") {
-  include_dirs = [ "//bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/include" ]
+config("zlib") {
+  libs = []
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/include" ]
   if (is_win) {
-    libs = [ "//bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/lib/libzlibstatic.a" ]
+    libs += [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/lib/libzlibstatic.a" ]
   } else {
-    libs = [ "//bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/lib/libz.a" ]
+    libs += [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zlib/${current_cpu}/${compile_configure_type}/lib/libz.a" ]
+  }
+}
+
+config("zstd") {
+  include_dirs = [ system_env.ROOT_DIR + "bin/${current_os}/${compiler_toolchain}/3rdparty/zstd/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/zstd/${current_cpu}/${compile_configure_type}/lib/libzstd.a" ]
+}
+
+config("fmt") {
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/fmt/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [ system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/fmt/${current_cpu}/${compile_configure_type}/lib/libfmt.a" ]
+}
+
+config("icu") {
+  defines = [
+    "U_DISABLE_RENAMING",
+    #"U_STATIC_IMPLEMENTATION",
+  ]
+  libs = []
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/include" ]
+  if (is_win) {
+    libs += [
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libsicuuc.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libsicutu.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libsicui18n.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libsicuio.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libsicudata.a",
+    ]
+  } else {
+    libs += [
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libicuuc.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libicutu.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libicui18n.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libicuio.a",
+      system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/icu/${current_cpu}/${compile_configure_type}/lib/libicudata.a",
+    ]
   }
 }
