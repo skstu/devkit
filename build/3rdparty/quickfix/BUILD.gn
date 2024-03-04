@@ -1,8 +1,12 @@
 import("//build/tools/cmake.gni")
 
+#copy("my_copy") {
+#  sources = [ "${target_out_dir}/../build/3rdparty/quickfix/patch/Allocator.h" ]
+#  outputs = [ "${target_out_dir}/../3rdparty/quickfix/src/C++" ]
+#}
 cmake("quickfix") {
   if (is_win) {
-    assert("Please use MSVC tool chain to compile!")
+    #assert("Please use MSVC tool chain to compile!")
   }
   source_dir = rebase_path("//3rdparty/${target_name}", root_build_dir)
   build_dir = rebase_path(
@@ -11,7 +15,6 @@ cmake("quickfix") {
   install_dir = rebase_path(
           "//bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}",
           root_build_dir)
-
   cmake_options_configure = [
     "-G",
     "Ninja",
