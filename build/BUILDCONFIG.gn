@@ -21,7 +21,7 @@ declare_args() {
   enable_position_independent_code = true
 
   # View compile option details
-  enable_compiler_logging = false
+  enable_compiler_logging = true
 
   # Enable POSIX standard dynamic library loading
   enable_posix_dlfcn = true

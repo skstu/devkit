@@ -32,6 +32,3 @@
 [submodule "3rdparty/zstd"]
 	path = 3rdparty/zstd
 	url = git@github.com:facebook/zstd.git
-[submodule "3rdparty/quickfix"]
-	path = 3rdparty/quickfix
-	url = git@github.com:quickfix/quickfix.git
