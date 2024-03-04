@@ -43,3 +43,11 @@ config("icu") {
     ]
   }
 }
+
+config("openssl") {
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/lib64/libssl.a",
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/lib64/libcrypto.a",
+  ]
+}

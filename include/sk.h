@@ -168,6 +168,9 @@ SK_EXTERN int sk_icu_detect_name(const char *textIn, size_t len, char **name);
 SK_EXTERN int sk_icu_detect_type(const char *textIn, size_t len,
                                  sk_icu_conv_type *type);
 
+SK_EXTERN int sk_ossl_md5(const char *src, size_t srcLen, char **dst,
+                          size_t *dstLen);
+
 struct sk_tlock_s {
   void *data;
   void *t_handle;

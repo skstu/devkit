@@ -8,5 +8,6 @@ int main(int argc, char *argv[]) {
   test_comp_gzip();
 
   test_icu();
+  test_ossl();
   return 0;
 }

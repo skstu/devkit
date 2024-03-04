@@ -227,7 +227,10 @@ config("default_executable_config") {
   ]
 }
 config("default_static_library_config") {
-  configs = [ ":default_libs" ]
+  configs = [
+    ":default_libs",
+    ":default_configs",
+  ]
 }
 config("default_shared_library_config") {
   configs = [

@@ -113,7 +113,8 @@
     "linux.h": "c",
     "valarray": "c",
     "zstd.h": "c",
-    "format.h": "c"
+    "format.h": "c",
+    "core_dispatch.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

@@ -3,8 +3,12 @@ executable("test_sk") {
     "comp.cc",
     "icu.cc",
     "main.cc",
+    "ossl.cc",
   ]
-  deps = [ "//projects/sk:sk" ]
+  deps = [
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
   public_configs = [
     "//build/deps:fmt",
     "//build/deps:icu",

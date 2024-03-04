@@ -5,6 +5,7 @@ source_set("source_sk") {
     "icu.c",
     "local.c",
     "loop.c",
+    "ossl.c",
   ]
   if (is_win) {
     sources += [
@@ -28,6 +29,7 @@ source_set("source_sk") {
     "//build/deps:zlib",
     "//build/deps:zstd",
     "//build/deps:icu",
+    "//build/deps:openssl",
   ]
 }
 if (enable_static_library_sk) {

@@ -2,6 +2,7 @@
 #define __TESTS_TEST_SK_STDAFX_H_
 #include <iostream>
 #include <sk.h>
+#include <stl.h>
 #include <string.h>
 #include <fmt/format.h>
 #include "tests.h"
