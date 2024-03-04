@@ -1,4 +1,4 @@
-build_3rdparty = true
+build_3rdparty = false
 
 group("build_all") {
   if (build_3rdparty) {
@@ -13,7 +13,8 @@ group("build_all") {
       #"//build/3rdparty/yaml-cpp:yaml-cpp",
       #"//build/3rdparty/zlib:zlib",
       #"//build/3rdparty/zstd:zstd",
-      "//build/3rdparty/quickfix:quickfix",
+      # Only MSVC tool chain is supported on WINDOWS platform
+      #"//build/3rdparty/quickfix:quickfix",
     ]
   } else {
     deps = [
