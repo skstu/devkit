@@ -1,6 +1,9 @@
 import("//build/tools/cmake.gni")
 
 cmake("quickfix") {
+  if (is_win) {
+    assert("Please use MSVC tool chain to compile!")
+  }
   source_dir = rebase_path("//3rdparty/${target_name}", root_build_dir)
   build_dir = rebase_path(
           "//$root_out_dir/3rdparty/${target_name}/build_${current_os}_${compiler_toolchain}_${current_cpu}_${compile_configure_type}",
@@ -9,11 +12,6 @@ cmake("quickfix") {
           "//bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}",
           root_build_dir)
 
-  #__quick_fix_include_dir =
-  #    system_env.ROOT_DIR + "/3rdparty/${target_name}/include/quickfix"
-
-  __quick_fix_include_dir =
-      system_env.ROOT_DIR + "/3rdparty/${target_name}/src/c++"
   cmake_options_configure = [
     "-G",
     "Ninja",
@@ -34,8 +32,6 @@ cmake("quickfix") {
     "-DQUICKFIX_EXAMPLES=OFF",
     "-DQUICKFIX_SHARED_LIBS=OFF",
     "-DQUICKFIX_TESTS=OFF",
-
-    #"-DCMAKE_INCLUDE_DIRECTORIES=${__quick_fix_include_dir}",
   ]
 
   cmake_options_build = [
