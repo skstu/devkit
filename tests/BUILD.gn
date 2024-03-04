@@ -1,3 +1,6 @@
 group("tests_group") {
-  deps = [ "test_sk:test_sk" ]
+  deps = [
+    #"test_sk:test_sk",
+    "test_wx:test_wx",
+  ]
 }

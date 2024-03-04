@@ -31,6 +31,9 @@ declare_args() {
 
   # SKSTU core library
   enable_static_library_sk = false
+
+  # WXUI library
+  enable_static_library_wxui = false
 }
 
 declare_args() {

@@ -1,0 +1,12 @@
+executable("test_wx") {
+  sources = [ "main.cc" ]
+  deps = [
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+    "//projects/wxui:wxui",
+  ]
+  public_configs = [
+    "//build/deps:fmt",
+    "//build/deps:icu",
+  ]
+}

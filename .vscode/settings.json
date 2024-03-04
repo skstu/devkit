@@ -114,7 +114,8 @@
     "valarray": "c",
     "zstd.h": "c",
     "format.h": "c",
-    "core_dispatch.h": "c"
+    "core_dispatch.h": "c",
+    "wxui.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",
