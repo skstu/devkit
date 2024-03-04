@@ -1,4 +1,4 @@
-build_3rdparty = true
+build_3rdparty = false
 
 group("build_all") {
   if (build_3rdparty) {
