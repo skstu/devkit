@@ -100,3 +100,8 @@ config("wxwidgets") {
     system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/wxwidgets/${current_cpu}/${compile_configure_type}/lib/clang_x64_lib/libwxzlibd.a",
   ]
 }
+
+config("quickfix") {
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/quickfix/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [ system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/quickfix/${current_cpu}/${compile_configure_type}/lib/libquickfix.a" ]
+}

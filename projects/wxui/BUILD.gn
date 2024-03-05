@@ -1,13 +1,18 @@
+source_set("source_wxui") {
+  sources = [
+    "base.cc",
+    "ui.cc",
+  ]
+
+  public_configs = [ "//build/deps:wxwidgets" ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+}
 if (enable_static_library_wxui) {
   static_library("wxui") {
-    sources = [ "wxui.cc" ]
-
-    public_configs = [ "//build/deps:wxwidgets" ]
+    deps = [ ":source_wxui" ]
   }
 } else {
   shared_library("wxui") {
-    sources = [ "wxui.cc" ]
-
-    public_configs = [ "//build/deps:wxwidgets" ]
+    deps = [ ":source_wxui" ]
   }
 }

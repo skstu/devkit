@@ -120,92 +120,99 @@
 
 namespace stl {
 class Time {
-public:
-  template <typename T = std::chrono::seconds>
+  public:
+    template <typename T = std::chrono::seconds>
 #if _STL_HAS_CXX20
-    requires std::is_convertible_v<T, std::chrono::milliseconds> ||
-             std::is_convertible_v<T, std::chrono::minutes> ||
-             std::is_convertible_v<T, std::chrono::microseconds>
+        requires std::is_convertible_v<T, std::chrono::milliseconds>
+                 || std::is_convertible_v<T, std::chrono::minutes>
+                 || std::is_convertible_v<T, std::chrono::microseconds>
 #endif
-  static time_t TimeStamp() {
-    return std::chrono::duration_cast<T>(
-               std::chrono::time_point_cast<T>(std::chrono::system_clock::now())
-                   .time_since_epoch())
-        .count();
-  }
-  static std::string CurrentDateA();
-  static std::wstring CurrentDateW();
+    static time_t TimeStamp() {
+        return std::chrono::duration_cast<T>(
+                   std::chrono::time_point_cast<T>(
+                       std::chrono::system_clock::now())
+                       .time_since_epoch())
+            .count();
+    }
+    static std::string CurrentDateA();
+    static std::wstring CurrentDateW();
 };
 
 class String {
-public:
-  static std::string LowerA(const std::string &);
-  static std::wstring LowerW(const std::wstring &);
-  static std::string UpperA(const std::string &);
-  static std::wstring UpperW(const std::wstring &);
-  static std::string BinaryToHexString(const std::string &s);
-  static std::string HexStringToBinary(const std::string &s);
-  static std::vector<std::string> StringSpilt(const std::string &,
-                                              const std::string &);
-  static std::vector<std::wstring> WStringSplit(const std::wstring &,
-                                                const std::wstring &);
-  /*
-   * Input IPV4: "192.168.0.1:8888"
-   * Input IPV6: "[::]:8888"
-   */
-  static std::tuple<std::string, int> UnmadeIPAddr(const std::string &addr);
-  static std::string MadeIPAddr(const std::string &ip, const int &port);
-  static std::string UrlFixA(const std::string &inputUrlOrPath);
+  public:
+    static std::string LowerA(const std::string &);
+    static std::wstring LowerW(const std::wstring &);
+    static std::string UpperA(const std::string &);
+    static std::wstring UpperW(const std::wstring &);
+    static std::string BinaryToHexString(const std::string &s);
+    static std::string HexStringToBinary(const std::string &s);
+    static std::vector<std::string>
+    StringSpilt(const std::string &, const std::string &);
+    static std::vector<std::wstring>
+    WStringSplit(const std::wstring &, const std::wstring &);
+    /*
+     * Input IPV4: "192.168.0.1:8888"
+     * Input IPV6: "[::]:8888"
+     */
+    static std::tuple<std::string, int> UnmadeIPAddr(const std::string &addr);
+    static std::string MadeIPAddr(const std::string &ip, const int &port);
+    static std::string UrlFixA(const std::string &inputUrlOrPath);
+    static std::string WemadeEncode(const std::string &);
+    static std::string WemadeDecode(const std::string &);
 };
 
 class Directory {
-public:
-  //!@ input example : c:\\Windows\\System32\\
+  public:
+    //!@ input example : c:\\Windows\\System32\\
   //!
-  static bool CreateA(const std::string &);
-  static bool CreateW(const std::wstring &);
-  static bool RemoveAllA(const std::string &);
-  static bool RemoveAllW(const std::wstring &);
+    static bool CreateA(const std::string &);
+    static bool CreateW(const std::wstring &);
+    static bool RemoveAllA(const std::string &);
+    static bool RemoveAllW(const std::wstring &);
 };
 
 class Path {
-public:
-  static std::string NormalA(const std::string &);
-  static std::wstring NormalW(const std::wstring &);
-  static bool ExistsA(const std::string &input_path);
-  static bool ExistsW(const std::wstring &input_path);
-  static bool VerifyA(const std::string &input_path);
-  static bool VerifyW(const std::wstring &input_path);
-  static std::string FixA(const std::string &input_path,
-                          const std::string &path_spilt);
-  static std::wstring FixW(const std::wstring &input_path,
-                           const std::wstring &path_spilt);
-  static std::string ParentA(const std::string &);
-  static std::wstring ParentW(const std::wstring &);
-  static std::string AppendA(const std::string &abs, const std::string &rel);
-  static std::wstring AppendW(const std::wstring &abs, const std::wstring &rel);
-  static std::string PathnameToPathA(const std::string &input_pathname);
-  static std::wstring PathnameToPathW(const std::wstring &input_pathname);
+  public:
+    static std::string NormalA(const std::string &);
+    static std::wstring NormalW(const std::wstring &);
+    static bool ExistsA(const std::string &input_path);
+    static bool ExistsW(const std::wstring &input_path);
+    static bool VerifyA(const std::string &input_path);
+    static bool VerifyW(const std::wstring &input_path);
+    static std::string
+    FixA(const std::string &input_path, const std::string &path_spilt);
+    static std::wstring
+    FixW(const std::wstring &input_path, const std::wstring &path_spilt);
+    static std::string ParentA(const std::string &);
+    static std::wstring ParentW(const std::wstring &);
+    static std::string AppendA(const std::string &abs, const std::string &rel);
+    static std::wstring
+    AppendW(const std::wstring &abs, const std::wstring &rel);
+    static std::string PathnameToPathA(const std::string &input_pathname);
+    static std::wstring PathnameToPathW(const std::wstring &input_pathname);
 };
 
 class File {
-public:
-  static std::string Create(const std::string &);
-  static bool RemoveA(const std::string &);
-  static bool RemoveW(const std::wstring &);
-  static std::string
-  ReadFile(/*std::ios::_Nocreate | std::ios::_Noreplace | std::ios::binary*/
-           const std::string &,
-           const int &mode_ = std::ios::in | std::ios::binary);
-  static void
-  ReadFile(/*std::ios::_Nocreate | std::ios::_Noreplace | std::ios::binary*/
-           const std::string &, std::vector<char> &,
-           const int &mode_ = std::ios::in | std::ios::binary);
-  static bool WriteFile(const std::string &, const std::string &,
-                        const int &mode_ = static_cast<int>(std::ios::binary) |
-                                           static_cast<int>(std::ios::out) |
-                                           static_cast<int>(std::ios::trunc));
-  static bool WriteFileAddto(const std::string &, const std::string &);
+  public:
+    static std::string Create(const std::string &);
+    static bool RemoveA(const std::string &);
+    static bool RemoveW(const std::wstring &);
+    static std::string
+    ReadFile(/*std::ios::_Nocreate | std::ios::_Noreplace | std::ios::binary*/
+             const std::string &,
+             const int &mode_ = std::ios::in | std::ios::binary);
+    static void
+    ReadFile(/*std::ios::_Nocreate | std::ios::_Noreplace | std::ios::binary*/
+             const std::string &,
+             std::vector<char> &,
+             const int &mode_ = std::ios::in | std::ios::binary);
+    static bool WriteFile(
+        const std::string &,
+        const std::string &,
+        const int &mode_ = static_cast<int>(std::ios::binary)
+                           | static_cast<int>(std::ios::out)
+                           | static_cast<int>(std::ios::trunc));
+    static bool WriteFileAddto(const std::string &, const std::string &);
 };
 } // namespace stl
 

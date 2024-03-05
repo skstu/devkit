@@ -1,0 +1,12 @@
+executable("test_fix") {
+  sources = [ "main.cc" ]
+  deps = [
+    "//projects/fix:fix",
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
+  public_configs = [
+    "//build/deps:fmt",
+    "//build/deps:icu",
+  ]
+}
