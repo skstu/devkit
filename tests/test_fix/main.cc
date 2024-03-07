@@ -7,12 +7,17 @@ int main(int argc, char *argv[]) {
 #else
   __gpFix = fix::IFix::Create("fix.so");
 #endif
-
+  if (__gpFix) {
+    __gpFix->Start();
+  }
   std::string input;
   do {
     input.clear();
     std::getline(std::cin, input);
     if (input == "q" || std::cin.eof()) {
+      if (__gpFix) {
+        __gpFix->Stop();
+      }
       break;
     }
   } while (1);

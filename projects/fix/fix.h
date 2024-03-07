@@ -7,9 +7,15 @@ public:
   virtual ~Fix();
 
 protected:
+  bool Start() override final;
+  void Stop() override final;
   bool Ready() const override final;
   void Release() const override final;
+
+private:
+  std::atomic_bool open_ = false;
 };
+
 #ifdef __cplusplus
 extern "C" {
 #endif

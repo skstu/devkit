@@ -1,12 +1,8 @@
 import("//build/tools/cmake.gni")
 
-#copy("my_copy") {
-#  sources = [ "${target_out_dir}/../build/3rdparty/quickfix/patch/Allocator.h" ]
-#  outputs = [ "${target_out_dir}/../3rdparty/quickfix/src/C++" ]
-#}
 cmake("quickfix") {
-  if (is_win) {
-    #assert("Please use MSVC tool chain to compile!")
+  if (is_msvc) {
+    assert("Please use MSVC tool chain to compile!")
   }
   source_dir = rebase_path("//3rdparty/${target_name}", root_build_dir)
   build_dir = rebase_path(
@@ -15,6 +11,9 @@ cmake("quickfix") {
   install_dir = rebase_path(
           "//bin/${current_os}/${compiler_toolchain}/3rdparty/${target_name}/${current_cpu}/${compile_configure_type}",
           root_build_dir)
+
+  OPENSSL_DIR_ROOT = system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}"
+
   cmake_options_configure = [
     "-G",
     "Ninja",
@@ -31,7 +30,8 @@ cmake("quickfix") {
     "-DHAVE_POSTGRESQL=OFF",
     "-DHAVE_PYTHON=OFF",
     "-DHAVE_PYTHON3=OFF",
-    "-DHAVE_SSL=OFF",
+    "-DHAVE_SSL=ON",
+    "-DOPENSSL_ROOT_DIR=\"${OPENSSL_DIR_ROOT}\"",
     "-DQUICKFIX_EXAMPLES=OFF",
     "-DQUICKFIX_SHARED_LIBS=OFF",
     "-DQUICKFIX_TESTS=OFF",

@@ -35,3 +35,9 @@
 [submodule "3rdparty/quickfix"]
 	path = 3rdparty/quickfix
 	url = git@github.com:skstu/quickfix.git
+[submodule "3rdparty/openssl-1.0.2u"]
+	path = 3rdparty/openssl-1.0.2u
+	url = git@github.com:skstu/openssl-1.0.2u.git
+[submodule "3rdparty/openssl-fips-2.0.16"]
+	path = 3rdparty/openssl-fips-2.0.16
+	url = git@github.com:skstu/openssl-fips-2.0.16.git

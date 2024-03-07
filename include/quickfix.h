@@ -8,6 +8,8 @@ class IFix : public Interface<IFix> {
 public:
   virtual bool Ready() const = 0;
   virtual void Release() const = 0;
+  virtual bool Start() = 0;
+  virtual void Stop() = 0;
 };
 } // namespace fix
 
