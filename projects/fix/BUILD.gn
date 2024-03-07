@@ -4,11 +4,11 @@ source_set("source_fix") {
     "fix.cc",
   ]
 
-  public_configs = [ "//build/deps:quickfix" ]
-  defines = [
-    "SHARED_IMPLEMENTATION",
-    "HAVE_SSL=1",
+  public_configs = [
+    "//build/deps:quickfix",
+    "//build/deps:openssl",
   ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
   deps = [ "//projects/stl:stl" ]
 }
 if (enable_static_library_wxui) {

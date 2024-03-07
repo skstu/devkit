@@ -18,7 +18,7 @@ import("//build/tools/cmd.gni")
 # If at some point you get a "make (e=2):" error, ensure you don't have another "make.exe" in your PATH or just type /bin/make instead of make.
 
 # perl Configure VC-WIN64A threads no-asm no-ssl2 no-ssl3 no-idea enable-fips no-mdc2 no-ec2m no-shared enable-md2 enable-rc5 --prefix=%PATH_INSTALL%
-cmd("openssl") {
+cmd("openssl-1.0.2u-fips") {
   build_configure = ""
   build_configure_type = "--release"
   if (is_win) {
@@ -61,7 +61,6 @@ cmd("openssl") {
     "no-mdc2",
     "no-ec2m",
     "no-shared",
-    "enable-legacy",
     "enable-md2",
     "enable-rc5",
     "${build_configure_type}",
