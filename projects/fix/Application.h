@@ -1,30 +1,10 @@
-/* -*- C++ -*- */
+#ifndef __PROJECTS_FIX_APPLICATION_H_
+#define __PROJECTS_FIX_APPLICATION_H_
 
-/****************************************************************************
-** Copyright (c) 2001-2014
-**
-** This file is part of the QuickFIX FIX Engine
-**
-** This file may be distributed under the terms of the quickfixengine.org
-** license as defined by quickfixengine.org and appearing in the file
-** LICENSE included in the packaging of this file.
-**
-** This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-** WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-**
-** See http://www.quickfixengine.org/LICENSE for licensing information.
-**
-** Contact ask@quickfixengine.org if any conditions of this licensing are
-** not clear to you.
-**
-****************************************************************************/
-
-#ifndef EXECUTOR_APPLICATION_H
-#define EXECUTOR_APPLICATION_H
-
-class Application : public FIX::Application, public FIX::MessageCracker {
+class FixApplication final : public FIX::Application,
+                             public FIX::MessageCracker {
 public:
-  Application() : m_orderID(0), m_execID(0) {
+  FixApplication() : m_orderID(0), m_execID(0) {
   }
 
   // Application overloads
@@ -59,4 +39,4 @@ private:
   int m_orderID, m_execID;
 };
 
-#endif
+#endif ///__PROJECTS_FIX_APPLICATION_H_

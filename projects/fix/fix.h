@@ -7,13 +7,16 @@ public:
   virtual ~Fix();
 
 protected:
-  bool Start() override final;
+  bool Start(const char *settings) override final;
   void Stop() override final;
   bool Ready() const override final;
   void Release() const override final;
 
 private:
   std::atomic_bool open_ = false;
+  std::string settings_;
+  FIX::Acceptor *acceptor_ = nullptr;
+  FIX::Initiator *initiator_ = nullptr;
 };
 
 #ifdef __cplusplus

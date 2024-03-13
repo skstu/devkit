@@ -19,7 +19,6 @@ using namespace fix;
 #include <quickfix/Mutex.h>
 #include <quickfix/Application.h>
 #include <quickfix/MessageCracker.h>
-//!@ QuickFix use ssl.
 #if HAVE_SSL
 #include <quickfix/ThreadedSSLSocketAcceptor.h>
 #include <quickfix/ThreadedSSLSocketInitiator.h>
@@ -51,6 +50,7 @@ using namespace fix;
 #include <quickfix/fix44/ExecutionReport.h>
 #include <quickfix/fix50/ExecutionReport.h>
 
-#include "Application.h"
+#include "sessionsettings.h"
+#include "application.h"
 #include "fix.h"
 #endif ///__PROJECTS_FIX_AFX_H_

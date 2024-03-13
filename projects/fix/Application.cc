@@ -1,56 +1,38 @@
-/****************************************************************************
-** Copyright (c) 2001-2014
-**
-** This file is part of the QuickFIX FIX Engine
-**
-** This file may be distributed under the terms of the quickfixengine.org
-** license as defined by quickfixengine.org and appearing in the file
-** LICENSE included in the packaging of this file.
-**
-** This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING THE
-** WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-**
-** See http://www.quickfixengine.org/LICENSE for licensing information.
-**
-** Contact ask@quickfixengine.org if any conditions of this licensing are
-** not clear to you.
-**
-****************************************************************************/
+#include "stdafx.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4503 4355 4786)
 #endif
 
-#include "stdafx.h"
-
-void Application::onCreate(const FIX::SessionID &sessionID) {
+void FixApplication::onCreate(const FIX::SessionID &sessionID) {
 }
-void Application::onLogon(const FIX::SessionID &sessionID) {
+void FixApplication::onLogon(const FIX::SessionID &sessionID) {
 }
-void Application::onLogout(const FIX::SessionID &sessionID) {
+void FixApplication::onLogout(const FIX::SessionID &sessionID) {
 }
-void Application::toAdmin(FIX::Message &message,
-                          const FIX::SessionID &sessionID) {
+void FixApplication::toAdmin(FIX::Message &message,
+                             const FIX::SessionID &sessionID) {
 }
-void Application::toApp(FIX::Message &message, const FIX::SessionID &sessionID)
+void FixApplication::toApp(FIX::Message &message,
+                           const FIX::SessionID &sessionID)
     EXCEPT(FIX::DoNotSend) {
 }
 
-void Application::fromAdmin(const FIX::Message &message,
-                            const FIX::SessionID &sessionID)
+void FixApplication::fromAdmin(const FIX::Message &message,
+                               const FIX::SessionID &sessionID)
     EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue,
            FIX::RejectLogon) {
 }
 
-void Application::fromApp(const FIX::Message &message,
-                          const FIX::SessionID &sessionID)
+void FixApplication::fromApp(const FIX::Message &message,
+                             const FIX::SessionID &sessionID)
     EXCEPT(FIX::FieldNotFound, FIX::IncorrectDataFormat, FIX::IncorrectTagValue,
            FIX::UnsupportedMessageType) {
   crack(message, sessionID);
 }
 
-void Application::onMessage(const FIX40::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX40::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;
@@ -88,8 +70,8 @@ void Application::onMessage(const FIX40::NewOrderSingle &message,
   }
 }
 
-void Application::onMessage(const FIX41::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX41::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;
@@ -127,8 +109,8 @@ void Application::onMessage(const FIX41::NewOrderSingle &message,
   }
 }
 
-void Application::onMessage(const FIX42::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX42::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;
@@ -169,8 +151,8 @@ void Application::onMessage(const FIX42::NewOrderSingle &message,
   }
 }
 
-void Application::onMessage(const FIX43::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX43::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;
@@ -210,8 +192,8 @@ void Application::onMessage(const FIX43::NewOrderSingle &message,
   }
 }
 
-void Application::onMessage(const FIX44::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX44::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;
@@ -251,8 +233,8 @@ void Application::onMessage(const FIX44::NewOrderSingle &message,
   }
 }
 
-void Application::onMessage(const FIX50::NewOrderSingle &message,
-                            const FIX::SessionID &sessionID) {
+void FixApplication::onMessage(const FIX50::NewOrderSingle &message,
+                               const FIX::SessionID &sessionID) {
   FIX::Symbol symbol;
   FIX::Side side;
   FIX::OrdType ordType;

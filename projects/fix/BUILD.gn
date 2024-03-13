@@ -1,7 +1,8 @@
 source_set("source_fix") {
   sources = [
-    "Application.cc",
+    "application.cc",
     "fix.cc",
+    "sessionsettings.cc",
   ]
 
   public_configs = [
