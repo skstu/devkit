@@ -17,9 +17,6 @@
 	path = 3rdparty/icu
 	url = git@github.com:unicode-org/icu.git
 	branch = maint/maint-74
-[submodule "3rdparty/wxwidgets"]
-	path = 3rdparty/wxwidgets
-	url = git@github.com:wxWidgets/wxWidgets.git --recursive
 [submodule "3rdparty/cjson"]
 	path = 3rdparty/cjson
 	url = git@github.com:DaveGamble/cJSON.git
