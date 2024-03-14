@@ -13,7 +13,7 @@ group("build_all") {
       #"//build/3rdparty/icu:icu",
       #"//build/3rdparty/libuv:libuv",
       #"//build/3rdparty/openssl:openssl",
-      "//build/3rdparty/quickfix:quickfix",
+      #"//build/3rdparty/quickfix:quickfix",
       #"//build/3rdparty/wxwidgets:wxwidgets",
     ]
   } else {

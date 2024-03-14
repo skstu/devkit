@@ -130,7 +130,10 @@
     "threadedsocketacceptor.h": "c",
     "sslsocketconnection.h": "c",
     "threadedsslsocketacceptor.h": "c",
-    "messagecracker.h": "c"
+    "messagecracker.h": "c",
+    "csignal": "cpp",
+    "panda.h": "c",
+    "interface.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

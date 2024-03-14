@@ -2,6 +2,7 @@ group("tests_group") {
   deps = [
     #"test_sk:test_sk",
     #"test_wx:test_wx",
-    "test_fix:test_fix",
+    #"test_fix:test_fix",
+    "test_panda:test_panda",
   ]
 }

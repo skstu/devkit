@@ -1,0 +1,8 @@
+source_set("source_panda") {
+  sources = [ "pd.cc" ]
+
+  defines = [ "SHARED_IMPLEMENTATION" ]
+}
+shared_library("panda") {
+  deps = [ ":source_panda" ]
+}

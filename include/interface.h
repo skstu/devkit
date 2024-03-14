@@ -4,16 +4,15 @@
 #include <dlfcn.h>
 #include "shared_library.h"
 
-using tf_interface_init = void* (*)(void*, unsigned long);
+using tf_interface_init = void *(*)(void *, unsigned long);
 using tf_interface_uninit = void (*)(void);
 const char name_interface_init[] = "interface_init";
 const char name_interface_uninit[] = "interface_uninit";
-template <typename T>
-class Interface {
- public:
-  static T* Create(const char* dyPathname) {
-    T* result = nullptr;
-    void* handle_ = nullptr;
+template <typename T> class Interface {
+public:
+  static T *Create(const char *dyPathname) {
+    T *result = nullptr;
+    void *handle_ = nullptr;
     tf_interface_init init_ = nullptr;
     tf_interface_uninit uninit_ = nullptr;
     do {
@@ -29,7 +28,7 @@ class Interface {
       if (!init_ || !uninit_) {
         break;
       }
-      result = (T*)init_(nullptr, 0);
+      result = (T *)init_(nullptr, 0);
       if (!result) {
         uninit_();
         break;
@@ -44,16 +43,16 @@ class Interface {
     }
     return result;
   }
-  static void Destroy(T** obj) {
+  static void Destroy(T **obj) {
     do {
       if (!(*obj)) {
         break;
       }
-      auto _this = dynamic_cast<Interface*>(*obj);
+      Interface *_this = dynamic_cast<Interface *>(*obj);
       if (!_this) {
         break;
       }
-      auto htmp = _this->handle_;
+      void *htmp = _this->handle_;
       if (_this->interface_uninit_) {
         _this->interface_uninit_();
       }
@@ -64,10 +63,10 @@ class Interface {
     } while (0);
   }
 
- private:
+private:
   tf_interface_init interface_init_ = nullptr;
   tf_interface_uninit interface_uninit_ = nullptr;
-  void* handle_ = nullptr;
+  void *handle_ = nullptr;
 };
 
-#endif  // _INTERFACE_H__
+#endif // _INTERFACE_H__
