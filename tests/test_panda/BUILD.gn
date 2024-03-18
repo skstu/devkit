@@ -1,16 +1,7 @@
-executable("test_sk") {
-  sources = [
-    "comp.cc",
-    "icu.cc",
-    "main.cc",
-    "ossl.cc",
-  ]
+executable("test_panda") {
+  sources = [ "main.cc" ]
   deps = [
-    "//projects/sk:sk",
+    "//projects/panda",
     "//projects/stl:stl",
-  ]
-  public_configs = [
-    "//build/deps:fmt",
-    "//build/deps:icu",
   ]
 }

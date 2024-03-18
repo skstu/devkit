@@ -1,37 +1,13 @@
-source_set("source_pd") {
+source_set("source_panda") {
   sources = [
-    "comm.c",
-    "comp.c",
-    "icu.c",
-    "local.c",
-    "loop.c",
-    "ossl.c",
+    "bf.cc",
+    "pd.cc",
   ]
-  if (is_win) {
-    sources += [
-      "win/core.c",
-      "win/file.c",
-      "win/flock.c",
-      "win/main.c",
-      "win/tlock.c",
-    ]
-  } else {
-    sources += [
-      "linux/core.c",
-      "linux/file.c",
-      "linux/flock.c",
-      "linux/main.c",
-      "linux/tlock.c",
-    ]
-  }
-  include_dirs = [ "//projects/panda" ]
-  public_configs = [
-    "//build/deps:zlib",
-    "//build/deps:zstd",
-    "//build/deps:icu",
-    "//build/deps:openssl",
-  ]
+
+  deps = [ "//projects/stl:stl" ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  public_configs = [ "//build/deps:openssl" ]
 }
 shared_library("panda") {
-  deps = [ ":source_pd" ]
+  deps = [ ":source_panda" ]
 }

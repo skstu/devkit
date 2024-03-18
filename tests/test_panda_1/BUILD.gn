@@ -1,7 +1,0 @@
-executable("test_panda") {
-  sources = [ "main.cc" ]
-  deps = [
-    "//projects/panda",
-    "//projects/stl:stl",
-  ]
-}

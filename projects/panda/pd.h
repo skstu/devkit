@@ -9,6 +9,7 @@ public:
 protected:
   bool Ready() const override final;
   void Release() const override final;
+  IBrowserFingerprint *CreateBF() const override final;
   void Test() const override final;
 };
 

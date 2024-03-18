@@ -12,6 +12,9 @@ bool Panda::Ready() const {
 void Panda::Release() const {
   delete this;
 }
+IBrowserFingerprint *Panda::CreateBF() const {
+  return nullptr;
+}
 void Panda::Test() const {
 #ifdef _WIN32
   ::MessageBoxA(NULL, "Hello!", "I'm Martell!", MB_TOPMOST);

@@ -1,9 +1,5 @@
-#ifndef __TESTS_TEST_SK_STDAFX_H_
-#define __TESTS_TEST_SK_STDAFX_H_
-#include <iostream>
-#include <sk.h>
+#ifndef __TEST_PANDA_AFX_H_
+#define __TEST_PANDA_AFX_H_
 #include <stl.h>
-#include <string.h>
-#include <fmt/format.h>
-#include "tests.h"
-#endif ///__TESTS_TEST_SK_STDAFX_H_
+#include <panda.h>
+#endif ///__TEST_PANDA_AFX_H_

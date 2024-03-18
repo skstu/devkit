@@ -1,17 +1,17 @@
-#ifndef __SRC_SK_AFX_H_
-#define __SRC_SK_AFX_H_
+#ifndef __PROJECTS_PANDA_AFX_H_
+#define __PROJECTS_PANDA_AFX_H_
 
+#include <stl.h>
+#include <rapidjson.h>
+#include <rapidxml.h>
 #include <panda.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "version.h"
+using namespace panda;
 
-#if defined(_WIN32)
-#include "win/win.h"
+#ifdef _WIN32
+#include <Windows.h>
 #else
-#include "linux/linux.h"
 #endif
+#include "bf.h"
+#include "pd.h"
 
-#include "local.h"
-
-#endif /*__SRC_SK_AFX_H_*/
+#endif ///__PROJECTS_PANDA_AFX_H_
