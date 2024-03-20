@@ -105,3 +105,8 @@ config("quickfix") {
   include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/quickfix/${current_cpu}/${compile_configure_type}/include" ]
   libs = [ system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/quickfix/${current_cpu}/${compile_configure_type}/lib/libquickfix.a" ]
 }
+
+config("libuv") {
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/libuv/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [ system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/libuv/${current_cpu}/${compile_configure_type}/lib/libuv.a" ]
+}

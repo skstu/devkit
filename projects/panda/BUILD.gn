@@ -1,5 +1,6 @@
 source_set("source_panda") {
   sources = [
+    "bext.cc",
     "bf.cc",
     "pd.cc",
   ]

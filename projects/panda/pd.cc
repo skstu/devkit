@@ -12,6 +12,9 @@ bool Panda::Ready() const {
 void Panda::Release() const {
   delete this;
 }
+IBrowserExtensions *Panda::CreateEXT() const {
+  return nullptr;
+}
 IBrowserFingerprint *Panda::CreateBF() const {
   return nullptr;
 }

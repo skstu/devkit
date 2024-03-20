@@ -29,3 +29,6 @@
 [submodule "3rdparty/quickfix"]
 	path = 3rdparty/quickfix
 	url = git@github.com:skstu/quickfix.git
+[submodule "3rdparty/rapidjson"]
+	path = 3rdparty/rapidjson
+	url = git@github.com:Tencent/rapidjson.git

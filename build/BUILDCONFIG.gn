@@ -1,5 +1,5 @@
 declare_args() {
-  is_debug = true
+  is_debug = false
 
   # Specify compile arch ["x86","x64"]
   compile_arch = ""

@@ -34,9 +34,7 @@ protected:
   bool AudioContext_hash() override final;
   bool Font_hash() override final;
   bool Fonts() override final;
-  void OutputXml(char **, size_t *) const override final;
   void OutputJson(char **, size_t *) const override final;
-  bool InputXml(const char *, size_t) override final;
   bool InputJson(const char *, size_t) override final;
 };
 

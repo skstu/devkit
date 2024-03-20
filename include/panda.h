@@ -4,6 +4,10 @@
 #include "interface.h"
 
 namespace panda {
+class IBrowserExtensions {
+public:
+  virtual void Release() const = 0;
+};
 class IBrowserFingerprint {
 public:
   virtual void Release() const = 0;
@@ -33,9 +37,7 @@ public:
   virtual bool AudioContext_hash() = 0;
   virtual bool Font_hash() = 0;
   virtual bool Fonts() = 0;
-  virtual void OutputXml(char **, size_t *) const = 0;
   virtual void OutputJson(char **, size_t *) const = 0;
-  virtual bool InputXml(const char *, size_t) = 0;
   virtual bool InputJson(const char *, size_t) = 0;
 };
 class IPanda : public Interface<IPanda> {
@@ -43,6 +45,7 @@ public:
   virtual bool Ready() const = 0;
   virtual void Release() const = 0;
   virtual IBrowserFingerprint *CreateBF() const = 0;
+  virtual IBrowserExtensions *CreateEXT() const = 0;
   virtual void Test() const = 0;
 };
 } // namespace panda

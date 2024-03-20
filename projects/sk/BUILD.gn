@@ -6,6 +6,7 @@ source_set("source_sk") {
     "local.c",
     "loop.c",
     "ossl.c",
+    "uv.c",
   ]
   if (is_win) {
     sources += [
@@ -30,6 +31,7 @@ source_set("source_sk") {
     "//build/deps:zstd",
     "//build/deps:icu",
     "//build/deps:openssl",
+    "//build/deps:libuv",
   ]
 }
 if (enable_static_library_sk) {

@@ -87,14 +87,8 @@ bool BrowserFingerprint::Fonts() {
   return false;
 }
 
-void BrowserFingerprint::OutputXml(char **, size_t *) const {
-  return;
-}
 void BrowserFingerprint::OutputJson(char **, size_t *) const {
   return;
-}
-bool BrowserFingerprint::InputXml(const char *, size_t) {
-  return false;
 }
 bool BrowserFingerprint::InputJson(const char *, size_t) {
   return false;

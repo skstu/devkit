@@ -177,6 +177,7 @@ public:
     }
     return str;
   }
+#if 0
   static bool Sort(rapidjson::Value &inObj, rapidjson::Document &inDoc,
                    const bool &level1 = false /*max_level<=1*/) {
     bool result = false;
@@ -321,6 +322,7 @@ public:
     }
     return true;
   }
+#endif
   static std::string toString(const rapidjson::Value &valObj) {
     std::string result;
     rapidjson::StringBuffer jbuffer;

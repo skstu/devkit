@@ -3,7 +3,6 @@
 
 #include <stl.h>
 #include <rapidjson.h>
-#include <rapidxml.h>
 #include <panda.h>
 using namespace panda;
 
@@ -12,6 +11,7 @@ using namespace panda;
 #else
 #endif
 #include "bf.h"
+#include "bext.h"
 #include "pd.h"
 
 #endif ///__PROJECTS_PANDA_AFX_H_
