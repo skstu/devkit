@@ -32,3 +32,6 @@
 [submodule "3rdparty/rapidjson"]
 	path = 3rdparty/rapidjson
 	url = git@github.com:Tencent/rapidjson.git
+[submodule "3rdparty/jsonnet"]
+	path = 3rdparty/jsonnet
+	url = https://github.com/google/jsonnet.git
