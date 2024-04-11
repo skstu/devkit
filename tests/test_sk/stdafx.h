@@ -6,4 +6,5 @@
 #include <string.h>
 #include <fmt/format.h>
 #include "tests.h"
+#include "fps.h"
 #endif ///__TESTS_TEST_SK_STDAFX_H_

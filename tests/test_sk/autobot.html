@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutobotDemo</title>
+<style>
+  #node1 {
+    float: left;
+    width: 100px;
+    height: 22px;
+    background-color: red;
+    margin: 1px;
+    cursor: pointer;
+  }
+  #node2 {
+    float: left;
+    width: 100px;
+    height: 22px;
+    background-color: yellow;
+    margin: 1px;
+    cursor: pointer;
+  }
+  #node3 {
+    float: left;
+    width: 100px;
+    height: 22px;
+    background-color: green;
+    margin: 1px;
+    cursor: pointer;
+  }
+  #node4 {
+    float: left;
+    width: 100px;
+    height: 22px;
+    background-color: green;
+    margin: 1px;
+    cursor: pointer;
+  }
+  #right {
+    float: left;
+    width: 300px;
+    height: 200px;
+    background-color: lightgray;
+    margin: 20px;
+    position: relative;
+  }
+  
+  #droppable {
+    width: 200px;
+    height: 200px;
+    background-color: blue;
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  
+  ul#list {
+  list-style: none;
+  float: left;
+  display: inline-block;
+  text-align: center;
+}
+
+ul#list li {
+  display: block;
+}
+
+#tree li{
+margin: 1px;
+width: 150px;
+}
+#text {
+background-color: red;
+}
+#span_auto_10 {
+background-color: red;
+}
+
+#container {
+  display: flex;
+}
+
+#tree, #right {
+  flex: 1;
+}
+#drop_1 {
+background-color: red;
+}
+</style>
+</head>
+<body>
+
+
+      
+<div id="container">
+	<div id="tree">
+	  <li id="0">
+		<span>[猜拳游戏]</span>
+		<ul>
+			<span>道具</span>
+			<ul>
+			  <li id="drop_1" tid="1" draggable="true" ondragstart="dragStart(event)">石头</li>
+			  <li id="drop_2" tid="2" draggable="true" ondragstart="dragStart(event)">剪刀</li>
+			  <li id="drop_3" tid="3" draggable="true" ondragstart="dragStart(event)">布</li>
+			</ul>
+		</ul>
+		<ul>
+			<span id="span_auto_10" tid="10" draggable="true" ondragstart="dragStart(event)">对手出牌(随机)</span>
+		</ul>
+	  </li>
+	</div>
+
+	<div id="right" ondrop="drop(event)" ondragover="allowDrop(event)">
+	  <div id="droppable"></div>
+	</div>
+</div>
+<script>
+function allowDrop(ev) {
+  ev.preventDefault();
+}
+
+function dragStart(ev) {
+  ev.dataTransfer.setData("text", ev.target.id);
+}
+
+function drop(ev) {
+  ev.preventDefault();
+  var data = ev.dataTransfer.getData("text");
+  var draggedElement = document.getElementById(data);
+  var droppableArea = document.getElementById("droppable");
+  
+const tid = document.getElementById(data).getAttribute("tid");
+const tidInt = parseInt(tid, 10);
+
+
+  var rect = droppableArea.getBoundingClientRect();
+  var x = ev.clientX - rect.left;
+  var y = ev.clientY - rect.top;
+  if (x > 0 && x < 200 && y > 0 && y < 200) {
+  if(tidInt==1){
+      //alert("石头！");
+      const set_v = prompt("设置: ")
+      alert(set_v)
+  }
+  else if(tidInt==2){
+      alert("剪刀！");
+  }
+  else if(tidInt ==3){
+      alert("布！");
+  }
+  else if(tidInt ==10){
+      alert("对手已出牌！");
+  }
+  else{
+  }
+
+  }
+}
+</script>
+
+</body>
+</html>

@@ -6,5 +6,6 @@ void test_comp_gzip();
 void test_comp_zip();
 void test_icu();
 void test_ossl();
+void test_uv();
 
 #endif ///__TESTS_TEST_SK_TESTS_H_

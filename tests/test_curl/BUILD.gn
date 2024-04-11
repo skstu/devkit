@@ -1,0 +1,10 @@
+executable("test_curl") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//projects/curl:curl",
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
+  public_configs = [ "//build/deps:fmt" ]
+}

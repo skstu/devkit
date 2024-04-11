@@ -1,0 +1,14 @@
+source_set("source_curl") {
+  sources = [ "curl.cc" ]
+
+  public_configs = [
+    "//build/deps:curl",
+    "//build/deps:openssl",
+    "//build/deps:zlib",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("curl") {
+  deps = [ ":source_curl" ]
+}

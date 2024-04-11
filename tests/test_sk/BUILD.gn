@@ -1,9 +1,11 @@
 executable("test_sk") {
   sources = [
     "comp.cc",
+    "fps.cc",
     "icu.cc",
     "main.cc",
     "ossl.cc",
+    "test_uv.cc",
   ]
   deps = [
     "//projects/sk:sk",

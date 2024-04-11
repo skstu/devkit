@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutobotDemo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            /*align-items: center;*/
+        }
+
+        .button-container {
+            text-align: left;
+        }
+
+        #container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            height: 100%;
+            margin-top: 5px;
+            border: 1px solid #f60707;
+            min-height: 200px;
+        }
+
+        #container_bottom {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
+            height: 30%;
+            margin-top: 5px;
+            border: 1px solid #090909;
+        }
+
+        #left,
+        #middle,
+        #right {
+            border: 1px solid #951818;
+            padding: 10px;
+            margin: 5px;
+            height: 100%;
+            min-height: 100px;
+        }
+
+        #left {
+            width: 20%;
+        }
+
+        #middle {
+            width: 40%;
+        }
+
+        #right {
+            width: 40%;
+        }
+
+        #bottom {
+            border: 1px solid #292828;
+            padding: 20px;
+            margin: 5px;
+            /*width: 80%;
+            min-height: 30%;*/
+            width: 100%;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="button-container">
+        <button onclick="button1()">撤销重做</button>
+        <button onclick="button2()">执行任务</button>
+    </div>
+
+    <div id="container">
+        <div id="left">
+            <ul id="list">
+                <li draggable="true" ondragstart="drag(event)">Item 1</li>
+                <li draggable="true" ondragstart="drag(event)">Item 2</li>
+                <li draggable="true" ondragstart="drag(event)">Item 3</li>
+            </ul>
+        </div>
+        <div id="middle" ondragover="allowDrop(event)" ondrop="drop(event)">
+            Drag and drop area
+        </div>
+        <div id="right">
+            <p>Records:</p>
+            <ul id="records"></ul>
+        </div>
+    </div>
+
+    <div id="container_bottom">
+        <div id="bottom">
+            <p>Logs:</p>
+            <textarea id="logs" cols="30" rows="5"></textarea>
+        </div>
+    </div>
+
+    <script>
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.innerText);
+        }
+
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            var data = ev.dataTransfer.getData("text");
+            var records = document.getElementById("records");
+            var li = document.createElement("li");
+            li.appendChild(document.createTextNode(data));
+            records.appendChild(li);
+
+            var logs = document.getElementById("logs");
+            logs.value += "Item dropped: " + data + "\n";
+        }
+
+        function button1() {
+            alert('Button 1 clicked!');
+        }
+        function button2() {
+            alert('Button 2 clicked!');
+        }
+    </script>
+
+</body>
+
+</html>

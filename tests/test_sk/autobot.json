@@ -1,0 +1,51 @@
+{
+    "dict": {
+        "operator": {
+            "logical": [
+                {
+                    "signal": "||",
+                    "key": "AND",
+                    "id": 0
+                },
+                {
+                    "signal": "||",
+                    "key": "OR",
+                    "id": 1
+                }
+            ],
+            "unary": {}
+        }
+    },
+    "language": "py",
+    "functions": [
+        {
+            "order": 1,
+            "name": "get_number",
+            "parameters": [
+                {
+                    "type": 1,
+                    "name": "param1"
+                },
+                {
+                    "type": 2,
+                    "name": "param2"
+                }
+            ],
+            "result": {
+                "type": 1,
+                "name": "ret"
+            }
+        }
+    ],
+    "objects": [
+        {
+            "id": "1000",
+            "name": "calc",
+            "function": {},
+            "value": {},
+            "loop": {},
+            "parameters": {},
+            "operator": {}
+        }
+    ]
+}

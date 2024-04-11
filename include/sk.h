@@ -170,6 +170,13 @@ SK_EXTERN int sk_icu_detect_type(const char *textIn, size_t len,
 
 SK_EXTERN int sk_ossl_md5(const char *src, size_t srcLen, char **dst,
                           size_t *dstLen);
+SK_EXTERN int sk_ossl_base64_encode(const char *src, size_t srcLen, char **dst,
+                                    size_t *dstLen);
+SK_EXTERN int sk_ossl_base64_decode(const char *src, size_t srcLen, char **dst,
+                                    size_t *dstLen);
+
+SK_EXTERN int sk_spawn(const char *file, const char **args, size_t argc,
+                       int wait);
 
 struct sk_tlock_s {
   void *data;

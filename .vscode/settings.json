@@ -133,7 +133,10 @@
     "messagecracker.h": "c",
     "csignal": "cpp",
     "panda.h": "c",
-    "interface.h": "c"
+    "interface.h": "c",
+    "uv.h": "c",
+    "quickfix.h": "c",
+    "curl.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

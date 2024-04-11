@@ -9,11 +9,12 @@ group("build_all") {
 
       # Only MSVC tool chain is supported on WINDOWS platform
       #"//build/3rdparty/cjson:cjson",
-      #"//build/3rdparty/curl:curl",
+      "//build/3rdparty/curl:curl",
+
       #"//build/3rdparty/fmt:fmt",
 
       #"//build/3rdparty/icu:icu",
-      "//build/3rdparty/libuv:libuv",
+      #"//build/3rdparty/libuv:libuv",
 
       #"//build/3rdparty/openssl:openssl",
 
