@@ -38,3 +38,6 @@
 [submodule "3rdparty/libuiohook"]
 	path = 3rdparty/libuiohook
 	url = git@github.com:kwhat/libuiohook.git
+[submodule "3rdparty/opencv"]
+	path = 3rdparty/opencv
+	url = git@github.com:opencv/opencv.git
