@@ -35,3 +35,6 @@
 [submodule "3rdparty/jsonnet"]
 	path = 3rdparty/jsonnet
 	url = https://github.com/google/jsonnet.git
+[submodule "3rdparty/libuiohook"]
+	path = 3rdparty/libuiohook
+	url = git@github.com:kwhat/libuiohook.git
