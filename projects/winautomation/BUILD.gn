@@ -1,0 +1,13 @@
+source_set("source_automation") {
+  sources = [ "automation.cc" ]
+
+  public_configs = [
+    "//build/deps:openssl",
+    "//build/deps:zlib",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("winautomation") {
+  deps = [ ":source_automation" ]
+}

@@ -1,0 +1,13 @@
+source_set("source_overlay") {
+  sources = [ "overlay.cc" ]
+
+  public_configs = [
+    "//build/deps:openssl",
+    "//build/deps:zlib",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("winoverlay") {
+  deps = [ ":source_overlay" ]
+}

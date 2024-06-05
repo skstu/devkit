@@ -20,6 +20,18 @@ cmake("opencv") {
     "-B",
     build_dir,
     "-DCMAKE_INSTALL_PREFIX=${install_dir}",
+    "-DBUILD_SHARED_LIBS=OFF",
+    "-DBUILD_IPP_IW=ON",
+    "-DBUILD_ITT=ON",
+    "-DBUILD_JASPER=ON",
+    "-DBUILD_JPEG=ON",
+    "-DBUILD_OPENJPEG=ON",
+    "-DBUILD_PACKAGE=ON",
+    "-DBUILD_PNG=ON",
+    "-DBUILD_PROTOBUF=ON",
+    "-DBUILD_WEBP=ON",
+    "-DBUILD_WITH_STATIC_CRT=ON",
+    "-DBUILD_ZLIB=ON",
   ]
 
   cmake_options_build = [

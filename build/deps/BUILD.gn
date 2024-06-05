@@ -122,3 +122,13 @@ config("libuiohook") {
   libs = [ system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/libuiohook/${current_cpu}/${compile_configure_type}/lib/libuiohook.a" ]
   defines = [ "CURL_STATICLIB" ]
 }
+
+config("opencv") {
+  include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/include" ]
+  libs = [
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibjpeg-turbo.a",
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibtiff.a",
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibwebp.a",
+    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/libzlib.a",
+  ]
+}

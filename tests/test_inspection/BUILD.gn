@@ -1,0 +1,9 @@
+executable("test_inspection") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//projects/inspection:inspection",
+    "//projects/stl:stl",
+  ]
+  public_configs = [ "//build/deps:fmt" ]
+}

@@ -1,9 +1,10 @@
-build_3rdparty = true
+build_3rdparty = false
 
 group("build_all") {
   if (build_3rdparty) {
     deps = [
-      "//build/3rdparty/libuiohook:libuiohook",
+      #"//build/3rdparty/libuiohook:libuiohook",
+      "//build/3rdparty/opencv:opencv",
       #"//build/3rdparty/fmt:fmt",
       #"//build/3rdparty/icu:icu",
       #"//build/3rdparty/libuv:libuv",

@@ -2,6 +2,26 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Test Inspection",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/out/test_inspection.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/msys64/mingw64/bin/gdb.exe",
+      "setupCommands": [
+        {
+          "text": "set target-triple x86_64-pc-windows-gnu",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Compile Debug On GN"
+    },
+    {
       "name": "Build With Ninja On Windows",
       "type": "cppdbg",
       "request": "launch",
