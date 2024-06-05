@@ -1,4 +1,5 @@
 # The location of the build configuration file.
 buildconfig = "//build/BUILDCONFIG.gn"
 
-script_executable = "python3"
+#script_executable = "python3"
+script_executable = "python"
