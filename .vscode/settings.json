@@ -203,4 +203,6 @@
   "liveServer.settings.port": 0,
   "cmake.configureOnOpen": false,
   "C_Cpp.clang_format_sortIncludes": null,
+  "gnformat.paths.gn": "C:\\devtools\\devtools\\bin\\gn\\gn-windows-amd64\\gn.exe",
+  "gnformat.paths.buildtools": "C:\\Developer\\electron-22.3.27\\src\\buildtools",
 }
