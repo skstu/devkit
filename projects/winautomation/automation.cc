@@ -51,32 +51,81 @@ void Automation::Stop() {
     threads_.clear();
   } while (0);
 }
-void Automation::Process() {
+void Automation::OnElementCaptureFinish(const IElement *pElement) const {
+  std::unique_lock<std::mutex> lock{*mutex_, std::defer_lock};
+  lock.lock();
+  if (capture_finish_cb_)
+    capture_finish_cb_(pElement);
+  lock.unlock();
+}
+void Automation::RegisterElementCaptureFinishCb(
+    const tfElementCaptureFinishCb &cb) {
+  std::unique_lock<std::mutex> lock{*mutex_, std::defer_lock};
+  lock.lock();
+  capture_finish_cb_ = cb;
+  lock.unlock();
+}
+IElement *Automation::GetElementOnUnderMouse(const long &x,
+                                             const long &y) const {
+  Element *result = nullptr;
   LRESULT hr = S_OK;
   IUIAutomation *pAutomation = nullptr;
   IUIAutomationElement *pElement = nullptr;
   do {
+    hr =
+        CoCreateInstance(__uuidof(CUIAutomation), nullptr, CLSCTX_INPROC_SERVER,
+                         __uuidof(IUIAutomation), (void **)&pAutomation);
+    if (FAILED(hr) || !pAutomation)
+      break;
+    POINT pt = {x, y};
+    hr = pAutomation->ElementFromPoint(pt, &pElement);
+    if (FAILED(hr) || !pElement)
+      break;
+    RECT boundingRect = {0};
+    hr = pElement->get_CurrentBoundingRectangle(&boundingRect);
+    if (FAILED(hr))
+      break;
+    result = new Element();
+    *result << boundingRect;
+    result->SetCaprutePoint(pt);
+  } while (0);
+  SK_RELEASE_PTR(pElement);
+  SK_RELEASE_PTR(pAutomation);
+  return dynamic_cast<IElement *>(result);
+}
+void Automation::Process() {
+  LRESULT hr = S_OK;
+  IUIAutomation *pAutomation = nullptr;
+  IUIAutomationElement *pElement = nullptr;
+
+  POINT pt_prev = {0};
+  POINT pt_next = {0};
+  do {
     SK_RELEASE_PTR(pElement);
     SK_RELEASE_PTR(pAutomation);
     do {
+      if (FALSE == GetCursorPos(&pt_next))
+        break;
+      if (memcmp(&pt_prev, &pt_next, sizeof(POINT)) == 0)
+        break;
       hr = CoCreateInstance(__uuidof(CUIAutomation), nullptr,
                             CLSCTX_INPROC_SERVER, __uuidof(IUIAutomation),
                             (void **)&pAutomation);
       if (FAILED(hr) || !pAutomation)
         break;
-      POINT pt = {0};
-      if (FALSE == GetCursorPos(&pt))
-        break;
-      hr = pAutomation->ElementFromPoint(pt, &pElement);
+      hr = pAutomation->ElementFromPoint(pt_next, &pElement);
       if (FAILED(hr) || !pElement)
         break;
       RECT boundingRect = {0};
       hr = pElement->get_CurrentBoundingRectangle(&boundingRect);
       if (FAILED(hr))
         break;
-      Element *pElement = new Element();
-      OnCapruteFinish(dynamic_cast<IElement *>(pElement));
-      SK_RELEASE_PTR(pElement);
+      Element *pEle = new Element();
+      *pEle << boundingRect;
+      pEle->SetCaprutePoint(pt_next);
+      OnElementCaptureFinish(pEle);
+      SK_RELEASE_PTR(pEle);
+      memcpy(&pt_prev, &pt_next, sizeof(POINT));
     } while (0);
     if (!open_.load())
       break;
@@ -84,20 +133,6 @@ void Automation::Process() {
   } while (1);
   SK_RELEASE_PTR(pElement);
   SK_RELEASE_PTR(pAutomation);
-}
-void Automation::OnCapruteFinish(const IElement *pElement) const {
-  std::unique_lock<std::mutex> lock{*mutex_, std::defer_lock};
-  lock.lock();
-  if (caprute_finish_cb_) {
-    caprute_finish_cb_(pElement);
-  }
-  lock.unlock();
-}
-void Automation::RegisterCapruteFinishCb(const tfCapruteFinishCb &cb) {
-  std::unique_lock<std::mutex> lock{*mutex_, std::defer_lock};
-  lock.lock();
-  caprute_finish_cb_ = cb;
-  lock.unlock();
 }
 Automation *__gpAutomation = nullptr;
 ///////////////////////////////////////////////////////////////////////////////////////////

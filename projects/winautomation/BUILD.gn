@@ -1,5 +1,8 @@
 source_set("source_automation") {
-  sources = [ "automation.cc" ]
+  sources = [
+    "automation.cc",
+    "element.cc",
+  ]
 
   public_configs = [
     "//build/deps:openssl",

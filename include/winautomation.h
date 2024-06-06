@@ -34,16 +34,20 @@ public:
   virtual const IPosition *GetPosition() const = 0;
   virtual void Release() const = 0;
 };
+
 class IAutomation : public Interface<IAutomation> {
-public:
-  using tfCapruteFinishCb = std::function<void(const IElement *)>;
+protected:
+  using tfElementCaptureFinishCb = std::function<void(const IElement *)>;
 
 public:
   virtual bool Start() = 0;
   virtual void Stop() = 0;
   virtual bool Ready() const = 0;
   virtual void Release() const = 0;
-  virtual void RegisterCapruteFinishCb(const tfCapruteFinishCb &) = 0;
+  virtual IElement *GetElementOnUnderMouse(const long &,
+                                           const long &) const = 0;
+  virtual void
+  RegisterElementCaptureFinishCb(const tfElementCaptureFinishCb &) = 0;
 };
 } // namespace win
 

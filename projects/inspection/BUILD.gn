@@ -4,6 +4,8 @@ source_set("source_inspection") {
   public_configs = [
     "//build/deps:openssl",
     "//build/deps:zlib",
+    "//build/deps:fmt",
+    "//build/deps:icu",
   ]
   defines = [ "SHARED_IMPLEMENTATION" ]
   deps = [

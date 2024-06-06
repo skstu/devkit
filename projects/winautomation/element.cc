@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+////////////////////////////////////////////////////////////////////////////////////////////////
 Point::Point() {
 }
 Point::Point(const PixelType &_x, const PixelType &_y) : x(_x), y(_y) {
@@ -7,11 +7,26 @@ Point::Point(const PixelType &_x, const PixelType &_y) : x(_x), y(_y) {
 
 Point::~Point() {
 }
+void Point::operator=(const POINT &pt) {
+  x = pt.x;
+  y = pt.y;
+}
 void Point::operator=(const Point &obj) {
   x = obj.x;
   y = obj.y;
 }
-bool Point::operator==(const Point &obj) {
+bool Point::operator==(const POINT &pt) const {
+  bool result = false;
+  do {
+    if (x != pt.x)
+      break;
+    if (y != pt.y)
+      break;
+    result = true;
+  } while (0);
+  return result;
+}
+bool Point::operator==(const Point &obj) const {
   bool result = false;
   do {
     if (x != obj.x)
@@ -31,7 +46,7 @@ const PixelType &Point::GetX() const {
 const PixelType &Point::GetY() const {
   return y;
 }
-
+////////////////////////////////////////////////////////////////////////////////////////////////
 Rect::Rect() {
 }
 Rect::Rect(const RECT &rect)
@@ -76,6 +91,7 @@ PixelType Rect::GetWidth() const {
 PixelType Rect::GetHeight() const {
   return bottom - top;
 }
+////////////////////////////////////////////////////////////////////////////////////////////////
 Position::Position() {
   point_ = new Point();
   rect_ = new Rect();
@@ -89,13 +105,19 @@ Position::~Position() {
 void Position::Release() const {
   delete this;
 }
+void Position::operator<<(const RECT &rect) {
+  *rect_ = rect;
+}
+void Position::operator<<(const POINT &pt) {
+  *point_ = pt;
+}
 const IPoint *Position::GetPoint() const {
   return point_;
 }
 const IRect *Position::GetRect() const {
   return rect_;
 }
-
+////////////////////////////////////////////////////////////////////////////////////////////////
 Element::Element() {
   Init();
 }
@@ -115,8 +137,23 @@ void Element::Release() const {
   delete this;
 }
 const IPoint *Element::GetCaprutePoint() const {
+  std::lock_guard<std::mutex> lock{*mutex_};
   return dynamic_cast<IPoint *>(caprute_point_);
 }
 const IPosition *Element::GetPosition() const {
+  std::lock_guard<std::mutex> lock{*mutex_};
   return dynamic_cast<IPosition *>(position_);
+}
+void Element::SetCaprutePoint(const POINT &pt) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  *caprute_point_ = pt;
+}
+void Element::operator<<(const RECT &rect) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  *position_ << rect;
+}
+
+void Element::operator<<(const POINT &pt) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  *position_ << pt;
 }

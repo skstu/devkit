@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-static std::atomic_bool gsIsProcessedControl = false;
-
 static bool logger_proc(unsigned int level, const char *format, ...) {
   bool status = false;
 
@@ -46,8 +44,8 @@ static void dispatch_proc(uiohook_event *const event) {
     switch (event->data.keyboard.keycode) {
     case VC_CONTROL_L:
     case VC_CONTROL_R: {
-      if (!gsIsProcessedControl.load())
-        gsIsProcessedControl.store(true);
+      if (!__gpHook->GetControlState())
+        __gpHook->SetControlState(true);
     } break;
     default:
       break;
@@ -61,8 +59,8 @@ static void dispatch_proc(uiohook_event *const event) {
     } break;
     case VC_CONTROL_L:
     case VC_CONTROL_R: {
-      if (gsIsProcessedControl.load())
-        gsIsProcessedControl.store(false);
+      if (__gpHook->GetControlState())
+        __gpHook->SetControlState(false);
     } break;
     default:
       break;
@@ -77,16 +75,21 @@ static void dispatch_proc(uiohook_event *const event) {
   case EVENT_MOUSE_RELEASED: {
     switch (event->data.mouse.button) {
     case MOUSE_BUTTON1: {
-      if (!gsIsProcessedControl.load())
+      if (!__gpHook->GetControlState())
         break;
-      std::cout << "capture . . ." << std::endl;
+      bool is_exit = false;
+      __gpHook->OnCaptureFinish(event->data.mouse.x, event->data.mouse.y,
+                                is_exit);
+      if (is_exit)
+        hook_stop();
+      // std::cout << "capture . . ." << std::endl;
     } break;
     default:
       break;
     }
   } break;
   case EVENT_MOUSE_MOVED: {
-
+    __gpHook->OnMouseMove(event->data.mouse.x, event->data.mouse.y);
   } break;
   case EVENT_MOUSE_DRAGGED: {
 
@@ -114,6 +117,32 @@ bool Hook::Ready() const {
 void Hook::Init() {
 }
 void Hook::UnInit() {
+}
+bool Hook::GetControlState() const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  return processed_control_.load();
+}
+void Hook::SetControlState(const bool &processed) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  processed_control_.store(processed);
+}
+void Hook::OnMouseMove(const long &x, const long &y) const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  if (mouse_move_cb_)
+    mouse_move_cb_(x, y);
+}
+void Hook::OnCaptureFinish(const long &x, const long &y, bool &exit) const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  if (capture_finish_cb_)
+    capture_finish_cb_(x, y, exit);
+}
+void Hook::RegisterMouseMoveCb(const tfMouseMoveCb &cb) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  mouse_move_cb_ = cb;
+}
+void Hook::RegisterCaptureFinishCb(const tfCaptureFinishCb &cb) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  capture_finish_cb_ = cb;
 }
 bool Hook::Start() {
   do {

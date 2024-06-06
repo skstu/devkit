@@ -141,7 +141,10 @@
     "expected": "cpp",
     "winoverlay.h": "c",
     "uiohook.h": "c",
-    "*.rh": "cpp"
+    "*.rh": "cpp",
+    "element.h": "c",
+    "winautomation.h": "c",
+    "tests.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

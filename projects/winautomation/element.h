@@ -7,6 +7,7 @@ public:
   Point(const PixelType &, const PixelType &);
   ~Point();
   void Release() const override final;
+  void operator=(const POINT &);
 
 protected:
   const PixelType &GetX() const override final;
@@ -14,11 +15,13 @@ protected:
 
 public:
   void operator=(const Point &obj);
-  bool operator==(const Point &obj);
+  bool operator==(const Point &obj) const;
+  bool operator==(const POINT &pt) const;
 
 private:
   PixelType x = 0;
   PixelType y = 0;
+  std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 
 class Rect final : public IRect {
@@ -45,6 +48,7 @@ private:
   PixelType top = 0;
   PixelType right = 0;
   PixelType bottom = 0;
+  std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 
 class Position final : public IPosition {
@@ -52,6 +56,8 @@ public:
   Position();
   ~Position();
   void Release() const override final;
+  void operator<<(const RECT &);
+  void operator<<(const POINT &);
 
 protected:
   const IPoint *GetPoint() const override final;
@@ -60,12 +66,16 @@ protected:
 private:
   Rect *rect_ = nullptr;
   Point *point_ = nullptr;
+  std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 
 class Element final : public IElement {
 public:
   Element();
   ~Element();
+
+  void operator<<(const RECT &);
+  void operator<<(const POINT &);
 
 private:
   void Init();
@@ -76,8 +86,12 @@ public:
   const IPoint *GetCaprutePoint() const override final;
   const IPosition *GetPosition() const override final;
 
+public:
+  void SetCaprutePoint(const POINT &);
+
 private:
   Point *caprute_point_ = nullptr;
   Position *position_ = nullptr;
+  std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 #endif //__PROJECTS_WINAUTOMATION_ELEMENT_H_
