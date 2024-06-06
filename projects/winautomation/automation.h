@@ -18,7 +18,7 @@ protected:
   void RegisterCapruteFinishCb(const tfCapruteFinishCb &) override final;
 
 private:
-  void OnCapruteFinish(const IAutomation::IElement *) const;
+  void OnCapruteFinish(const IElement *) const;
 
 private:
   std::vector<std::thread> threads_;

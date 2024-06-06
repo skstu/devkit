@@ -74,7 +74,9 @@ void Automation::Process() {
       hr = pElement->get_CurrentBoundingRectangle(&boundingRect);
       if (FAILED(hr))
         break;
-      OnCapruteFinish(nullptr);
+      Element *pElement = new Element();
+      OnCapruteFinish(dynamic_cast<IElement *>(pElement));
+      SK_RELEASE_PTR(pElement);
     } while (0);
     if (!open_.load())
       break;
@@ -83,7 +85,7 @@ void Automation::Process() {
   SK_RELEASE_PTR(pElement);
   SK_RELEASE_PTR(pAutomation);
 }
-void Automation::OnCapruteFinish(const IAutomation::IElement *pElement) const {
+void Automation::OnCapruteFinish(const IElement *pElement) const {
   std::unique_lock<std::mutex> lock{*mutex_, std::defer_lock};
   lock.lock();
   if (caprute_finish_cb_) {

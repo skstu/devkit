@@ -19,7 +19,10 @@ void Inspect::Init() {
     // pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
     // pOverlay_ = win::IOverlay::Create("winoverlay.dll");
     pAutomation_ = win::IAutomation::Create("winautomation.dll");
-
+    pAutomation_->RegisterCapruteFinishCb([&](const IElement *pElement) {
+      auto ss = 0;
+      auto sk = 0;
+    });
     ready_.store(true);
   } while (0);
 }

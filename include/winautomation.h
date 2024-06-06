@@ -4,28 +4,38 @@
 #include "interface.h"
 
 namespace win {
+using PixelType = double;
 
+class IPoint {
+public:
+  virtual void Release() const = 0;
+  virtual const PixelType &GetX() const = 0;
+  virtual const PixelType &GetY() const = 0;
+};
+class IRect {
+public:
+  virtual void Release() const = 0;
+  virtual const PixelType &Left() const = 0;
+  virtual const PixelType &Top() const = 0;
+  virtual const PixelType &Right() const = 0;
+  virtual const PixelType &Bottom() const = 0;
+  virtual PixelType GetWidth() const = 0;
+  virtual PixelType GetHeight() const = 0;
+};
+class IPosition {
+public:
+  virtual const IPoint *GetPoint() const = 0;
+  virtual const IRect *GetRect() const = 0;
+  virtual void Release() const = 0;
+};
+class IElement {
+public:
+  virtual const IPoint *GetCaprutePoint() const = 0;
+  virtual const IPosition *GetPosition() const = 0;
+  virtual void Release() const = 0;
+};
 class IAutomation : public Interface<IAutomation> {
 public:
-  class IPoint {
-  public:
-    virtual void Release() const = 0;
-  };
-  class IRect {
-  public:
-    virtual void Release() const = 0;
-  };
-  class IPosition {
-  public:
-    virtual void Release() const = 0;
-  };
-  class IElement {
-  public:
-    virtual const IPoint *GetCaprutePoint() const = 0;
-    virtual const IRect *GetRect() const = 0;
-    virtual const IPosition *GetPos() const = 0;
-    virtual void Release() const = 0;
-  };
   using tfCapruteFinishCb = std::function<void(const IElement *)>;
 
 public:
