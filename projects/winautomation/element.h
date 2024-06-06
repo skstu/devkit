@@ -40,8 +40,8 @@ protected:
   const PixelType &Top() const override final;
   const PixelType &Right() const override final;
   const PixelType &Bottom() const override final;
-  PixelType GetWidth() const override final;
-  PixelType GetHeight() const override final;
+  PixelType Width() const override final;
+  PixelType Height() const override final;
 
 private:
   PixelType left = 0;
@@ -72,12 +72,12 @@ private:
 class Element final : public IElement {
 public:
   Element();
-  ~Element();
 
   void operator<<(const RECT &);
   void operator<<(const POINT &);
 
 private:
+  ~Element();
   void Init();
   void UnInit();
 
@@ -90,8 +90,8 @@ public:
   void SetCaprutePoint(const POINT &);
 
 private:
-  Point *caprute_point_ = nullptr;
   Position *position_ = nullptr;
+  Point *caprute_point_ = nullptr;
   std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 #endif //__PROJECTS_WINAUTOMATION_ELEMENT_H_

@@ -124,7 +124,8 @@ void Automation::Process() {
       *pEle << boundingRect;
       pEle->SetCaprutePoint(pt_next);
       OnElementCaptureFinish(pEle);
-      SK_RELEASE_PTR(pEle);
+      //!@ 由外部调用释放
+      /*SK_RELEASE_PTR(pEle);*/
       memcpy(&pt_prev, &pt_next, sizeof(POINT));
     } while (0);
     if (!open_.load())

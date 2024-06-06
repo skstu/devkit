@@ -32,10 +32,10 @@ static bool logger_proc(unsigned int level, const char *format, ...) {
 static void dispatch_proc(uiohook_event *const event) {
   switch (event->type) {
   case EVENT_HOOK_ENABLED: {
-
+    std::cout << "Hook enabled." << std::endl;
   } break;
   case EVENT_HOOK_DISABLED: {
-
+    std::cout << "Hook disabled." << std::endl;
   } break;
   case EVENT_KEY_TYPED: {
 
@@ -82,7 +82,7 @@ static void dispatch_proc(uiohook_event *const event) {
                                 is_exit);
       if (is_exit)
         hook_stop();
-      // std::cout << "capture . . ." << std::endl;
+      std::cout << "capture . . ." << std::endl;
     } break;
     default:
       break;

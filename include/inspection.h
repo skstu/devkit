@@ -6,8 +6,8 @@
 namespace inspect {
 class Inspection : public Interface<Inspection> {
 public:
-  virtual bool Start() = 0;
   virtual void Stop() = 0;
+  virtual bool Start() = 0;
   virtual bool Ready() const = 0;
   virtual void Release() const = 0;
 };

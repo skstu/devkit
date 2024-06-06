@@ -16,22 +16,37 @@ void Inspect::Init() {
   do {
     if (ready_.load())
       break;
-    pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
     pOverlay_ = win::IOverlay::Create("winoverlay.dll");
+    pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
     pAutomation_ = win::IAutomation::Create("winautomation.dll");
     pUiohook_->RegisterMouseMoveCb([&](const long &x, const long &y) {
       std::string output = fmt::format("pt(x:{},y:{})", x, y);
-      std::cout << output << std::endl;
-      /*auto pElement = pAutomation_->GetElementOnUnderMouse(x, y);
-       */
+      // std::cout << output << std::endl;
     });
-    pAutomation_->RegisterElementCaptureFinishCb([](const IElement *pElement) {
+    pUiohook_->RegisterCaptureFinishCb(
+        [&](const long &x, const long &y, bool &exit) {
+          /*std::cout << fmt::format("Capture success on point(x:{},y:{}).", x,
+             y)
+                    << std::endl;*/
+          /*exit = false;
+          auto pElement = pAutomation_->GetElementOnUnderMouse(x, y);
+          if (pElement) {
+            std::cout << "Found element." << std::endl;
+          } else {
+            std::cout << "Not found element." << std::endl;
+          }*/
+        });
+    pAutomation_->RegisterElementCaptureFinishCb([&](const IElement *pElement) {
       if (pElement) {
         auto pos = pElement->GetPosition();
         auto pt = pos->GetPoint();
         std::string output = fmt::format("pt(x:{},y:{}) is one element.",
                                          pt->GetX(), pt->GetY());
-        std::cout << output << std::endl;
+        // std::cout << output << std::endl;
+        auto rect = pos->GetRect();
+        pOverlay_->AppendPos((long)rect->Left(), (long)rect->Top(),
+                             (long)rect->Width(), (long)rect->Height());
+        pElement->Release();
       }
     });
     ready_.store(true);
@@ -39,7 +54,6 @@ void Inspect::Init() {
 }
 void Inspect::UnInit() {
   do {
-
     if (!ready_.load())
       break;
 

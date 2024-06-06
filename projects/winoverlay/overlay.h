@@ -44,12 +44,17 @@ protected:
   void Stop() override final;
   bool Ready() const override final;
   void Release() const override final;
+  void AppendPos(const long &, const long &, const long &,
+                 const long &) override final;
+  bool Screenshot(char **, size_t *) const override final;
+  void Free(void **) const override final;
 
 private:
   void WindowThread();
   HWND hwnd_ = nullptr;
   std::vector<std::thread> threads_;
   std::atomic_bool open_ = false;
+  stl::container::queue<RECT> posq_;
 };
 
 #ifdef __cplusplus

@@ -85,10 +85,10 @@ const PixelType &Rect::Right() const {
 const PixelType &Rect::Bottom() const {
   return bottom;
 }
-PixelType Rect::GetWidth() const {
+PixelType Rect::Width() const {
   return right - left;
 }
-PixelType Rect::GetHeight() const {
+PixelType Rect::Height() const {
   return bottom - top;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////

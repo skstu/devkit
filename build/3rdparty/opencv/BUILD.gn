@@ -20,7 +20,7 @@ cmake("opencv") {
     "-B",
     build_dir,
     "-DCMAKE_INSTALL_PREFIX=${install_dir}",
-    "-DBUILD_SHARED_LIBS=OFF",
+    "-DBUILD_SHARED_LIBS=ON",
     "-DBUILD_IPP_IW=ON",
     "-DBUILD_ITT=ON",
     "-DBUILD_JASPER=ON",

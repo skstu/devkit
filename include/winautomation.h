@@ -19,8 +19,8 @@ public:
   virtual const PixelType &Top() const = 0;
   virtual const PixelType &Right() const = 0;
   virtual const PixelType &Bottom() const = 0;
-  virtual PixelType GetWidth() const = 0;
-  virtual PixelType GetHeight() const = 0;
+  virtual PixelType Width() const = 0;
+  virtual PixelType Height() const = 0;
 };
 class IPosition {
 public:

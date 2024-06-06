@@ -4,13 +4,52 @@ static ULONG_PTR gdiplustoken_ = 0;
 static Gdiplus::GdiplusStartupInput gdiplusStartupInput_ = {0};
 static const wchar_t CLASS_NAME[] = L"OverlayWindowClassBySkstu";
 
+static void CaptureScreenshot(RECT rect, const wchar_t *filePath) {
+  // 获取屏幕设备上下文
+  HDC hScreenDC = GetDC(NULL);
+  HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
+
+  // 创建兼容的位图
+  HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, rect.right - rect.left,
+                                           rect.bottom - rect.top);
+  HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
+
+  // 拷贝屏幕内容到内存设备上下文
+  BitBlt(hMemoryDC, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
+         hScreenDC, rect.left, rect.top, SRCCOPY);
+
+  // 创建 GDI+ 位图
+  Gdiplus::Bitmap bitmap(hBitmap, NULL);
+
+  // 保存位图到文件
+  CLSID clsid;
+  CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}",
+                  &clsid); // PNG 编码器 CLSID
+
+  IStream *pStream = nullptr;
+
+  bitmap.Save(pStream, &clsid, NULL);
+
+  // 清理
+  SelectObject(hMemoryDC, hOldBitmap);
+  DeleteObject(hBitmap);
+  DeleteDC(hMemoryDC);
+  ReleaseDC(NULL, hScreenDC);
+}
+
 static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                        LPARAM lParam) {
+
+  LONG_PTR theClass = GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+
   switch (uMsg) {
   case WM_CREATE: {
     return 0;
   } break;
   case WM_PAINT: {
+    auto _this = reinterpret_cast<Overlay *>(theClass);
+    if (!_this)
+      break;
     PAINTSTRUCT ps;
     HDC hdc = BeginPaint(hwnd, &ps);
 
@@ -32,12 +71,13 @@ static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     // 创建Graphics对象
     Gdiplus::Graphics graphics(hdc);
     // 创建一个红色的画笔
-    Gdiplus::Pen pen(Gdiplus::Color(255, 255, 215, 0), 2);
+    // Gdiplus::Pen pen(Gdiplus::Color(255, 255, 215, 0), 2);
+    Gdiplus::Pen pen(Gdiplus::Color(255, 0, 122, 204), 5);
     // 绘制矩形边框
     int left = rect.left;
     int top = rect.top;
-    int width = rect.right - rect.left - 1;
-    int height = rect.bottom - rect.top - 1;
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
     // 调用明确的DrawRectangle重载函数
     graphics.DrawRectangle(&pen, left, top, width, height);
 #endif
@@ -105,6 +145,35 @@ void Overlay::Stop() {
     threads_.clear();
   } while (0);
 }
+bool Overlay::Screenshot(char **buffer, size_t *len) const {
+  bool result = false;
+  *buffer = nullptr;
+  *len = 0;
+  do {
+
+    result = true;
+  } while (0);
+  return result;
+}
+void Overlay::Free(void **p) const {
+  do {
+    if (!(*p))
+      break;
+    free(*p);
+    *p = nullptr;
+  } while (0);
+}
+void Overlay::AppendPos(const long &x, const long &y, const long &width,
+                        const long &height) {
+  RECT pos = {0};
+  pos.left = x;
+  pos.top = y;
+  pos.right = x + width;
+  pos.bottom = y + height;
+  pos.right -= 1;
+  pos.bottom -= 1;
+  posq_.push(pos);
+}
 void Overlay::WindowThread() {
   do {
     WNDCLASSW wc = {};
@@ -118,6 +187,8 @@ void Overlay::WindowThread() {
                             GetModuleHandleW(NULL), NULL);
     if (!hwnd_)
       break;
+
+    SetWindowLongPtrW(hwnd_, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
 
     if (FALSE ==
         SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 0, LWA_COLORKEY))
@@ -146,6 +217,14 @@ void Overlay::WindowThread() {
       if (!open_.load()) {
         SendMessageW(hwnd_, WM_DESTROY, 0, 0);
         break;
+      } else {
+        auto poss = posq_.pops();
+        for (const auto &pos : poss) {
+          SetWindowPos(hwnd_, HWND_TOPMOST, pos.left, pos.top,
+                       pos.right - pos.left, pos.bottom - pos.top,
+                       SWP_SHOWWINDOW);
+          InvalidateRect(hwnd_, NULL, TRUE);
+        }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     } while (1);
@@ -299,6 +378,19 @@ void Overlay::Update(const RECT &rect) const {
   } while (0);
 }
 
+/*
+void Overlay::AppendPos(const long &x, const long &y, const long &width, const long &height) {
+  RECT pos = {0};
+  pos.left = x;
+  pos.top = y;
+  pos.right = x+width;
+  pos.bottom = y+height;
+  posq_.push(pos);
+}*/
+ void Overlay::Update(){
+
+ }
+
 
 void Overlay::WindowProc() {
   do {
@@ -335,6 +427,15 @@ void Overlay::WindowProc() {
           SendMessageW(hwnd_, WM_DESTROY, 0, 0);
           break;
         } else {
+
+          auto poss = posq_.pops();
+          for(const auto& pos : poss) {
+                SetWindowPos(hwnd_, HWND_TOPMOST, rect.left, rect.top,
+                 rect.right - rect.left, rect.bottom - rect.top,
+                 SWP_SHOWWINDOW);
+    InvalidateRect(hwnd_, NULL, TRUE);
+          }
+          
           TranslateMessage(&msg);
           DispatchMessage(&msg);
         }
