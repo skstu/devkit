@@ -146,7 +146,8 @@
     "winautomation.h": "c",
     "tests.h": "c",
     "atlcom.h": "c",
-    "opencv.hpp": "c"
+    "opencv.hpp": "c",
+    "shared_library.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",
