@@ -125,10 +125,10 @@ config("libuiohook") {
 
 config("opencv") {
   include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/include" ]
-  libs = [
-    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibjpeg-turbo.a",
-    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibtiff.a",
-    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibwebp.a",
-    system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/libzlib.a",
-  ]
+  #libs = [
+  #  system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibjpeg-turbo.a",
+  #  system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibtiff.a",
+  #  system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/liblibwebp.a",
+  #  system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/opencv/${current_cpu}/${compile_configure_type}/${current_cpu}/mingw/staticlib/libzlib.a",
+  #]
 }

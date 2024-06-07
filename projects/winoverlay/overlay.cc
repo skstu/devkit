@@ -3,8 +3,9 @@
 static ULONG_PTR gdiplustoken_ = 0;
 static Gdiplus::GdiplusStartupInput gdiplusStartupInput_ = {0};
 static const wchar_t CLASS_NAME[] = L"OverlayWindowClassBySkstu";
+static const long window_size_offset = 5; //!@ px
 
-static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
+static bool __Screenshot(const RECT &rect, char **buffer, size_t *len) {
   bool result = false;
   *buffer = nullptr;
   *len = 0;
@@ -13,8 +14,6 @@ static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
   HDC hScreenDC = nullptr;
   HDC hMemoryDC = nullptr;
   do {
-    RECT rect;
-    GetWindowRect(hwnd, &rect);
     hScreenDC = GetDC(NULL);
     hMemoryDC = CreateCompatibleDC(hScreenDC);
     if (!hScreenDC || !hMemoryDC)
@@ -29,15 +28,13 @@ static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
                         SRCCOPY))
       break;
     Gdiplus::Bitmap bitmap(hBitmap, NULL);
-    if (FAILED(CreateStreamOnHGlobal(NULL, TRUE, &pStream)))
+    if (FAILED(CreateStreamOnHGlobal(NULL, TRUE, &pStream)) || !pStream)
       break;
     CLSID clsid;
     if (FAILED(
             CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}", &clsid)))
       break;
     if (Gdiplus::Status::Ok != bitmap.Save(pStream, &clsid, NULL))
-      break;
-    if (!pStream)
       break;
     STATSTG statstg = {0};
     if (FAILED(pStream->Stat(&statstg, STATFLAG_NONAME)))
@@ -48,7 +45,7 @@ static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
     LARGE_INTEGER liZero = {};
     pStream->Seek(liZero, STREAM_SEEK_SET, NULL);
     ULONG bytesRead = 0;
-    pStream->Read(buffer, streamSize, &bytesRead);
+    pStream->Read(*buffer, streamSize, &bytesRead);
     SelectObject(hMemoryDC, hOldBitmap);
     result = true;
   } while (0);
@@ -104,7 +101,7 @@ static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     Gdiplus::Graphics graphics(hdc);
     // 创建一个红色的画笔
     // Gdiplus::Pen pen(Gdiplus::Color(255, 255, 215, 0), 2);
-    Gdiplus::Pen pen(Gdiplus::Color(255, 0, 122, 204), 3);
+    Gdiplus::Pen pen(Gdiplus::Color(100, 0, 122, 204), 2);
     // 绘制矩形边框
     int left = rect.left;
     int top = rect.top;
@@ -180,24 +177,26 @@ void Overlay::Stop() {
     threads_.clear();
   } while (0);
 }
-bool Overlay::Screenshot(char **buffer, size_t *len) const {
+bool Overlay::Screenshot(const tfStreamCb &stream_cb) const {
   bool result = false;
-  *buffer = nullptr;
-  *len = 0;
+  char *buffer = nullptr;
+  size_t len = 0;
   do {
-    if (!__Screenshot(hwnd_, buffer, len))
+    RECT rtClient = {0};
+    if (FALSE == GetClientRect(hwnd_, &rtClient))
       break;
+    rtClient.left += window_size_offset;
+    rtClient.top += window_size_offset;
+    rtClient.right -= window_size_offset;
+    rtClient.bottom -= window_size_offset;
+    if (!__Screenshot(rtClient, &buffer, &len))
+      break;
+    if (stream_cb)
+      stream_cb(buffer, len);
     result = true;
   } while (0);
+  SK_FREE_PTR(buffer);
   return result;
-}
-void Overlay::Free(void **p) const {
-  do {
-    if (!(*p))
-      break;
-    free(*p);
-    *p = nullptr;
-  } while (0);
 }
 void Overlay::AppendPos(const long &x, const long &y, const long &width,
                         const long &height) {
@@ -206,6 +205,12 @@ void Overlay::AppendPos(const long &x, const long &y, const long &width,
   pos.top = y;
   pos.right = x + width;
   pos.bottom = y + height;
+
+  pos.left -= window_size_offset;
+  pos.top -= window_size_offset;
+  pos.right += window_size_offset;
+  pos.bottom += window_size_offset;
+
   pos.right -= 1;
   pos.bottom -= 1;
   posq_.push(pos);

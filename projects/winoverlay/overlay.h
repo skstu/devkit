@@ -17,8 +17,7 @@ protected:
   void Release() const override final;
   void AppendPos(const long &, const long &, const long &,
                  const long &) override final;
-  bool Screenshot(char **, size_t *) const override final;
-  void Free(void **) const override final;
+  bool Screenshot(const tfStreamCb &) const override final;
 
 private:
   void WindowThread();

@@ -9,6 +9,7 @@ source_set("source_inspection") {
   ]
   defines = [ "SHARED_IMPLEMENTATION" ]
   deps = [
+    "//projects/opencv:opencv",
     "//projects/stl:stl",
     "//projects/uiohook:uiohook",
     "//projects/winautomation:winautomation",

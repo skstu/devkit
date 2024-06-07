@@ -40,7 +40,7 @@ void Hook::UnInit() {
 }
 void Hook::AppendEvent(const uiohook_event *ev) {
   uiohook_event _ev;
-  memcpy(&_ev, &ev, sizeof(uiohook_event));
+  memcpy(&_ev, ev, sizeof(uiohook_event));
   uiohook_event_q_.push(_ev);
 }
 bool Hook::GetControlState() const {
@@ -115,9 +115,7 @@ void Hook::EventNotify() {
       auto evs = uiohook_event_q_.pops();
       if (evs.empty())
         break;
-      std::cout << evs.size() << std::endl;
       for (const auto &event : evs) {
-#if 0
         switch (event.type) {
         case EVENT_HOOK_ENABLED: {
           std::cout << "Hook enabled." << std::endl;
@@ -170,7 +168,7 @@ void Hook::EventNotify() {
                                       is_exit);
             if (is_exit)
               hook_stop();
-            std::cout << "capture . . ." << std::endl;
+            // std::cout << "capture . . ." << std::endl;
           } break;
           default:
             break;
@@ -188,7 +186,6 @@ void Hook::EventNotify() {
         default:
           break;
         }
-#endif
       }
     } while (0);
     if (!open_.load())

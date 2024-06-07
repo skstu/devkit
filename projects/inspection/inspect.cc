@@ -23,19 +23,32 @@ void Inspect::Init() {
       std::string output = fmt::format("pt(x:{},y:{})", x, y);
       // std::cout << output << std::endl;
     });
-    pUiohook_->RegisterCaptureFinishCb(
-        [&](const long &x, const long &y, bool &exit) {
-          /*std::cout << fmt::format("Capture success on point(x:{},y:{}).", x,
-             y)
-                    << std::endl;*/
-          /*exit = false;
-          auto pElement = pAutomation_->GetElementOnUnderMouse(x, y);
-          if (pElement) {
-            std::cout << "Found element." << std::endl;
-          } else {
-            std::cout << "Not found element." << std::endl;
-          }*/
-        });
+
+    pUiohook_->RegisterCaptureFinishCb([&](const long &x, const long &y,
+                                           bool &exit) {
+      /*std::cout << fmt::format("Capture success on point(x:{},y:{}).", x,
+         y)
+                << std::endl;*/
+      /*exit = false;
+      auto pElement = pAutomation_->GetElementOnUnderMouse(x, y);
+      if (pElement) {
+        std::cout << "Found element." << std::endl;
+      } else {
+        std::cout << "Not found element." << std::endl;
+      }*/
+
+      // std::cout << "caprute finished." << std::endl;
+      pOverlay_->Screenshot([](const char *buffer, const size_t &buffer_len) {
+        // std::cout << buffer_len << std::endl;
+        auto pngFilePathname =
+            fmt::format(R"(d:\capute_png_s\{}.png)", stl::Time::TimeStamp());
+        if (stl::File::WriteFile(pngFilePathname,
+                                 std::string(buffer, buffer_len)))
+          std::cout << "Write file success." << std::endl;
+        else
+          std::cout << "Write file failed." << std::endl;
+      });
+    });
     pAutomation_->RegisterElementCaptureFinishCb([&](const IElement *pElement) {
       if (pElement) {
         auto pos = pElement->GetPosition();

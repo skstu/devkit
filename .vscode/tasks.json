@@ -57,6 +57,34 @@
         "showReuseMessage": false,
         "clear": false
       }
+    },
+    {
+      "label": "Test Inspection",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        [
+          "gn gen out",
+          "&&",
+          "ninja -C out",
+        ]
+      ],
+      "problemMatcher": [
+        "$gcc",
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": false
+      }
     }
   ],
   "version": "2.0.0"
