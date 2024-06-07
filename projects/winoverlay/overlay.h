@@ -1,35 +1,6 @@
 #ifndef __PROJECTS_WINOVERLAY_OVERLAY_H_
 #define __PROJECTS_WINOVERLAY_OVERLAY_H_
-#if 0
 
-class Overlay {
-public:
-  Overlay();
-  ~Overlay();
-
-private:
-  void Init();
-  void UnInit();
-
-public:
-  bool Create();
-  void Destory();
-  void Release() const;
-  void Update(const RECT &) const;
-
-private:
-  HWND hwnd_ = nullptr;
-  IUIAutomation *pAutomation_ = nullptr;
-  std::atomic_bool coinit_ = false;
-  std::atomic_bool open_ = false;
-  std::atomic_bool ready_ = false;
-  std::vector<std::thread> threads_;
-  void WindowProc();
-  ULONG_PTR gdiplustoken_ = 0;
-  Gdiplus::GdiplusStartupInput gdiplusStartupInput_ = {0};
-};
-
-#endif
 class Overlay final : public IOverlay {
 public:
   Overlay();

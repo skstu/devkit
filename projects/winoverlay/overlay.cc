@@ -4,37 +4,69 @@ static ULONG_PTR gdiplustoken_ = 0;
 static Gdiplus::GdiplusStartupInput gdiplusStartupInput_ = {0};
 static const wchar_t CLASS_NAME[] = L"OverlayWindowClassBySkstu";
 
-static void CaptureScreenshot(RECT rect, const wchar_t *filePath) {
-  // 获取屏幕设备上下文
-  HDC hScreenDC = GetDC(NULL);
-  HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
-
-  // 创建兼容的位图
-  HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, rect.right - rect.left,
-                                           rect.bottom - rect.top);
-  HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
-
-  // 拷贝屏幕内容到内存设备上下文
-  BitBlt(hMemoryDC, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
-         hScreenDC, rect.left, rect.top, SRCCOPY);
-
-  // 创建 GDI+ 位图
-  Gdiplus::Bitmap bitmap(hBitmap, NULL);
-
-  // 保存位图到文件
-  CLSID clsid;
-  CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}",
-                  &clsid); // PNG 编码器 CLSID
-
+static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
+  bool result = false;
+  *buffer = nullptr;
+  *len = 0;
   IStream *pStream = nullptr;
-
-  bitmap.Save(pStream, &clsid, NULL);
-
-  // 清理
-  SelectObject(hMemoryDC, hOldBitmap);
-  DeleteObject(hBitmap);
-  DeleteDC(hMemoryDC);
-  ReleaseDC(NULL, hScreenDC);
+  HBITMAP hBitmap = nullptr;
+  HDC hScreenDC = nullptr;
+  HDC hMemoryDC = nullptr;
+  do {
+    RECT rect;
+    GetWindowRect(hwnd, &rect);
+    hScreenDC = GetDC(NULL);
+    hMemoryDC = CreateCompatibleDC(hScreenDC);
+    if (!hScreenDC || !hMemoryDC)
+      break;
+    hBitmap = CreateCompatibleBitmap(hScreenDC, rect.right - rect.left,
+                                     rect.bottom - rect.top);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
+    if (!hBitmap || !hOldBitmap)
+      break;
+    if (FALSE == BitBlt(hMemoryDC, 0, 0, rect.right - rect.left,
+                        rect.bottom - rect.top, hScreenDC, rect.left, rect.top,
+                        SRCCOPY))
+      break;
+    Gdiplus::Bitmap bitmap(hBitmap, NULL);
+    if (FAILED(CreateStreamOnHGlobal(NULL, TRUE, &pStream)))
+      break;
+    CLSID clsid;
+    if (FAILED(
+            CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}", &clsid)))
+      break;
+    if (Gdiplus::Status::Ok != bitmap.Save(pStream, &clsid, NULL))
+      break;
+    if (!pStream)
+      break;
+    STATSTG statstg = {0};
+    if (FAILED(pStream->Stat(&statstg, STATFLAG_NONAME)))
+      break;
+    ULONG streamSize = statstg.cbSize.LowPart;
+    *len = streamSize;
+    *buffer = (char *)malloc(len);
+    LARGE_INTEGER liZero = {};
+    pStream->Seek(liZero, STREAM_SEEK_SET, NULL);
+    ULONG bytesRead = 0;
+    pStream->Read(buffer, streamSize, &bytesRead);
+    SelectObject(hMemoryDC, hOldBitmap);
+    result = true;
+  } while (0);
+  if (hBitmap)
+    DeleteObject(hBitmap);
+  if (hMemoryDC)
+    DeleteDC(hMemoryDC);
+  if (hScreenDC)
+    ReleaseDC(NULL, hScreenDC);
+  SK_RELEASE_PTR(pStream);
+  if (!result) {
+    if (*buffer) {
+      free(*buffer);
+      *buffer = nullptr;
+    }
+    *len = 0;
+  }
+  return result;
 }
 
 static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
@@ -150,7 +182,8 @@ bool Overlay::Screenshot(char **buffer, size_t *len) const {
   *buffer = nullptr;
   *len = 0;
   do {
-
+    if (!__Screenshot(hwnd_, buffer, len))
+      break;
     result = true;
   } while (0);
   return result;
@@ -258,190 +291,5 @@ SHARED_API void interface_uninit() {
 }
 
 #ifdef __cplusplus
-}
-#endif
-
-#if 0
-
-#include "stdafx.h"
-
-void CaptureScreenshot(RECT rect, const wchar_t *filePath) {
-  // 初始化 GDI+
-  Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-  ULONG_PTR gdiplusToken;
-  Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
-
-  // 获取屏幕设备上下文
-  HDC hScreenDC = GetDC(NULL);
-  HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
-
-  // 创建兼容的位图
-  HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, rect.right - rect.left,
-                                           rect.bottom - rect.top);
-  HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
-
-  // 拷贝屏幕内容到内存设备上下文
-  BitBlt(hMemoryDC, 0, 0, rect.right - rect.left, rect.bottom - rect.top,
-         hScreenDC, rect.left, rect.top, SRCCOPY);
-
-  // 创建 GDI+ 位图
-  Gdiplus::Bitmap bitmap(hBitmap, NULL);
-
-  // 保存位图到文件
-  CLSID clsid;
-  CLSIDFromString(L"{557CF400-1A04-11D3-9A73-0000F81EF32E}",
-                  &clsid); // PNG 编码器 CLSID
-  bitmap.Save(filePath, &clsid, NULL);
-
-  // 清理
-  SelectObject(hMemoryDC, hOldBitmap);
-  DeleteObject(hBitmap);
-  DeleteDC(hMemoryDC);
-  ReleaseDC(NULL, hScreenDC);
-  Gdiplus::GdiplusShutdown(gdiplusToken);
-}
-
-#if 0
-int main() {
-    // 获取 IUIAutomationElement 的 RECT
-    RECT boundingRect;
-    // 假设已经获取到 pElement
-    // pElement->get_CurrentBoundingRectangle(&boundingRect);
-
-    // 示例：捕获整个屏幕
-    boundingRect.left = 0;
-    boundingRect.top = 0;
-    boundingRect.right = GetSystemMetrics(SM_CXSCREEN);
-    boundingRect.bottom = GetSystemMetrics(SM_CYSCREEN);
-
-    // 捕获并保存图片
-    CaptureScreenshot(boundingRect, L"screenshot.png");
-
-    return 0;
-}
-#endif
-Overlay::Overlay() {
-  Init();
-}
-
-Overlay::~Overlay() {
-  UnInit();
-}
-void Overlay::Release() const {
-  delete this;
-}
-void Overlay::Init() {
-  do {
-    Gdiplus::Status status =
-        Gdiplus::GdiplusStartup(&gdiplustoken_, &gdiplusStartupInput_, NULL);
-    if (Gdiplus::Ok != status)
-      break;
-    ready_.store(true);
-  } while (0);
-}
-void Overlay::UnInit() {
-  do {
-    if (!ready_.load())
-      break;
-    Gdiplus::GdiplusShutdown(gdiplustoken_);
-    ready_.store(false);
-  } while (0);
-}
-bool Overlay::Create() {
-  do {
-    if (open_.load() || !ready_.load())
-      break;
-    open_.store(true);
-    threads_.emplace_back([this]() { WindowProc(); });
-  } while (0);
-  return open_.load();
-}
-void Overlay::Destory() {
-  do {
-    if (!open_.load())
-      break;
-    PostMessage(hwnd_, WM_CLOSE, 0, 0);
-    for (auto &t : threads_)
-      t.join();
-    threads_.clear();
-    open_.store(false);
-  } while (0);
-}
-void Overlay::Update(const RECT &rect) const {
-  do {
-    if (!hwnd_)
-      break;
-    SetWindowPos(hwnd_, HWND_TOPMOST, rect.left, rect.top,
-                 rect.right - rect.left, rect.bottom - rect.top,
-                 SWP_SHOWWINDOW);
-    InvalidateRect(hwnd_, NULL, TRUE);
-  } while (0);
-}
-
-/*
-void Overlay::AppendPos(const long &x, const long &y, const long &width, const long &height) {
-  RECT pos = {0};
-  pos.left = x;
-  pos.top = y;
-  pos.right = x+width;
-  pos.bottom = y+height;
-  posq_.push(pos);
-}*/
- void Overlay::Update(){
-
- }
-
-
-void Overlay::WindowProc() {
-  do {
-    const wchar_t CLASS_NAME[] = L"OverlayWindowClassBySkstu";
-    WNDCLASSW wc = {};
-    wc.lpfnWndProc = OverlayWndProc;
-    wc.hInstance = GetModuleHandleW(NULL);
-    wc.lpszClassName = CLASS_NAME;
-    RegisterClassW(&wc);
-    hwnd_ = CreateWindowExW(WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST |
-                                WS_EX_TOOLWINDOW, // 添加 WS_EX_TOOLWINDOW
-                            CLASS_NAME, NULL, WS_POPUP, 0, 0, 0, 0, NULL, NULL,
-                            GetModuleHandleW(NULL), NULL);
-    if (!hwnd_)
-      break;
-
-    if (FALSE ==
-        SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 0, LWA_COLORKEY))
-      break;
-
-    ShowWindow(hwnd_, SW_SHOW);
-    UpdateWindow(hwnd_);
-
-    /*HWND desk = GetDesktopWindow();
-    RECT rtDesk;
-    GetWindowRect(desk, &rtDesk);
-    Update(rtDesk);*/
-    MSG msg = {0};
-    do {
-      if (PeekMessageW(&msg, hwnd_, 0, 0, PM_REMOVE) != 0) {
-        if (msg.message == WM_QUERYENDSESSION || msg.message == WM_CLOSE ||
-            msg.message == WM_DESTROY || msg.message == WM_QUIT ||
-            msg.message == WM_ENDSESSION) {
-          SendMessageW(hwnd_, WM_DESTROY, 0, 0);
-          break;
-        } else {
-
-          auto poss = posq_.pops();
-          for(const auto& pos : poss) {
-                SetWindowPos(hwnd_, HWND_TOPMOST, rect.left, rect.top,
-                 rect.right - rect.left, rect.bottom - rect.top,
-                 SWP_SHOWWINDOW);
-    InvalidateRect(hwnd_, NULL, TRUE);
-          }
-          
-          TranslateMessage(&msg);
-          DispatchMessage(&msg);
-        }
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    } while (1);
-  } while (0);
 }
 #endif
