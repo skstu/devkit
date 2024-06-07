@@ -1,5 +1,8 @@
 source_set("source_uiohook") {
-  sources = [ "hook.cc" ]
+  sources = [
+    "event.cc",
+    "hook.cc",
+  ]
 
   public_configs = [
     "//build/deps:openssl",

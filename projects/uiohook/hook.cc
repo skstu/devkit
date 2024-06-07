@@ -22,86 +22,6 @@ static bool logger_proc(unsigned int level, const char *format, ...) {
   return status;
 }
 
-// NOTE: The following callback executes on the same thread that hook_run() is
-// called from.  This is important because hook_run() attaches to the operating
-// systems event dispatcher and may delay event delivery to the target
-// application. Furthermore, some operating systems may choose to disable your
-// hook if it takes too long to process.  If you need to do any extended
-// processing, please do so by copying the event to your own queued dispatch
-// thread.
-static void dispatch_proc(uiohook_event *const event) {
-  switch (event->type) {
-  case EVENT_HOOK_ENABLED: {
-    std::cout << "Hook enabled." << std::endl;
-  } break;
-  case EVENT_HOOK_DISABLED: {
-    std::cout << "Hook disabled." << std::endl;
-  } break;
-  case EVENT_KEY_TYPED: {
-
-  } break;
-  case EVENT_KEY_PRESSED: {
-    switch (event->data.keyboard.keycode) {
-    case VC_CONTROL_L:
-    case VC_CONTROL_R: {
-      if (!__gpHook->GetControlState())
-        __gpHook->SetControlState(true);
-    } break;
-    default:
-      break;
-    }
-  } break;
-  case EVENT_KEY_RELEASED: {
-    switch (event->data.keyboard.keycode) {
-    case VC_ESCAPE: {
-      std::cout << "UIOHook module exit." << std::endl;
-      hook_stop();
-    } break;
-    case VC_CONTROL_L:
-    case VC_CONTROL_R: {
-      if (__gpHook->GetControlState())
-        __gpHook->SetControlState(false);
-    } break;
-    default:
-      break;
-    }
-  } break;
-  case EVENT_MOUSE_CLICKED: {
-
-  } break;
-  case EVENT_MOUSE_PRESSED: {
-
-  } break;
-  case EVENT_MOUSE_RELEASED: {
-    switch (event->data.mouse.button) {
-    case MOUSE_BUTTON1: {
-      if (!__gpHook->GetControlState())
-        break;
-      bool is_exit = false;
-      __gpHook->OnCaptureFinish(event->data.mouse.x, event->data.mouse.y,
-                                is_exit);
-      if (is_exit)
-        hook_stop();
-      std::cout << "capture . . ." << std::endl;
-    } break;
-    default:
-      break;
-    }
-  } break;
-  case EVENT_MOUSE_MOVED: {
-    __gpHook->OnMouseMove(event->data.mouse.x, event->data.mouse.y);
-  } break;
-  case EVENT_MOUSE_DRAGGED: {
-
-  } break;
-  case EVENT_MOUSE_WHEEL: {
-
-  } break;
-  default:
-    break;
-  }
-}
-
 Hook::Hook() {
   Init();
 }
@@ -117,6 +37,11 @@ bool Hook::Ready() const {
 void Hook::Init() {
 }
 void Hook::UnInit() {
+}
+void Hook::AppendEvent(const uiohook_event *ev) {
+  uiohook_event _ev;
+  memcpy(&_ev, &ev, sizeof(uiohook_event));
+  uiohook_event_q_.push(_ev);
 }
 bool Hook::GetControlState() const {
   std::lock_guard<std::mutex> lock{*mutex_};
@@ -150,6 +75,7 @@ bool Hook::Start() {
       break;
     open_.store(true);
     threads_.emplace_back([this]() { Perform(); });
+    threads_.emplace_back([this]() { EventNotify(); });
   } while (0);
   return open_.load();
 }
@@ -176,12 +102,113 @@ void Hook::Stop() {
     threads_.clear();
   } while (0);
 }
+IUioevent *Hook::CreateEvent() {
+  IUioevent *result = nullptr;
+  do {
+
+  } while (0);
+  return result;
+}
+void Hook::EventNotify() {
+  do {
+    do {
+      auto evs = uiohook_event_q_.pops();
+      if (evs.empty())
+        break;
+      std::cout << evs.size() << std::endl;
+      for (const auto &event : evs) {
+#if 0
+        switch (event.type) {
+        case EVENT_HOOK_ENABLED: {
+          std::cout << "Hook enabled." << std::endl;
+        } break;
+        case EVENT_HOOK_DISABLED: {
+          std::cout << "Hook disabled." << std::endl;
+        } break;
+        case EVENT_KEY_TYPED: {
+
+        } break;
+        case EVENT_KEY_PRESSED: {
+          switch (event.data.keyboard.keycode) {
+          case VC_CONTROL_L:
+          case VC_CONTROL_R: {
+            if (!__gpHook->GetControlState())
+              __gpHook->SetControlState(true);
+          } break;
+          default:
+            break;
+          }
+        } break;
+        case EVENT_KEY_RELEASED: {
+          switch (event.data.keyboard.keycode) {
+          case VC_ESCAPE: {
+            std::cout << "UIOHook module exit." << std::endl;
+            hook_stop();
+          } break;
+          case VC_CONTROL_L:
+          case VC_CONTROL_R: {
+            if (__gpHook->GetControlState())
+              __gpHook->SetControlState(false);
+          } break;
+          default:
+            break;
+          }
+        } break;
+        case EVENT_MOUSE_CLICKED: {
+
+        } break;
+        case EVENT_MOUSE_PRESSED: {
+
+        } break;
+        case EVENT_MOUSE_RELEASED: {
+          switch (event.data.mouse.button) {
+          case MOUSE_BUTTON1: {
+            if (!__gpHook->GetControlState())
+              break;
+            bool is_exit = false;
+            __gpHook->OnCaptureFinish(event.data.mouse.x, event.data.mouse.y,
+                                      is_exit);
+            if (is_exit)
+              hook_stop();
+            std::cout << "capture . . ." << std::endl;
+          } break;
+          default:
+            break;
+          }
+        } break;
+        case EVENT_MOUSE_MOVED: {
+          __gpHook->OnMouseMove(event.data.mouse.x, event.data.mouse.y);
+        } break;
+        case EVENT_MOUSE_DRAGGED: {
+
+        } break;
+        case EVENT_MOUSE_WHEEL: {
+
+        } break;
+        default:
+          break;
+        }
+#endif
+      }
+    } while (0);
+    if (!open_.load())
+      break;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  } while (1);
+}
 void Hook::Perform() {
   // Set the logger callback for library output.
   hook_set_logger_proc(&logger_proc);
 
-  // Set the event callback for uiohook events.
-  hook_set_dispatch_proc(&dispatch_proc);
+  // NOTE: The following callback executes on the same thread that hook_run() is
+  // called from.  This is important because hook_run() attaches to the
+  // operating systems event dispatcher and may delay event delivery to the
+  // target application. Furthermore, some operating systems may choose to
+  // disable your hook if it takes too long to process.  If you need to do any
+  // extended processing, please do so by copying the event to your own queued
+  // dispatch thread. Set the event callback for uiohook events.
+  hook_set_dispatch_proc(
+      [](uiohook_event *const event) { __gpHook->AppendEvent(event); });
 
   // Start the hook and block.
   // NOTE If EVENT_HOOK_ENABLED was delivered, the status will always succeed.

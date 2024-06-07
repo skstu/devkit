@@ -44,7 +44,7 @@ static bool __Screenshot(const HWND &hwnd, char **buffer, size_t *len) {
       break;
     ULONG streamSize = statstg.cbSize.LowPart;
     *len = streamSize;
-    *buffer = (char *)malloc(len);
+    *buffer = (char *)malloc(*len);
     LARGE_INTEGER liZero = {};
     pStream->Seek(liZero, STREAM_SEEK_SET, NULL);
     ULONG bytesRead = 0;
@@ -104,7 +104,7 @@ static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     Gdiplus::Graphics graphics(hdc);
     // 创建一个红色的画笔
     // Gdiplus::Pen pen(Gdiplus::Color(255, 255, 215, 0), 2);
-    Gdiplus::Pen pen(Gdiplus::Color(255, 0, 122, 204), 5);
+    Gdiplus::Pen pen(Gdiplus::Color(255, 0, 122, 204), 3);
     // 绘制矩形边框
     int left = rect.left;
     int top = rect.top;
@@ -130,6 +130,9 @@ static LRESULT CALLBACK OverlayWndProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     EndPaint(hwnd, &ps);
   } break;
+  case WM_ERASEBKGND: {
+    return FALSE;
+  }
   case WM_DESTROY:
     PostQuitMessage(0);
     std::cout << "Overlay module exit." << std::endl;
@@ -258,6 +261,9 @@ void Overlay::WindowThread() {
                        SWP_SHOWWINDOW);
           InvalidateRect(hwnd_, NULL, TRUE);
         }
+        /*if (poss.empty()) {
+          InvalidateRect(hwnd_, NULL, TRUE);
+        }*/
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     } while (1);
