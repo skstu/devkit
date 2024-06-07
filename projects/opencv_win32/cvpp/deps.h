@@ -3,7 +3,7 @@
 
 
 #pragma comment(lib,"ippicvmt.lib")
-
+#pragma comment(lib,"dl.lib")
 #if _DEBUG
 #pragma comment(lib,"opencv_calib3d4100d.lib")
 #pragma comment(lib,"opencv_core4100d.lib")

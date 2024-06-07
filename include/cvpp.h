@@ -1,8 +1,8 @@
 #ifndef __CVPP_H_
 #define __CVPP_H_
-
+#include "interface.h"
 namespace cvpp {
-	class ICvpp {
+	class ICvpp : public Interface<ICvpp> {
 	public:
 		virtual void Stop() = 0;
 		virtual bool Start() = 0;

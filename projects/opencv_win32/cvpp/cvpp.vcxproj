@@ -94,18 +94,18 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SHARED_IMPLEMENTATION;WIN32;_DEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\build\lib\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -114,12 +114,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SHARED_IMPLEMENTATION;WIN32;NDEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,25 +127,25 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\build\lib\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SHARED_IMPLEMENTATION;_DEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\build\lib\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -154,12 +154,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SHARED_IMPLEMENTATION;NDEBUG;CVPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\include;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\iw\include;$(SolutionDir)..\..\3rdparty\opencv\build;$(SolutionDir)..\..\3rdparty\opencv\modules\ts\include;$(SolutionDir)..\..\3rdparty\opencv\modules\core\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgcodecs\include;$(SolutionDir)..\..\3rdparty\opencv\modules\videoio\include;$(SolutionDir)..\..\3rdparty\opencv\modules\imgproc\include;$(SolutionDir)..\..\3rdparty\opencv\modules\highgui\include;$(SolutionDir)..\..\3rdparty\opencv\include;$(SolutionDir)..\..\3rdparty\opencv\modules\calib3d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\features2d\include;$(SolutionDir)..\..\3rdparty\opencv\modules\flann\include;$(SolutionDir)..\..\3rdparty\opencv\modules\dnn\include;$(SolutionDir)..\..\3rdparty\opencv\modules\ml\include;$(SolutionDir)..\..\3rdparty\opencv\modules\objdetect\include;$(SolutionDir)..\..\3rdparty\opencv\modules\photo\include;$(SolutionDir)..\..\3rdparty\opencv\modules\stitching\include;$(SolutionDir)..\..\3rdparty\opencv\modules\video\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -167,7 +167,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\3rdparty\opencv\build\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\lib\$(Configuration)\;$(SolutionDir)..\..\3rdparty\opencv\build\3rdparty\ippicv\ippicv_win\icv\lib\intel64\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\build\lib\$(Configuration)\</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
