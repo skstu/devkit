@@ -1,0 +1,15 @@
+source_set("source_uiohook") {
+  sources = [
+    "event.cc",
+    "event.h",
+    "hook.cc",
+    "hook.h",
+  ]
+
+  public_configs = [ "//build/deps:libuiohook" ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("uiohook") {
+  deps = [ ":source_uiohook" ]
+}

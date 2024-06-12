@@ -2,10 +2,44 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "python": "C:\\Users\\k34ub\\source\\work\\rpaWindowsUI\\tools\\python\\3.11\\python.exe",
+      //"python": "C:\\Python\\Python312\\python.exe",
+      "name": "Python: RPA-Pyd",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\tests\\rpa\\test_pyd.py",
+      "console": "integratedTerminal",
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "0,1"
+      },
+      "args": [],
+      "justMyCode": false
+    },
+    {
       "name": "Test Inspection",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/out/test_inspection.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "C:/msys64/mingw64/bin/gdb.exe",
+      "setupCommands": [
+        {
+          "text": "set target-triple x86_64-pc-windows-gnu",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Compile Debug On GN"
+    },
+    {
+      "name": "Test Overlay",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/out/test_overlay.exe",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",

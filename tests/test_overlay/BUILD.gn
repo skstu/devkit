@@ -1,0 +1,9 @@
+executable("test_overlay") {
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//projects/inspection/overlay:overlay",
+    "//projects/stl:stl",
+  ]
+  public_configs = [ "//build/deps:fmt" ]
+}

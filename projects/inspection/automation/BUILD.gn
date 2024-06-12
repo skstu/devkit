@@ -1,0 +1,17 @@
+source_set("source_automation") {
+  sources = [
+    "automation.cc",
+    "automation.h",
+    "stdafx.h",
+  ]
+  include_dirs = [ "//projects/inspection/include" ]
+  public_configs = [
+    "//build/deps:openssl",
+    "//build/deps:zlib",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("automation") {
+  deps = [ ":source_automation" ]
+}

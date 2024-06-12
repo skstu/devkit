@@ -147,7 +147,11 @@
     "tests.h": "c",
     "atlcom.h": "c",
     "opencv.hpp": "c",
-    "shared_library.h": "c"
+    "shared_library.h": "c",
+    "windows.h": "c",
+    "shellscalingapi.h": "c",
+    "inspect.h": "c",
+    "cvpp.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

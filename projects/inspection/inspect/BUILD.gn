@@ -1,0 +1,28 @@
+source_set("source_inspection") {
+  sources = [
+    "config.cc",
+    "config.h",
+    "element.cc",
+    "element.h",
+    "inspect.cc",
+    "inspect.h",
+    "stdafx.h",
+  ]
+  include_dirs = [ "//projects/inspection/include" ]
+  public_configs = [
+    "//build/deps:zlib",
+    "//build/deps:fmt",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [
+    #"//projects/opencv:opencv",
+    "//projects/inspection/automation:automation",
+    "//projects/inspection/overlay:overlay",
+    "//projects/inspection/uiohook:uiohook",
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
+}
+shared_library("inspection") {
+  deps = [ ":source_inspection" ]
+}

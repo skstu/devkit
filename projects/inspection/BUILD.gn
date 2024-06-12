@@ -1,21 +1,8 @@
-source_set("source_inspection") {
-  sources = [ "inspect.cc" ]
-
-  public_configs = [
-    "//build/deps:openssl",
-    "//build/deps:zlib",
-    "//build/deps:fmt",
-    "//build/deps:icu",
-  ]
-  defines = [ "SHARED_IMPLEMENTATION" ]
+group("inspection") {
   deps = [
-    "//projects/opencv:opencv",
-    "//projects/stl:stl",
-    "//projects/uiohook:uiohook",
-    "//projects/winautomation:winautomation",
-    "//projects/winoverlay:winoverlay",
+    "automation:automation",
+    "inspect:inspection",
+    "overlay:overlay",
+    "uiohook:uiohook",
   ]
-}
-shared_library("inspection") {
-  deps = [ ":source_inspection" ]
 }

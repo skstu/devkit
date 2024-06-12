@@ -14,6 +14,8 @@ template("c_cc_toolchain") {
 
     ext_flags = ""
 
+    object_subdir = "{{target_out_dir}}/{{label_name}}"
+
     tool("cc") {
       command = "$cc $ext_flags {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
       description = "CC {{output}}"
@@ -120,6 +122,15 @@ template("c_cc_toolchain") {
       rspfile_content =
           "{{inputs}} $whole_archive_flag {{rlibs}} $no_whole_archive_flag "
       outputs = [ outfile ]
+    }
+    tool("rc") {
+      command = "windres {{defines}} {{include_dirs}} -O coff -o {{output}} {{source}}"
+      depsformat = "gcc"
+
+      description = "WINDRES {{output}}"
+
+      #outputs = [ "{{output_dir}}/{{target_output_name}}.res" ]
+      outputs = [ "$object_subdir/{{source_name_part}}.res" ]
     }
     tool("stamp") {
       command = "touch {{output}}"

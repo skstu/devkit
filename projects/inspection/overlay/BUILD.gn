@@ -1,0 +1,26 @@
+source_set("source_overlay") {
+  sources = [
+    "overlay.cc",
+    "overlay.h",
+    "resource.rc",
+    "stdafx.h",
+    "window.cc",
+    "window.h",
+    "window_bk.cc",
+    "window_bk.h",
+    "window_cv.cc",
+    "window_cv.h",
+    "window_ui.cc",
+    "window_ui.h",
+  ]
+  include_dirs = [ "//projects/inspection/include" ]
+  public_configs = [ "//build/deps:fmt" ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
+}
+shared_library("overlay") {
+  deps = [ ":source_overlay" ]
+}
