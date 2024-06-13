@@ -41,3 +41,6 @@
 [submodule "3rdparty/opencv"]
 	path = 3rdparty/opencv
 	url = git@github.com:opencv/opencv.git
+[submodule "3rdparty/dlfcn-win32"]
+	path = 3rdparty/dlfcn-win32
+	url = git@github.com:dlfcn-win32/dlfcn-win32.git
