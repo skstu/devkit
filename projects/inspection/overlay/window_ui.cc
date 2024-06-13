@@ -36,7 +36,7 @@ static void OnPaint(const HWND &hWnd, const bool &screenshot = false) {
     Gdiplus::Graphics graphicsMem(hdcMem);
     graphicsMem.Clear(Gdiplus::Color(0, 0, 0, 0)); // 透明背景
 
-    Gdiplus::Pen pen(Gdiplus::Color(screenshot ? 0 : 200, 255, 215, 0), 2);
+    Gdiplus::Pen pen(Gdiplus::Color(screenshot ? 0 : 255, 255, 215, 0), 5);
     graphicsMem.DrawRectangle(&pen, left, top, width, height);
 
     BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);

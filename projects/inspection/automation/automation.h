@@ -1,5 +1,5 @@
-#ifndef __PROJECTS_WINAUTOMATION_AUTOMATION_H_
-#define __PROJECTS_WINAUTOMATION_AUTOMATION_H_
+#ifndef __PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_
+#define __PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_
 
 class Automation final : public IAutomation {
 public:
@@ -29,10 +29,12 @@ private:
   void OnCaptureFinished(const Element *) const;
   const unsigned int thread_loop_interval_worker_ = 25;   // ms
   const unsigned int thread_loop_interval_callback_ = 25; // ms
-  stl::container::queue<std::tuple<POINT, IUIAutomationElement *>>
-      queue_uiautomation_element_;
   std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
   std::map<unsigned long long, tfCaptureFinishedCb> capture_finished_cbs_;
+
+public:
+  stl::container::queue<Element> queue_uiautomation_element_;
+  static void FillElement(IUIAutomationElement *pElement, Element &element);
 };
 
 #ifdef __cplusplus
@@ -45,4 +47,4 @@ SHARED_API void interface_uninit();
 #endif
 extern Automation *__gpAutomation;
 
-#endif ///__PROJECTS_WINAUTOMATION_AUTOMATION_H_
+#endif ///__PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_

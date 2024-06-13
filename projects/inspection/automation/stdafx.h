@@ -11,5 +11,6 @@ using namespace inspect;
 #include <comutil.h>
 #include <UIAutomation.h>
 
+#include "automation_focus_changed_event.h"
 #include "automation.h"
 #endif ///__PROJECTS_INSPECTION_AUTOMATION_AFX_H_

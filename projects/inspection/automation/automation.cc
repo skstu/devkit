@@ -95,8 +95,102 @@ IElement *Automation::GetElementOnUnderMouse(const long &x,
   return dynamic_cast<IElement *>(result);
 }*/
 
-static void FillElement(IUIAutomationElement *pElement, Element &element) {
+void Automation::OnCaptureFinished(const Element *pElement) const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  for (auto &cb : capture_finished_cbs_) {
+    cb.second(cb.first, pElement);
+  }
+}
+void Automation::RegisterCaptureFinishedCb(const unsigned long long &host_ptr,
+                                           const tfCaptureFinishedCb &cb) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  do {
+    if (host_ptr <= 0)
+      break;
+    auto found = capture_finished_cbs_.find(host_ptr);
+    if (found != capture_finished_cbs_.end())
+      capture_finished_cbs_.erase(found);
+    capture_finished_cbs_.emplace(host_ptr, cb);
+  } while (0);
+}
+void Automation::CallbackProc() {
+  RECT rect_prev = {0};
+
+  do {
+    do {
+      auto eles = queue_uiautomation_element_.pops();
+      if (eles.empty())
+        break;
+      for (auto &ele : eles) {
+        do {
+          RECT rect;
+          rect.left = ele.pos.left;
+          rect.top = ele.pos.top;
+          rect.right = ele.pos.right;
+          rect.bottom = ele.pos.bottom;
+          if (memcmp(&rect_prev, &rect, sizeof(RECT)) == 0)
+            break;
+          memcpy(&rect_prev, &rect, sizeof(RECT));
+          OnCaptureFinished(&ele);
+        } while (0);
+      }
+    } while (0);
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(thread_loop_interval_callback_));
+    if (!open_.load())
+      break;
+  } while (1);
+}
+void Automation::WorkerProc() {
+  LRESULT hr = S_OK;
+  POINT pt_prev = {0};
+  POINT pt_next = {0};
+  IUIAutomation *pAutomation = nullptr;
+  AutomationFocusChangedEvent *focusChangedEventHandler = nullptr;
+  hr = CoCreateInstance(__uuidof(CUIAutomation), nullptr, CLSCTX_INPROC_SERVER,
+                        __uuidof(IUIAutomation), (void **)&pAutomation);
+
+  focusChangedEventHandler = new AutomationFocusChangedEvent();
+  hr = pAutomation->AddFocusChangedEventHandler(nullptr,
+                                                focusChangedEventHandler);
+
+  do {
+    do {
+      if (!pAutomation)
+        break;
+      break;
+      if (FALSE == GetCursorPos(&pt_next))
+        break;
+      if (memcmp(&pt_prev, &pt_next, sizeof(POINT)) == 0)
+        break;
+      IUIAutomationElement *pUIElement = nullptr;
+      hr = pAutomation->ElementFromPoint(pt_next, &pUIElement);
+      if (FAILED(hr) || !pUIElement)
+        break;
+      Element ele;
+      FillElement(pUIElement, ele);
+      SK_RELEASE_PTR(pUIElement);
+      ele.capture_point.x = pt_next.x;
+      ele.capture_point.y = pt_next.y;
+      queue_uiautomation_element_.push(ele);
+      memcpy(&pt_prev, &pt_next, sizeof(POINT));
+    } while (0);
+    if (!open_.load())
+      break;
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(thread_loop_interval_worker_));
+  } while (1);
+
+  if (focusChangedEventHandler) {
+    pAutomation->RemoveFocusChangedEventHandler(focusChangedEventHandler);
+    SK_RELEASE_PTR(focusChangedEventHandler);
+  }
+  SK_RELEASE_PTR(pAutomation);
+}
+
+void Automation::FillElement(IUIAutomationElement *pElement, Element &element) {
   BSTR bstrValue;
+  UINT bstrValueLen = 0;
   VARIANT varValue;
   RECT boundingRect;
   SAFEARRAY *runtimeIdArray = nullptr;
@@ -124,27 +218,39 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
   CONTROLTYPEID controlType;
   if (SUCCEEDED(pElement->get_CurrentControlType(&element.attr.ControlType))) {
     if (SUCCEEDED(pElement->get_CurrentLocalizedControlType(&bstrValue))) {
-      wcsncpy(element.attr.LocalizedControlType, bstrValue,
-              MAX_ELEMENT_ATTRIBUTES_TEXT);
+      bstrValueLen = SysStringLen(bstrValue);
+      if (bstrValueLen) {
+        wcsncpy(element.attr.LocalizedControlType, bstrValue,
+                MAX_ELEMENT_ATTRIBUTES_TEXT);
+      }
       SysFreeString(bstrValue);
     }
   }
 
   // Name
   if (SUCCEEDED(pElement->get_CurrentName(&bstrValue))) {
-    wcsncpy(element.attr.Name, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.Name, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
   // AcceleratorKey
   if (SUCCEEDED(pElement->get_CurrentAcceleratorKey(&bstrValue))) {
-    wcsncpy(element.attr.AcceleratorKey, bstrValue,
-            MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.AcceleratorKey, bstrValue,
+              MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
   // AccessKey
   if (SUCCEEDED(pElement->get_CurrentAccessKey(&bstrValue))) {
-    wcsncpy(element.attr.AccessKey, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.AccessKey, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
@@ -165,19 +271,29 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
 
   // AutomationId
   if (SUCCEEDED(pElement->get_CurrentAutomationId(&bstrValue))) {
-    wcsncpy(element.attr.AutomationId, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.AutomationId, bstrValue,
+              MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
   // ClassName
   if (SUCCEEDED(pElement->get_CurrentClassName(&bstrValue))) {
-    wcsncpy(element.attr.ClassName, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.ClassName, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
   // HelpText
   if (SUCCEEDED(pElement->get_CurrentHelpText(&bstrValue))) {
-    wcsncpy(element.attr.HelpText, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.HelpText, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
@@ -202,7 +318,10 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
 
   // ItemType
   if (SUCCEEDED(pElement->get_CurrentItemType(&bstrValue))) {
-    wcsncpy(element.attr.ItemType, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.ItemType, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
@@ -213,7 +332,10 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
 
   // FrameworkId
   if (SUCCEEDED(pElement->get_CurrentFrameworkId(&bstrValue))) {
-    wcsncpy(element.attr.FrameworkId, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.FrameworkId, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
@@ -224,20 +346,29 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
 
   // ItemStatus
   if (SUCCEEDED(pElement->get_CurrentItemStatus(&bstrValue))) {
-    wcsncpy(element.attr.ItemStatus, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.ItemStatus, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
   // AriaRole
   if (SUCCEEDED(pElement->get_CurrentAriaRole(&bstrValue))) {
-    wcsncpy(element.attr.AriaRole, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.AriaRole, bstrValue, MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
   // AriaProperties
   if (SUCCEEDED(pElement->get_CurrentAriaProperties(&bstrValue))) {
-    wcsncpy(element.attr.AriaProperties, bstrValue,
-            MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.AriaProperties, bstrValue,
+              MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
 
@@ -248,8 +379,11 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
 
   // ProviderDescription
   if (SUCCEEDED(pElement->get_CurrentProviderDescription(&bstrValue))) {
-    wcsncpy(element.attr.ProviderDescription, bstrValue,
-            MAX_ELEMENT_ATTRIBUTES_TEXT);
+    bstrValueLen = SysStringLen(bstrValue);
+    if (bstrValueLen) {
+      wcsncpy(element.attr.ProviderDescription, bstrValue,
+              MAX_ELEMENT_ATTRIBUTES_TEXT);
+    }
     SysFreeString(bstrValue);
   }
   // Orientation
@@ -265,109 +399,13 @@ static void FillElement(IUIAutomationElement *pElement, Element &element) {
         reinterpret_cast<decltype(element.attr.NativeWindowHandle)>(uiaHwnd);
   }
   // BoundingRectangle
-  /*if (SUCCEEDED(pElement->get_CurrentBoundingRectangle(&boundingRect))) {
+  if (SUCCEEDED(pElement->get_CurrentBoundingRectangle(&boundingRect))) {
     element.pos.left = boundingRect.left;
     element.pos.top = boundingRect.top;
     element.pos.right = boundingRect.right;
     element.pos.bottom = boundingRect.bottom;
-  }*/
-}
-void Automation::OnCaptureFinished(const Element *pElement) const {
-  std::lock_guard<std::mutex> lock{*mutex_};
-  for (auto &cb : capture_finished_cbs_) {
-    cb.second(cb.first, pElement);
   }
 }
-void Automation::RegisterCaptureFinishedCb(const unsigned long long &host_ptr,
-                                           const tfCaptureFinishedCb &cb) {
-  std::lock_guard<std::mutex> lock{*mutex_};
-  do {
-    if (host_ptr <= 0)
-      break;
-    auto found = capture_finished_cbs_.find(host_ptr);
-    if (found != capture_finished_cbs_.end())
-      capture_finished_cbs_.erase(found);
-    capture_finished_cbs_.emplace(host_ptr, cb);
-  } while (0);
-}
-void Automation::CallbackProc() {
-  RECT pos_prev = {0};
-  RECT pos_next = {0};
-
-  do {
-    do {
-      auto ties = queue_uiautomation_element_.pops();
-      if (ties.empty())
-        break;
-      for (auto &tie : ties) {
-        POINT &pt = std::get<0>(tie);
-        IUIAutomationElement *pElement = std::get<1>(tie);
-
-        do {
-          if (FAILED(pElement->get_CurrentBoundingRectangle(&pos_next)))
-            break;
-          if (memcmp(&pos_prev, &pos_next, sizeof(RECT)) == 0)
-            break;
-          memcpy(&pos_prev, &pos_next, sizeof(RECT));
-          Element ele;
-          FillElement(pElement, ele);
-          ele.capture_point.x = pt.x;
-          ele.capture_point.y = pt.y;
-          ele.pos.left = pos_next.left;
-          ele.pos.top = pos_next.top;
-          ele.pos.right = pos_next.right;
-          ele.pos.bottom = pos_next.bottom;
-          OnCaptureFinished(&ele);
-        } while (0);
-
-        SK_RELEASE_PTR(pElement);
-      }
-    } while (0);
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(thread_loop_interval_callback_));
-    if (!open_.load())
-      break;
-  } while (1);
-}
-void Automation::WorkerProc() {
-  LRESULT hr = S_OK;
-  POINT pt_prev = {0};
-  POINT pt_next = {0};
-  IUIAutomation *pAutomation = nullptr;
-  do {
-    SK_RELEASE_PTR(pAutomation);
-    do {
-      if (FALSE == GetCursorPos(&pt_next))
-        break;
-      if (memcmp(&pt_prev, &pt_next, sizeof(POINT)) == 0)
-        break;
-      hr = CoCreateInstance(__uuidof(CUIAutomation), nullptr,
-                            CLSCTX_INPROC_SERVER, __uuidof(IUIAutomation),
-                            (void **)&pAutomation);
-      if (FAILED(hr) || !pAutomation)
-        break;
-      IUIAutomationElement *pUIElement = nullptr;
-      hr = pAutomation->ElementFromPoint(pt_next, &pUIElement);
-      if (FAILED(hr) || !pUIElement)
-        break;
-      queue_uiautomation_element_.push(std::make_tuple(pt_next, pUIElement));
-      memcpy(&pt_prev, &pt_next, sizeof(POINT));
-    } while (0);
-    if (!open_.load())
-      break;
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(thread_loop_interval_worker_));
-  } while (1);
-
-  auto qs = queue_uiautomation_element_.pops();
-  for (auto &tie : qs) {
-    POINT &pt = std::get<0>(tie);
-    IUIAutomationElement *pElement = std::get<1>(tie);
-    SK_RELEASE_PTR(pElement);
-  }
-  SK_RELEASE_PTR(pAutomation);
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
