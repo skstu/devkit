@@ -1,10 +1,6 @@
 __pycache__
-*.ilk
-*.idb
-*.lib
-*.pdb
-*.dll
 bin
 out
 store
 objs
+libs
