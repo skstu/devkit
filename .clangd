@@ -1,0 +1,27 @@
+Diagnostics:
+  ClangTidy:
+    Add: ["*"]
+    Remove:
+    [
+      abseil*,
+      altera*,
+      fuchsia*,
+      llvmlib*,
+      zircon*,
+      google-readability-todo,
+      readability-braces-around-statements,
+      hicpp-braces-around-statements,
+      misc-unused*
+    ]
+    CheckOptions:
+      WarnOnFloatingPointNarrowingConversion: false
+---
+If:
+  PathMatch: [.*\.cpp, .*\.cxx, .*\.cc, .*\.h, .*\.hpp, .*\.hxx]
+CompileFlags:
+  Add: [-std=c++17]
+---
+If:
+  PathMatch: [.*\.c]
+CompileFlags:
+  Add: [-std=c17]

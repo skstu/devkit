@@ -25,4 +25,9 @@
 
 #pragma comment(lib,"dl.lib")
 #pragma comment(lib,"stl.lib")
+#if _DEBUG
+#pragma comment(lib,"fmtd.lib")
+#else
+#pragma comment(lib,"fmt.lib")
+#endif
 #endif //CAPTURE_AFX_H

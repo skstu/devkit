@@ -196,9 +196,10 @@ private:
   UioMouseWheelEventData *uiomousewheeleventdata_ = nullptr;
   uiohook_event uiohook_event_;
   unsigned long long userdata_ = 0;
-  UioVirtualKeyCodes keypressed[UioVirtualKeyCodes::UIO_VC_TOTAL];
-  UioVirtualMouseButtons
-      mousesbuttonpressed[UioVirtualMouseButtons::UIO_MOUSE_BUTTON_TOTAL];
+  UioVirtualKeyCodes
+      keypressed[static_cast<uint16_t>(UioVirtualKeyCodes::UIO_VC_TOTAL)];
+  UioVirtualMouseButtons mousesbuttonpressed[static_cast<uint16_t>(
+      UioVirtualMouseButtons::UIO_MOUSE_BUTTON_TOTAL)];
 };
 
 #endif //__PROJECTS_UIOHOOK_EVENT_H_

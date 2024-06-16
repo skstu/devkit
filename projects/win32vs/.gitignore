@@ -1,2 +1,6 @@
 /.vs
 *.vcxproj.user
+Win32
+*.lib
+*.exe
+*.dll

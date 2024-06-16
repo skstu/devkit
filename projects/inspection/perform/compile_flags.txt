@@ -1,0 +1,4 @@
+-std=c++17
+# -I/c/msys64/mingw64/include/c++/14.1.0
+# -I/c/msys64/mingw64/include
+# -I/c/msys64/usr/include

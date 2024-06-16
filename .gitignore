@@ -1,5 +1,9 @@
 __pycache__
-.ilk
+*.ilk
+*.idb
+*.lib
+*.pdb
+*.dll
 bin
 out
 store

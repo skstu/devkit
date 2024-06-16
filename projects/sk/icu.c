@@ -19,6 +19,30 @@ static const char ICU_CONV_TYPE_NAME[][100] = {
     "UTF-32LE", "UTF-32BE", "ASCII",  "GBK",      "GB18030",
 };
 
+int sk_icu_match_type_to_name(sk_icu_conv_type type, char **name,
+                              size_t *nameLen) {
+  int result = SK_NO;
+  *name = NULL;
+  *nameLen = 0;
+  do {
+    const size_t total =
+        sizeof(ICU_CONV_TYPE_NAME) / sizeof(ICU_CONV_TYPE_NAME[0]);
+    size_t index = (size_t)type;
+    if (index >= total)
+      break;
+    const char *target = ICU_CONV_TYPE_NAME[index];
+    *nameLen = strlen(target);
+    if (*nameLen <= 0)
+      break;
+    (*nameLen)++;
+    *name = sk__malloc(*nameLen);
+    memcpy(*name, target, *nameLen);
+    (*name)[*nameLen] = 0;
+    result = SK_OK;
+  } while (0);
+  return result;
+}
+
 static sk_icu_conv_type icu_match_name_to_type(const char *name) {
   sk_icu_conv_type r = ICU_CONV_TYPE_UNKNOWN;
   do {
@@ -33,6 +57,44 @@ static sk_icu_conv_type icu_match_name_to_type(const char *name) {
       }
     }
   } while (0);
+  return r;
+}
+int sk_icu_convert(const char *src, size_t srcLen, const char *to_name,
+                   char **dst, size_t *dstLen) {
+  UErrorCode status = U_ZERO_ERROR;
+  int r = SK_NO;
+  *dst = NULL;
+  *dstLen = 0;
+  char *from_name = NULL;
+  do {
+    if (!src || srcLen <= 0 || !to_name)
+      break;
+    if (SK_NO == sk_icu_detect_name(src, srcLen, &from_name))
+      break;
+    if (strcmp(to_name, from_name) == 0) {
+      *dst = malloc(srcLen);
+      *dstLen = srcLen;
+      memcpy(*dst, src, *dstLen);
+      status = U_ZERO_ERROR;
+      r = SK_OK;
+      break;
+    }
+    status = U_ZERO_ERROR;
+    *dstLen = ucnv_convert(to_name, from_name, NULL, 0, (const char *)src,
+                           srcLen, &status);
+    if (U_BUFFER_OVERFLOW_ERROR != status && *dstLen != 0)
+      break;
+    status = U_ZERO_ERROR;
+    *dstLen += sizeof(char);
+    *dst = malloc(*dstLen);
+    ucnv_convert(to_name, from_name, (char *)(*dst), *dstLen, (const char *)src,
+                 srcLen, &status);
+    if (status != U_ZERO_ERROR)
+      break;
+    *dstLen -= sizeof(char);
+    r = SK_OK;
+  } while (0);
+  sk_mem_free((void **)&from_name);
   return r;
 }
 int sk_icu_detect_name(const char *textIn, size_t len, char **name) {

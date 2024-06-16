@@ -151,7 +151,10 @@
     "windows.h": "c",
     "shellscalingapi.h": "c",
     "inspect.h": "c",
-    "cvpp.h": "c"
+    "cvpp.h": "c",
+    "focus_changed_event.h": "c",
+    "log.hpp": "c",
+    "skpp.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",
@@ -218,6 +221,26 @@
   "liveServer.settings.port": 0,
   "cmake.configureOnOpen": false,
   "C_Cpp.clang_format_sortIncludes": null,
-  "gnformat.paths.gn": "C:\\devtools\\devtools\\bin\\gn\\gn-windows-amd64\\gn.exe",
+  "gnformat.paths.gn": "C:\\Users\\k34ub\\source\\skstu\\devtools\\bin\\gn\\gn-windows-amd64\\gn.exe",
   "gnformat.paths.buildtools": "C:\\Developer\\electron-22.3.27\\src\\buildtools",
+  "workspaceCacheClean.autoReload": false,
+  "clangd.onConfigChanged": "restart",
+  "clangd.detectExtensionConflicts": true,
+  "clangd.path": "C:/msys64/clang64/bin/clangd.exe",
+  "clangd.serverCompletionRanking": true,
+  "clangd.fallbackFlags": [
+    "-std=c++17",
+    "-IC:/msys64/clang64/include/c++/v1",
+    "-IC:/msys64/clang64/include"
+  ],
+  "clangd.arguments": [],
+  "lldb.consoleMode": "evaluate",
+  "lldb.launch.sourceLanguages": [
+    "cpp",
+    "c"
+  ],
+  "lldb.launch.expressions": "native",
+  "lldb.displayFormat": "auto",
+  "lldb.dereferencePointers": false,
+  "lldb.showDisassembly": "auto"
 }

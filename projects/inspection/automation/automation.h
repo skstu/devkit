@@ -1,7 +1,8 @@
 #ifndef __PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_
 #define __PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_
 
-class Automation final : public IAutomation {
+class Automation final : public IAutomation,
+                         public IUIAutomationFocusChangedEventHandler {
 public:
   Automation();
   virtual ~Automation();
@@ -31,10 +32,22 @@ private:
   const unsigned int thread_loop_interval_callback_ = 25; // ms
   std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
   std::map<unsigned long long, tfCaptureFinishedCb> capture_finished_cbs_;
+  IUIAutomation *pAutomation_ = nullptr;
+  stl::container::queue<Element> queue_uiautomation_element_;
 
 public:
-  stl::container::queue<Element> queue_uiautomation_element_;
   static void FillElement(IUIAutomationElement *pElement, Element &element);
+
+protected:
+  ULONG STDMETHODCALLTYPE AddRef() override final;
+  ULONG STDMETHODCALLTYPE Release() override final;
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid,
+                                           void **ppvObject) override final;
+  HRESULT STDMETHODCALLTYPE
+  HandleFocusChangedEvent(IUIAutomationElement *sender) override final;
+
+private:
+  ULONG refCount = 1;
 };
 
 #ifdef __cplusplus

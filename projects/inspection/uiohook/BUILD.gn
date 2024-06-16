@@ -6,7 +6,10 @@ source_set("source_uiohook") {
     "hook.h",
   ]
 
-  public_configs = [ "//build/deps:libuiohook" ]
+  public_configs = [
+    "//build/deps:libuiohook",
+    "//build/deps:fmt",
+  ]
   defines = [ "SHARED_IMPLEMENTATION" ]
   deps = [ "//projects/stl:stl" ]
 }

@@ -7,6 +7,30 @@
 namespace inspect {
 const size_t MAX_ELEMENT_ATTRIBUTES_TEXT = 256;
 
+typedef struct tagWindowsInfo final {
+  void* hWnd;
+  char Text[_MAX_PATH];
+  char Class[_MAX_PATH];
+  tagWindowsInfo() {
+    ::memset(this, 0x00, sizeof(*this));
+  }
+  void operator=(const tagWindowsInfo &obj) {
+    ::memcpy(this, &obj, sizeof(*this));
+  }
+  bool operator<(const tagWindowsInfo &obj) const {
+    return hWnd < obj.hWnd;
+  }
+  bool operator>(const tagWindowsInfo &obj) const {
+    return hWnd > obj.hWnd;
+  }
+  bool operator==(const tagWindowsInfo &obj) const {
+    return hWnd == obj.hWnd;
+  }
+  bool operator!=(const tagWindowsInfo &obj) const {
+    return hWnd != obj.hWnd;
+  }
+} WindowsInfo;
+
 enum class OverlayWindowType : unsigned long long {
   OVERLAY_WINDOW_BK = 1,
   OVERLAY_WINDOW_CV = OVERLAY_WINDOW_BK << 1,

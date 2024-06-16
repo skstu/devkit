@@ -29,7 +29,8 @@ void Inspect::Init() {
 #endif
 
     pOverlay_ = IOverlay::Create("overlay.dll");
-    pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
+    // pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
+    std::cout << "Hello Martell!" << std::endl;
     pAutomation_ = IAutomation::Create("automation.dll");
     if (pAutomation_) {
       pAutomation_->RegisterCaptureFinishedCb(
@@ -89,9 +90,11 @@ void Inspect::Init() {
                 break;
 
               if (pEvent->DataKeyboard()->Keycode() !=
-                      uiohook::UioVirtualKeyCodes::UIO_VC_SHIFT_L &&
+                      static_cast<uint16_t>(
+                          uiohook::UioVirtualKeyCodes::UIO_VC_SHIFT_L) &&
                   pEvent->DataKeyboard()->Keycode() !=
-                      uiohook::UioVirtualKeyCodes::UIO_VC_SHIFT_R)
+                      static_cast<uint16_t>(
+                          uiohook::UioVirtualKeyCodes::UIO_VC_SHIFT_R))
                 break;
 
               _this->pOverlay_->Screenshot(
@@ -212,13 +215,28 @@ void Inspect::UnInit() {
     ready_.store(false);
   } while (0);
 }
+
 bool Inspect::Start() {
   if (pAutomation_)
     pAutomation_->Start();
   if (pOverlay_)
     pOverlay_->Start(OverlayWindowType::OVERLAY_WINDOW_UI);
-  if (pUiohook_)
+  if (pUiohook_) {
     pUiohook_->Start();
+
+#if 0
+    RECT rtTo;
+    GetWindowRect(GetDesktopWindow(), &rtTo);
+    POINT curPt = {0};
+    GetCursorPos(&curPt);
+    pUiohook_->MouseClick(
+        uiohook::UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT, 50, 50, 2);
+    pUiohook_->MouseWheel(curPt.x, curPt.y, 3, -1);
+
+    pUiohook_->MouseDragged(300, 300, 50, 50);
+#endif
+  }
+
   return true;
 }
 void Inspect::Stop() {
@@ -229,6 +247,7 @@ void Inspect::Stop() {
   if (pOverlay_)
     pOverlay_->Stop();
 }
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////

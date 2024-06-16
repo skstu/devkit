@@ -1,8 +1,11 @@
 #include "stdafx.h"
 UioEvent::UioEvent(const uiohook_event &ev) {
-  memset(&keypressed, UioVirtualKeyCodes::UIO_VC_UNKNOWN, sizeof(keypressed));
-  memset(&mousesbuttonpressed, UioVirtualMouseButtons::UIO_MOUSE_BUTTON_UNKNOWN,
-         sizeof(mousesbuttonpressed));
+  memset(&keypressed, static_cast<uint16_t>(UioVirtualKeyCodes::UIO_VC_UNKNOWN),
+         sizeof(keypressed));
+  memset(
+      &mousesbuttonpressed,
+      static_cast<uint16_t>(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_UNKNOWN),
+      sizeof(mousesbuttonpressed));
   memcpy(&uiohook_event_, &ev, sizeof(uiohook_event));
   uiokeyboardeventdata_ = new UioKeyboardEventData(ev);
   uiomouseeventdata_ = new UioMouseEventData(ev);
@@ -48,8 +51,10 @@ IUioScreenData *UioEvent::DataScreen() const {
 }
 void UioEvent::SetMousePressed(
     const std::map<UioVirtualMouseButtons, bool> &map_) {
-  memset(&mousesbuttonpressed, UioVirtualMouseButtons::UIO_MOUSE_BUTTON_UNKNOWN,
-         sizeof(mousesbuttonpressed));
+  memset(
+      &mousesbuttonpressed,
+      static_cast<uint16_t>(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_UNKNOWN),
+      sizeof(mousesbuttonpressed));
   size_t pos = 0;
   for (const auto &it : map_) {
     if (it.second == true)
@@ -57,7 +62,8 @@ void UioEvent::SetMousePressed(
   }
 }
 void UioEvent::SetKeyPressed(const std::map<UioVirtualKeyCodes, bool> &map_) {
-  memset(&keypressed, UioVirtualKeyCodes::UIO_VC_UNKNOWN, sizeof(keypressed));
+  memset(&keypressed, static_cast<uint16_t>(UioVirtualKeyCodes::UIO_VC_UNKNOWN),
+         sizeof(keypressed));
   size_t pos = 0;
   for (const auto &it : map_) {
     if (it.second == true) {

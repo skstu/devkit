@@ -1,0 +1,35 @@
+source_set("source_perform") {
+  sources = [
+    "main.cc",
+    "stdafx.h",
+    "tools.cc",
+    "tools.h",
+  ]
+  include_dirs = [ "//projects/inspection/include" ]
+  public_configs = [
+    "//build/deps:zlib",
+    "//build/deps:fmt",
+    ":windows_subsystem",
+  ]
+
+  #defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [
+    #"//projects/opencv:opencv",
+    "//projects/inspection/inspect:inspection",
+    "//projects/sk:sk",
+    "//projects/stl:stl",
+  ]
+
+  #configs += [ ":windows_subsystem" ]
+}
+executable("perform") {
+  deps = [ ":source_perform" ]
+  #configs += [ ":windows_subsystem" ]
+}
+
+config("windows_subsystem") {
+  ldflags = [
+    "-Wl,--subsystem,windows",  # 对应于 /SUBSYSTEM:WINDOWS
+    "-Wl,/ENTRY:WinMainCRTStartup",  # 指定入口点
+  ]
+}

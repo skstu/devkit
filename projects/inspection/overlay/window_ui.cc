@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+static int rect_offset_windowsui = 0;
+
 static std::atomic_bool gs_windowui_screenshot_switch = false;
 
 static void OnPaint(const HWND &hWnd, const bool &screenshot = false) {
@@ -17,8 +19,8 @@ static void OnPaint(const HWND &hWnd, const bool &screenshot = false) {
     // 使用双缓冲技术绘图
     RECT rect;
     GetClientRect(hWnd, &rect);
-    rect.right -= 1;
-    rect.bottom -= 1;
+    rect.right -= rect_offset_windowsui;
+    rect.bottom -= rect_offset_windowsui;
     int left = rect.left;
     int top = rect.top;
     int width = rect.right - rect.left;

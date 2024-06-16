@@ -1,0 +1,5 @@
+C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/CMakeFiles/INSTALL.dir
+C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/CMakeFiles/ALL_BUILD.dir
+C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/CMakeFiles/ZERO_CHECK.dir
+C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/src/CMakeFiles/dl.dir
+C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/src/CMakeFiles/INSTALL.dir

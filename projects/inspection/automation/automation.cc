@@ -1,5 +1,12 @@
 #include "stdafx.h"
 
+//!@ wndInfos->Does not contain the main window handle
+static void EnumChildWindows(const HWND &hProcessWnd,
+                             std::set<WindowsInfo> &wndInfos);
+//!@ wndInfos->Contains the handle to the main window
+static void EnumProcessWindows(const DWORD &ProcessId,
+                               std::set<WindowsInfo> &wndInfos);
+
 static IUIAutomation *gpAutomation = nullptr;
 
 Automation::Automation() {
@@ -20,11 +27,24 @@ void Automation::Init() {
     if (S_OK != coret && RPC_E_CHANGED_MODE != coret)
       break;
     coinit_.store(RPC_E_CHANGED_MODE == coret ? false : true);
+
+    if (S_OK != CoCreateInstance(__uuidof(CUIAutomation), nullptr,
+                                 CLSCTX_INPROC_SERVER, __uuidof(IUIAutomation),
+                                 (void **)&pAutomation_))
+      break;
+
+    // pAutomationFocusChangedEvent_ = new AutomationFocusChangedEvent();
+    pAutomation_->AddFocusChangedEventHandler(nullptr, this);
+
     ready_.store(true);
   } while (0);
 }
 void Automation::UnInit() {
   do {
+    pAutomation_->RemoveFocusChangedEventHandler(this);
+    // SK_RELEASE_PTR(pAutomationFocusChangedEvent_);
+    SK_RELEASE_PTR(pAutomation_);
+
     if (coinit_.load()) {
       CoUninitialize();
     }
@@ -145,26 +165,14 @@ void Automation::WorkerProc() {
   LRESULT hr = S_OK;
   POINT pt_prev = {0};
   POINT pt_next = {0};
-  IUIAutomation *pAutomation = nullptr;
-  AutomationFocusChangedEvent *focusChangedEventHandler = nullptr;
-  hr = CoCreateInstance(__uuidof(CUIAutomation), nullptr, CLSCTX_INPROC_SERVER,
-                        __uuidof(IUIAutomation), (void **)&pAutomation);
-
-  focusChangedEventHandler = new AutomationFocusChangedEvent();
-  hr = pAutomation->AddFocusChangedEventHandler(nullptr,
-                                                focusChangedEventHandler);
-
   do {
     do {
-      if (!pAutomation)
-        break;
-      break;
       if (FALSE == GetCursorPos(&pt_next))
         break;
       if (memcmp(&pt_prev, &pt_next, sizeof(POINT)) == 0)
         break;
       IUIAutomationElement *pUIElement = nullptr;
-      hr = pAutomation->ElementFromPoint(pt_next, &pUIElement);
+      hr = pAutomation_->ElementFromPoint(pt_next, &pUIElement);
       if (FAILED(hr) || !pUIElement)
         break;
       Element ele;
@@ -180,12 +188,6 @@ void Automation::WorkerProc() {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(thread_loop_interval_worker_));
   } while (1);
-
-  if (focusChangedEventHandler) {
-    pAutomation->RemoveFocusChangedEventHandler(focusChangedEventHandler);
-    SK_RELEASE_PTR(focusChangedEventHandler);
-  }
-  SK_RELEASE_PTR(pAutomation);
 }
 
 void Automation::FillElement(IUIAutomationElement *pElement, Element &element) {
@@ -405,6 +407,98 @@ void Automation::FillElement(IUIAutomationElement *pElement, Element &element) {
     element.pos.right = boundingRect.right;
     element.pos.bottom = boundingRect.bottom;
   }
+}
+
+ULONG STDMETHODCALLTYPE Automation::AddRef() {
+  return InterlockedIncrement(&refCount);
+}
+
+ULONG STDMETHODCALLTYPE Automation::Release() {
+  ULONG ret = InterlockedDecrement(&refCount);
+  if (ret == 0) {
+    delete this;
+  }
+  return ret;
+}
+
+HRESULT STDMETHODCALLTYPE Automation::QueryInterface(REFIID riid,
+                                                     void **ppvObject) {
+  if (riid == __uuidof(IUnknown) ||
+      riid == __uuidof(IUIAutomationFocusChangedEventHandler)) {
+    *ppvObject = static_cast<IUIAutomationFocusChangedEventHandler *>(this);
+    AddRef();
+    return S_OK;
+  }
+  *ppvObject = nullptr;
+  return E_NOINTERFACE;
+}
+
+HRESULT STDMETHODCALLTYPE
+Automation::HandleFocusChangedEvent(IUIAutomationElement *sender) {
+  HRESULT hr;
+  do {
+    if (!sender)
+      break;
+    POINT pt;
+    if (FALSE == GetCursorPos(&pt))
+      break;
+    Element ele;
+    FillElement(sender, ele);
+    ele.capture_point.x = pt.x;
+    ele.capture_point.y = pt.y;
+    queue_uiautomation_element_.push(ele);
+  } while (0);
+
+  return S_OK;
+}
+
+void EnumProcessWindows(const DWORD &ProcessId,
+                        std::set<WindowsInfo> &wndInfos) {
+  wndInfos.clear();
+  if (ProcessId <= 4)
+    return;
+  auto tieRoute = std::make_tuple(ProcessId, &wndInfos);
+  ::EnumWindows(
+      [](HWND hwnd, LPARAM route) -> BOOL {
+        auto pRoute =
+            reinterpret_cast<std::tuple<DWORD, std::set<WindowsInfo> *> *>(
+                route);
+        DWORD dwProcessId = std::get<0>(*pRoute);
+        std::set<WindowsInfo> *pOutInfos = std::get<1>(*pRoute);
+        DWORD thePid = 0;
+        ::GetWindowThreadProcessId(hwnd, &thePid);
+        if (thePid == dwProcessId) {
+          WindowsInfo info;
+          info.hWnd = hwnd;
+          ::GetWindowTextA(hwnd, info.Text, sizeof(info.Text));
+          ::GetClassNameA(hwnd, info.Class, sizeof(info.Class));
+          pOutInfos->emplace(info);
+#if 0
+    (*(HWND*)route) = hwnd;
+    return FALSE;
+#endif
+        }
+        return TRUE;
+      },
+      (LPARAM)&tieRoute);
+}
+void EnumChildWindows(const HWND &hProcessWnd,
+                      std::set<WindowsInfo> &wndInfos) {
+  wndInfos.clear();
+  if (!hProcessWnd)
+    return;
+  ::EnumChildWindows(
+      hProcessWnd,
+      [](HWND hwnd, LPARAM route) -> BOOL {
+        auto pOutInfos = reinterpret_cast<std::set<WindowsInfo> *>(route);
+        WindowsInfo info;
+        info.hWnd = hwnd;
+        ::GetWindowTextA(hwnd, info.Text, sizeof(info.Text));
+        ::GetClassNameA(hwnd, info.Class, sizeof(info.Class));
+        pOutInfos->emplace(info);
+        return TRUE;
+      },
+      (LPARAM)&wndInfos);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////

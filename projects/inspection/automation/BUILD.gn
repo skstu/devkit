@@ -2,8 +2,6 @@ source_set("source_automation") {
   sources = [
     "automation.cc",
     "automation.h",
-    "automation_focus_changed_event.cc",
-    "automation_focus_changed_event.h",
     "stdafx.h",
   ]
   include_dirs = [ "//projects/inspection/include" ]

@@ -162,11 +162,13 @@ SK_EXTERN int sk_comp_zstd(const char *src, size_t srcLen, char **dst,
 SK_EXTERN int sk_comp_unzstd(const char *src, size_t srcLen, char **dst,
                              size_t *dstLen);
 
-SK_EXTERN int sk_icu_convert(const char *, size_t, const char *, char **,
-                             size_t *);
+SK_EXTERN int sk_icu_convert(const char *src, size_t srcLen,
+                             const char *toEncode, char **dst, size_t *dstLen);
 SK_EXTERN int sk_icu_detect_name(const char *textIn, size_t len, char **name);
 SK_EXTERN int sk_icu_detect_type(const char *textIn, size_t len,
                                  sk_icu_conv_type *type);
+SK_EXTERN int sk_icu_match_type_to_name(sk_icu_conv_type type, char **name,
+                                        size_t *nameLen);
 
 SK_EXTERN int sk_ossl_md5(const char *src, size_t srcLen, char **dst,
                           size_t *dstLen);

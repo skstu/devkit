@@ -123,8 +123,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -144,8 +145,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -168,8 +170,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -189,8 +192,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
