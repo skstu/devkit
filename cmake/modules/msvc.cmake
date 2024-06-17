@@ -8,13 +8,13 @@ macro(MSVC_SET_STARTUP_PROJECT PROJECTNAME PROJECTDIR)
 set_property(DIRECTORY ${PROJECTDIR} PROPERTY VS_STARTUP_PROJECT ${PROJECTNAME})
 endmacro(MSVC_SET_STARTUP_PROJECT PROJECTNAME)
 
+#[[
 macro(MSVC_RUNTIME_LIBRARY_SET_MT PROJECTNAME)
 set_property(TARGET ${PROJECTNAME} PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 		target_compile_options(${PROJECTNAME} PRIVATE "$<$<CONFIG:Release>:/GL>")
   target_link_options(${PROJECTNAME} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
 endmacro(MSVC_RUNTIME_LIBRARY_SET_MT)
-
 macro(MSVC_RUNTIME_LIBRARY_SET_MD PROJECTNAME)
 set_property(TARGET ${PROJECTNAME} PROPERTY
   MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -33,6 +33,26 @@ macro(MSVC_USE_CRT_OPTION arg)
   target_link_options(${arg} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
   endif(ENABLE_MSVC_CRT_MT_${PROJECTNAME})
 endmacro(MSVC_USE_CRT_OPTION)
+]]
+
+macro(MSVC_CRT_SET PROJECTNAME CRTType)
+  #CRTType --- "/MT" "/MTd" "/MD" "/MDd"
+	if(${CRTType} STREQUAL "/MT" OR ${CRTType} STREQUAL "MT")
+		target_compile_options(${PROJECTNAME} PRIVATE
+		$<$<CONFIG:>:/MT>
+		$<$<CONFIG:Debug>:/MTd>
+		$<$<CONFIG:Release>:/MT>
+		)
+		target_compile_options(${PROJECTNAME} PRIVATE "$<$<CONFIG:Release>:/GL>")
+		target_link_options(${PROJECTNAME} PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+	elseif()
+		target_compile_options(${PROJECTNAME} PRIVATE
+		$<$<CONFIG:>:/MD>
+		$<$<CONFIG:Debug>:/MDd>
+		$<$<CONFIG:Release>:/MD>
+		)
+	endif()
+endmacro(MSVC_CRT_SET)
 
 #USE_MSVC_PCH        ：宏名字
 #PCH_TARGET          ：项目名称
@@ -44,7 +64,7 @@ macro(MSVC_USE_PCH PCH_TARGET PCH_HEADER_FILE PCH_SOURCE_FILE)
 		
 		# 生成预编译文件的路径
 		if(CMAKE_CONFIGURATION_TYPES)
-									# 如果有配置选项（Debug/Release），路径添加以及配置选项
+		# 如果有配置选项（Debug/Release），路径添加以及配置选项
 			set(PCH_DIR "${CMAKE_CURRENT_BINARY_DIR}/PCH/${PCH_TARGET}/${CMAKE_CFG_INTDIR}")
 		else(CMAKE_CONFIGURATION_TYPES)
 			set(PCH_DIR "${CMAKE_CURRENT_BINARY_DIR}/PCH/${PCH_TARGET}/")
@@ -62,13 +82,13 @@ macro(MSVC_USE_PCH PCH_TARGET PCH_HEADER_FILE PCH_SOURCE_FILE)
 			ADDITIONAL_MAKE_CLEAN_FILES ${PCH_DIR}/${PCH_NAME}.pch)
 endmacro(MSVC_USE_PCH)
 
-macro(MSVC_SET_LINK_FLAG_CONSOLE PROJECTNAME)
+macro(MSVC_LINK_FLAGS_SET_CONSOLE PROJECTNAME)
 set_target_properties(${PROJECTNAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
-endmacro(MSVC_SET_LINK_FLAG_CONSOLE)
+endmacro(MSVC_LINK_FLAGS_SET_CONSOLE)
 
-macro(MSVC_SET_LINK_FLAG_WINDOWS PROJECTNAME)
+macro(MSVC_LINK_FLAGS_SET_WINDOWS PROJECTNAME)
 set_target_properties(${PROJECTNAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS")
-endmacro(MSVC_SET_LINK_FLAG_WINDOWS)
+endmacro(MSVC_LINK_FLAGS_SET_WINDOWS)
 
 
 
