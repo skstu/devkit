@@ -1,5 +1,0 @@
-# CMake generation dependency list for this directory.
-C:/Users/k34ub/Downloads/cmake-3.28.0-windows-x86_64/share/cmake-3.28/Modules/CMakePackageConfigHelpers.cmake
-C:/Users/k34ub/Downloads/cmake-3.28.0-windows-x86_64/share/cmake-3.28/Modules/WriteBasicConfigVersionFile.cmake
-C:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32/dlfcn-win32-config.cmake.in
-C:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32/src/CMakeLists.txt

@@ -19,6 +19,7 @@ protected:
 
 private:
   std::atomic_bool ready_ = false;
+  std::atomic_bool open_ = false;
   IUiohook *pUiohook_ = nullptr;
   IAutomation *pAutomation_ = nullptr;
   IOverlay *pOverlay_ = nullptr;

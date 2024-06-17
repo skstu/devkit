@@ -4,3 +4,4 @@ Win32
 *.lib
 *.exe
 *.dll
+*.pdb

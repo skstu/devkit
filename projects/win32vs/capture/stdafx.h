@@ -1,5 +1,8 @@
 ﻿#ifndef CAPTURE_AFX_H
 #define CAPTURE_AFX_H
+
+#define ENABLE_WIN32_DLLMAIN 1
+
 #include <macros.h>
 #include <stl.h>
 #define WIN32_LEAN_AND_MEAN
@@ -8,9 +11,12 @@
 #pragma comment(lib,"Shlwapi.lib")
 #include <wchar.h>
 #include <log.hpp>
+#if !ENABLE_WIN32_DLLMAIN
+#include <dlfcn.h>
+#endif
 
 #include <../projects/inspection/include/inspection.h>
-
+#include <libuiohook.h>
 
 
 #define PY_SSIZE_T_CLEAN
@@ -21,11 +27,9 @@
 #include "core.h"
 #include "pyd.h"
 
-
-
 #pragma comment(lib,"dl.lib")
 #pragma comment(lib,"stl.lib")
-#if _DEBUG
+#ifdef _DEBUG
 #pragma comment(lib,"fmtd.lib")
 #else
 #pragma comment(lib,"fmt.lib")

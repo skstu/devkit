@@ -2,9 +2,23 @@
 
 namespace pybind = pybind11;
 
+
 PYBIND11_MODULE(capture, _module) {
  _module.doc() = "PDRPA(R) from UIAutomation on pyd.";
- _module.def("op_version", []() { return "0.1.5"; }, "A function return version");
+ _module.def("capture_device_version", []() { return "0.1.5"; }, "A function return version");
+
+ _module.def("capture_start",
+	 &rpa_win32_start,
+	 "A function create CaptureOperator"
+ );
+
+ _module.def("rpa_win32_stop",
+	 &rpa_win32_stop,
+	 "A function create CaptureOperator"
+ );
+
+
+
  _module.def("op_init",
   &op_init,
   "A function create CaptureOperator"

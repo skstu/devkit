@@ -12,6 +12,14 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8569F5C2-F5BB-3829-BB21-1E9D8D817C63}</ProjectGuid>
@@ -28,6 +36,16 @@
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
     <PlatformToolset>v142</PlatformToolset>
@@ -49,11 +67,19 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)..\..\objs\vs\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">fmt</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">fmt.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">fmt</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.lib</TargetExt>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">fmt.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">fmt</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.lib</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -86,7 +112,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8</AdditionalOptions>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -116,37 +142,71 @@
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <CustomBuild Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\CMakeLists.txt">
-      <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/k34ub/source/skstu/devkit/3rdparty/fmt/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\bin\cmake.exe -SC:/Users/k34ub/source/skstu/devkit/3rdparty/fmt -BC:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/fmt --check-stamp-file C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/fmt/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCXXInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCommonLanguageInclude.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeGenericSystem.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeInitializeConfigs.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeLanguageInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakePackageConfigHelpers.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeParseArguments.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeRCInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeSystemSpecificInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeSystemSpecificInitialize.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CPack.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CPackComponent.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CheckCXXCompilerFlag.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CheckCXXSourceCompiles.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\MSVC-CXX.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\MSVC.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\GNUInstallDirs.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckCompilerFlag.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-Initialize.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-MSVC.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\WindowsPaths.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Templates\CPackConfig.cmake.in;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\FindSetEnv.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\JoinPaths.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\fmt-config.cmake.in;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\fmt.pc.in;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeCXXCompiler.cmake;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeRCCompiler.cmake;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/k34ub/source/skstu/devkit/3rdparty/fmt/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\bin\cmake.exe -SC:/Users/k34ub/source/skstu/devkit/3rdparty/fmt -BC:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/fmt --check-stamp-file C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/fmt/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\BasicConfigVersion-AnyNewerVersion.cmake.in;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCXXInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCheckCompilerFlagCommonPatterns.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeCommonLanguageInclude.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeGenericSystem.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeInitializeConfigs.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeLanguageInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakePackageConfigHelpers.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeParseArguments.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeRCInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeSystemSpecificInformation.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakeSystemSpecificInitialize.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CPack.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CPackComponent.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CheckCXXCompilerFlag.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CheckCXXSourceCompiles.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\MSVC-CXX.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Compiler\MSVC.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\GNUInstallDirs.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckCompilerFlag.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckFlagCommonConfig.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Internal\CheckSourceCompiles.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-Initialize.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows-MSVC.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\Windows.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\Platform\WindowsPaths.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Templates\CPackConfig.cmake.in;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\FindSetEnv.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\JoinPaths.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\fmt-config.cmake.in;C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\support\cmake\fmt.pc.in;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeCXXCompiler.cmake;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeRCCompiler.cmake;C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\3.28.0\CMakeSystem.cmake;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-    </CustomBuild>
-  </ItemGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ProgramDataBaseFileName>C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\MinSizeRel\fmt.pdb</ProgramDataBaseFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /utf-8</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ProgramDataBaseFileName>C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\RelWithDebInfo\fmt.pdb</ProgramDataBaseFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Lib>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\src\format.cc" />
     <ClInclude Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\include\fmt\args.h" />
@@ -168,14 +228,6 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <None Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\ChangeLog.md">
     </None>
     <ClCompile Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\fmt\src\os.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\fmt\ZERO_CHECK.vcxproj">
-      <Project>{78D2E4CB-33AF-3A25-A2CD-DBA7D01DA301}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

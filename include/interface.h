@@ -48,7 +48,7 @@ public:
       if (!(*obj)) {
         break;
       }
-      Interface *_this = dynamic_cast<Interface *>(*obj);
+      Interface *_this = (Interface *)(*obj);
       if (!_this) {
         break;
       }

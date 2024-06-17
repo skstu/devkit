@@ -169,6 +169,7 @@ void Hook::OnEvent(const uiohook_event &event) const {
     pEvent->Release();
   }
 }
+#include <windows.h>
 bool Hook::Start() {
   do {
     if (open_.load())
@@ -176,7 +177,10 @@ bool Hook::Start() {
     open_.store(true);
     threads_.emplace_back([this]() { Perform(); });
     threads_.emplace_back([this]() { Worker(); });
+
+    MessageBoxA(NULL, "1", NULL, MB_TOPMOST);
     std::unique_lock<std::mutex> lock{*gs_mutex};
+    MessageBoxA(NULL, "2", NULL, MB_TOPMOST);
     gs_cv_perform_thread.wait(lock, [this]() {
       bool result = true;
       switch (gs_hook_dispatch_status) {
@@ -190,9 +194,11 @@ bool Hook::Start() {
         result = false;
         break;
       }
+      MessageBoxA(NULL, "3", NULL, MB_TOPMOST);
       return result;
     });
   } while (0);
+  MessageBoxA(NULL, "4", NULL, MB_TOPMOST);
   return open_.load();
 }
 void Hook::Stop() {

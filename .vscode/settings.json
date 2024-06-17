@@ -154,7 +154,8 @@
     "cvpp.h": "c",
     "focus_changed_event.h": "c",
     "log.hpp": "c",
-    "skpp.h": "c"
+    "skpp.h": "c",
+    "libuiohook.h": "c"
   },
   "editor.tabSize": 4,
   "C_Cpp.intelliSenseEngine": "Tag Parser",

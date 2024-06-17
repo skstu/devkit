@@ -19,6 +19,9 @@ void Inspect::Init() {
   do {
     if (ready_.load())
       break;
+
+    ready_.store(true);
+    break;
     std::string currentPath = sk::GetCurrentPath();
     std::cout << currentPath << std::endl;
 #if _DEBUG
@@ -29,8 +32,7 @@ void Inspect::Init() {
 #endif
 
     pOverlay_ = IOverlay::Create("overlay.dll");
-    // pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
-    std::cout << "Hello Martell!" << std::endl;
+    pUiohook_ = uiohook::IUiohook::Create("uiohook.dll");
     pAutomation_ = IAutomation::Create("automation.dll");
     if (pAutomation_) {
       pAutomation_->RegisterCaptureFinishedCb(
@@ -215,15 +217,16 @@ void Inspect::UnInit() {
     ready_.store(false);
   } while (0);
 }
-
 bool Inspect::Start() {
-  if (pAutomation_)
-    pAutomation_->Start();
-  if (pOverlay_)
-    pOverlay_->Start(OverlayWindowType::OVERLAY_WINDOW_UI);
-  if (pUiohook_) {
-    pUiohook_->Start();
-
+  do {
+    if (!ready_.load() || open_.load())
+      break;
+    if (pAutomation_)
+      pAutomation_->Start();
+    if (pOverlay_)
+      pOverlay_->Start(OverlayWindowType::OVERLAY_WINDOW_UI);
+    if (pUiohook_)
+      pUiohook_->Start();
 #if 0
     RECT rtTo;
     GetWindowRect(GetDesktopWindow(), &rtTo);
@@ -235,17 +238,22 @@ bool Inspect::Start() {
 
     pUiohook_->MouseDragged(300, 300, 50, 50);
 #endif
-  }
-
-  return true;
+    open_.store(true);
+  } while (0);
+  return open_.load();
 }
 void Inspect::Stop() {
-  if (pUiohook_)
-    pUiohook_->Stop();
-  if (pAutomation_)
-    pAutomation_->Stop();
-  if (pOverlay_)
-    pOverlay_->Stop();
+  do {
+    if (!open_.load())
+      break;
+    if (pUiohook_)
+      pUiohook_->Stop();
+    if (pAutomation_)
+      pAutomation_->Stop();
+    if (pOverlay_)
+      pOverlay_->Stop();
+    open_.store(false);
+  } while (0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////

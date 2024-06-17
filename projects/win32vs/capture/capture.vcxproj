@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="core.cpp" />
-    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="pyd.cpp" />
     <ClCompile Include="pyd_ext.cpp" />
@@ -126,6 +126,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +149,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -173,6 +175,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -195,6 +198,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)..\..\include\;$(SolutionDir)..\..\3rdparty\fmt\include;$(SolutionDir)..\..\3rdparty\dlfcn-win32\src;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\python\3.11\Include;$(SolutionDir)..\..\..\..\work\rpaWindowsUI\tools\Python\3.11\Lib\site-packages\pybind11\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

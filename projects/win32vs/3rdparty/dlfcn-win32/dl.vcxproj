@@ -69,7 +69,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;DLFCN_WIN32_SHARED;CMAKE_INTDIR="Debug";</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
     </ClCompile>
     <ResourceCompile>
@@ -110,7 +110,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <UseFullPaths>false</UseFullPaths>
       <WarningLevel>Level4</WarningLevel>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;DLFCN_WIN32_SHARED;CMAKE_INTDIR="Release";</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <DebugInformationFormat>
       </DebugInformationFormat>
@@ -142,46 +142,7 @@
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CustomBuild Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\dlfcn-win32\src\CMakeLists.txt">
-      <UseUtf8Encoding>Always</UseUtf8Encoding>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32/src/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
-C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\bin\cmake.exe -SC:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32 -BC:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32 --check-stamp-file C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/src/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakePackageConfigHelpers.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\dlfcn-win32\dlfcn-win32-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\dlfcn-win32\src\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32/src/CMakeLists.txt</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
-C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\bin\cmake.exe -SC:/Users/k34ub/source/skstu/devkit/3rdparty/dlfcn-win32 -BC:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32 --check-stamp-file C:/Users/k34ub/source/skstu/devkit/projects/win32vs/3rdparty/dlfcn-win32/src/CMakeFiles/generate.stamp
-if %errorlevel% neq 0 goto :cmEnd
-:cmEnd
-endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
-:cmErrorLevel
-exit /b %1
-:cmDone
-if %errorlevel% neq 0 goto :VCEnd</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\CMakePackageConfigHelpers.cmake;C:\Users\k34ub\Downloads\cmake-3.28.0-windows-x86_64\share\cmake-3.28\Modules\WriteBasicConfigVersionFile.cmake;C:\Users\k34ub\source\skstu\devkit\3rdparty\dlfcn-win32\dlfcn-win32-config.cmake.in;%(AdditionalInputs)</AdditionalInputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\dlfcn-win32\src\CMakeFiles\generate.stamp</Outputs>
-      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <ClCompile Include="C:\Users\k34ub\source\skstu\devkit\3rdparty\dlfcn-win32\src\dlfcn.c" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="C:\Users\k34ub\source\skstu\devkit\projects\win32vs\3rdparty\dlfcn-win32\ZERO_CHECK.vcxproj">
-      <Project>{D2FA83E9-F133-3DB9-A784-3D3F0D18CBC3}</Project>
-      <Name>ZERO_CHECK</Name>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -6,7 +6,8 @@
 #else
 #define PYD_API
 #endif
-
+PYD_API bool rpa_win32_start();
+PYD_API void rpa_win32_stop();
 PYD_API ULLPTR op_init();
 PYD_API void op_release(ULLPTR co_obj);
 PYD_API UINT op_find_capture(ULLPTR co_obj, const std::string& strJson);

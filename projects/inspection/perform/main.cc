@@ -25,10 +25,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
   inspect::Inspection *insp = nullptr;
   do {
+#ifndef _DEBUG
     if (is_exit) {
-
       break;
     }
+#endif
     insp = inspect::Inspection::Create(R"(inspection.dll)");
     if (insp == nullptr) {
       break;
@@ -36,10 +37,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     if (!insp->Start()) {
       break;
     }
-    while (true) {
+    /*while (true) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-    insp->Stop();
+    }*/
   } while (false);
   if (insp != nullptr) {
     insp->Stop();

@@ -3,6 +3,10 @@ import zbot.win32.capture as capture
 import time
 import atexit
 
+b = capture.rpa_win32_start()
+
+capture.rpa_win32_stop()
+
 
 co_obj = zbot.win32.capture.op_init()
 zbot.win32.capture.op_release(co_obj=co_obj)
@@ -41,4 +45,3 @@ capture.op_click(co_obj, sendfile)
 
 zbot.win32.capture.op_release(co_obj=co_obj)
 '''
-
