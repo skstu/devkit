@@ -23,6 +23,7 @@ group("build_all") {
   } else {
     deps = [
       #"//projects:projects_group",
+      #"//projects/inspection/capture:capture",
       "//tests:tests_group",
     ]
   }

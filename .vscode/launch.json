@@ -20,7 +20,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/out/perform.exe",
       "args": [
-        "--get-processes"
+        //"--get-processes"
       ],
       "cwd": "${workspaceFolder}",
       "sourceLanguages": [
@@ -54,12 +54,12 @@
       "preLaunchTask": "Compile Debug On GN"
     },
     {
-      "name": "Test Inspection",
+      "name": "Test Perform",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/out/perform.exe",
       "args": [
-        "--get-processes"
+        //"--get-processes"
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
