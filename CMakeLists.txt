@@ -8,15 +8,10 @@ set(SOLUTION_INCLUDE_DIR ${SOLUTION_ROOT_DIR}/include/)
 
 LIST(APPEND CMAKE_MODULE_PATH ${LOCAL_CMAKE_MODULES_PATH})
 include(global)
-include(msvc)
 
 if(MSVC)
 include(msvc)
 option(ENABLE_MSVC_CRT_MT "Enable msvc crt /MT /MTd compile." ON)
-if(ENABLE_MSVC_CRT_MT)
-add_compile_options("$<$<CONFIG:Release>:/GL>")
-add_link_options("$<$<CONFIG:Release>:/LTCG>")
-endif(ENABLE_MSVC_CRT_MT)
 endif(MSVC)
 
 add_definitions(-DUNICODE -D_UNICODE)
@@ -25,12 +20,17 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;" CACHE STRING "info" FORCE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
 
-
 # 3rdparty
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/dlfcn-win32/ "dlfcn-win32")
 set_target_properties(dl PROPERTIES FOLDER "3rdparty")
+
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/libuiohook/ "libuiohook")
 set_target_properties(uiohook PROPERTIES FOLDER "3rdparty")
+
+if(MSVC AND ENABLE_MSVC_CRT_MT)
+MSVC_CRT_SET(dl "/MT")
+MSVC_CRT_SET(uiohook "/MT")
+endif(MSVC AND ENABLE_MSVC_CRT_MT)
 
 #[[
 OutputPathConfig("bin" "libs/runtimes/" "libs/runtimes/")
