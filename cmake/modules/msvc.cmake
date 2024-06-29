@@ -100,4 +100,3 @@ endmacro(MSVC_LINK_FLAGS_SET_WINDOWS)
 
 endif(MSVC)
 
-
