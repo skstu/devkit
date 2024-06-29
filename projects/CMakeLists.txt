@@ -9,6 +9,8 @@ foreach(entry ${entries})
 
         if(${origin_entry_name} STREQUAL "inspection")
             add_subdirectory(${entry})
+        elseif(${origin_entry_name} STREQUAL "devtools")
+
         endif()
         #if(${origin_entry_name} STREQUAL "asdklfhgkasdgasdgah")
 

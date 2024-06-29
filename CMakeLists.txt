@@ -25,11 +25,17 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;" CACHE STRING "info" FORCE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
 
+
+# 3rdparty
+add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/dlfcn-win32/ "dlfcn-win32")
+set_target_properties(dl PROPERTIES FOLDER "3rdparty")
+add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/libuiohook/ "libuiohook")
+set_target_properties(uiohook PROPERTIES FOLDER "3rdparty")
+
 #[[
 OutputPathConfig("bin" "libs/runtimes/" "libs/runtimes/")
 add_subdirectory(${SOLUTION_ROOT_DIR}/runtimes/)
 OutputPathConfig("")
-
 option(ENABLE_MAIN_PROJECT_COMPILE_TESTS "Enable main projcet tests compile." ON)
 if(ENABLE_MAIN_PROJECT_COMPILE_TESTS)
 OutputPathConfig("bin" "bin/tests/" "objs")
@@ -38,10 +44,9 @@ add_subdirectory(${SOLUTION_ROOT_DIR}/tests/)
 OutputPathConfig("")
 endif(ENABLE_MAIN_PROJECT_COMPILE_TESTS)
 ]]
-
 #[[
-
 ]]
 
-add_subdirectory(${SOLUTION_ROOT_DIR}/projects/ "projects")
+
+#add_subdirectory(${SOLUTION_ROOT_DIR}/projects/ "projects")
 #set_target_properties(tests PROPERTIES FOLDER "tests")
