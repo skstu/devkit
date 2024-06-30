@@ -1,0 +1,7 @@
+static_library("ossl") {
+  sources = [
+    "ossl.cc",
+    "stdafx.h",
+  ]
+  public_configs = [ "//build/deps:openssl" ]
+}

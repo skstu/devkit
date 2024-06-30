@@ -29,6 +29,10 @@ protected:
   void Free(void **) const override final;
   bool SetClipboardText(const char *, const long &) const override final;
   bool GetClipboardText(char **, long *) const override final;
+  void SendTextW(const wchar_t *, const size_t &, const long &x,
+                 const long &y) const override final;
+  void SendClipboardTextA(const char *, const size_t &, const long &x,
+                          const long &y) const override final;
 
 private:
   void __MouseSetPos(const long &x, const long &y,

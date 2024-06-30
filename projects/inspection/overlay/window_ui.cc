@@ -4,56 +4,6 @@ static int rect_offset_windowsui = 0;
 
 static std::atomic_bool gs_windowui_screenshot_switch = false;
 
-static void OnPaint(const HWND &hWnd, const bool &screenshot = false) {
-  HDC hdc = nullptr;
-  HDC hdcMem = nullptr;
-  HBITMAP hbmMem = nullptr;
-  HGDIOBJ hOld = nullptr;
-
-  do {
-    if (!hWnd)
-      break;
-    hdc = GetDC(hWnd);
-    if (!hdc)
-      break;
-    // 使用双缓冲技术绘图
-    RECT rect;
-    GetClientRect(hWnd, &rect);
-    rect.right -= rect_offset_windowsui;
-    rect.bottom -= rect_offset_windowsui;
-    int left = rect.left;
-    int top = rect.top;
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
-
-    hdcMem = CreateCompatibleDC(hdc);
-    if (!hdcMem)
-      break;
-    hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-    if (!hbmMem)
-      break;
-    hOld = SelectObject(hdcMem, hbmMem);
-
-    // 清除背景
-    Gdiplus::Graphics graphicsMem(hdcMem);
-    graphicsMem.Clear(Gdiplus::Color(0, 0, 0, 0)); // 透明背景
-
-    Gdiplus::Pen pen(Gdiplus::Color(screenshot ? 0 : 255, 255, 215, 0), 5);
-    graphicsMem.DrawRectangle(&pen, left, top, width, height);
-
-    BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
-  } while (0);
-
-  if (hdcMem && hOld)
-    SelectObject(hdcMem, hOld);
-  if (hbmMem)
-    DeleteObject(hbmMem);
-  if (hdcMem)
-    DeleteDC(hdcMem);
-  if (hWnd && hdc)
-    ReleaseDC(hWnd, hdc);
-}
-
 static void OnScreenshot(const HWND &hWnd) {
   std::vector<char> imgBuffer;
   imgBuffer.clear();
@@ -111,6 +61,7 @@ static void OnScreenshot(const HWND &hWnd) {
   do {
     if (imgBuffer.empty())
       break;
+#if 0
 #if _DEBUG
     stl::File::WriteFile(R"(C:\Users\k34ub\Desktop\ctrl.png)",
                          std::string(&imgBuffer[0], imgBuffer.size()));
@@ -121,44 +72,15 @@ static void OnScreenshot(const HWND &hWnd) {
       break;
 #endif
     std::cout << "Screenshot success." << std::endl;
+#endif
+    Stream *data = new Stream();
+    data->SetData(imgBuffer.data(), imgBuffer.size());
+    __gpOverlay->OnScreenshotFinished(OverlayWindowType::OVERLAY_WINDOW_UI,
+                                      dynamic_cast<IOverlay::IStream *>(data));
+    SK_DELETE_PTR(data);
   } while (0);
 }
 
-static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
-                                   LPARAM lParam) {
-  static WindowBk *_this = reinterpret_cast<WindowBk *>(lParam);
-
-  static int mouseX = 0;
-  static int mouseY = 0;
-  static bool trackingMouse = false;
-  switch (uMsg) {
-  case WM_CREATE: {
-    return FALSE;
-  } break;
-  case WM_PAINT: {
-    // PAINTSTRUCT ps;
-    // HDC hdc = BeginPaint(hWnd, &ps);
-    // EndPaint(hWnd, &ps);
-    if (gs_windowui_screenshot_switch.load()) {
-      OnPaint(hWnd, true);
-      OnScreenshot(hWnd);
-      gs_windowui_screenshot_switch.store(false);
-    } else {
-      OnPaint(hWnd);
-    }
-  } break;
-  case WM_ERASEBKGND: {
-    return TRUE;
-  }
-  case WM_DESTROY: {
-    PostQuitMessage(0);
-    // std::cout << "Overlay module exit." << std::endl;
-  } break;
-  default:
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
-  }
-  return 0;
-}
 WindowUi::WindowUi()
     : IWindow(OverlayWindowType::OVERLAY_WINDOW_UI, L"OverlayWindowClassFromUi",
               WS_POPUP,
@@ -178,12 +100,30 @@ void WindowUi::Release() const {
 }
 
 void WindowUi::OnCreateWindowSuccess() const {
+  // SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 0, LWA_ALPHA);
   SetLayeredWindowAttributes(hwnd_, RGB(0, 0, 0), 0, LWA_COLORKEY);
 
   SetWindowPos(hwnd_, HWND_TOPMOST, default_window_point_.x,
                default_window_point_.y, default_window_size_.cx,
                default_window_size_.cy, SWP_SHOWWINDOW);
   InvalidateRect(hwnd_, NULL, TRUE);
+}
+void WindowUi::OnWindowIdle() {
+  do {
+    break;
+    POINT pt;
+    if (FALSE == GetCursorPos(&pt))
+      break;
+    HWND hwnd = WindowFromPoint(pt);
+    if (!hwnd)
+      break;
+    RECT rtWindow;
+    GetWindowRect(hwnd, &rtWindow);
+    SetWindowPos(hwnd_, HWND_TOPMOST, rtWindow.left, rtWindow.top,
+                 rtWindow.right - rtWindow.left, rtWindow.bottom - rtWindow.top,
+                 SWP_SHOWWINDOW);
+    InvalidateRect(hwnd_, NULL, TRUE);
+  } while (0);
 }
 void WindowUi::SetPosition(const long &x, const long &y, const long &cx,
                            const long &cy) const {
@@ -209,4 +149,157 @@ bool WindowUi::Screenshot() const {
     result = true;
   } while (0);
   return result;
+}
+
+void WindowUi::SetRegion() const {
+  HRGN hRgn = nullptr;
+  RECT rect;
+  GetWindowRect(hwnd_, &rect);
+  hRgn = CreateRectRgn(0, 0, rect.right - rect.left, rect.bottom - rect.top);
+  if (hwnd_ && hRgn)
+    SetWindowRgn(hwnd_, hRgn, TRUE);
+}
+void WindowUi::OnPaint() const {
+  Config *pConfig = dynamic_cast<Config *>(__gpOverlay->ConfigGet());
+  if (!pConfig)
+    return;
+  HDC hdc = nullptr;
+  HDC hdcMem = nullptr;
+  HBITMAP hbmMem = nullptr;
+  HGDIOBJ hOld = nullptr;
+
+  do {
+    if (!hwnd_)
+      break;
+    hdc = GetDC(hwnd_);
+    if (!hdc)
+      break;
+
+    // 使用双缓冲技术绘图
+    RECT rect;
+    GetClientRect(hwnd_, &rect);
+    rect.right -= rect_offset_windowsui;
+    rect.bottom -= rect_offset_windowsui;
+    int left = rect.left;
+    int top = rect.top;
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+
+    hdcMem = CreateCompatibleDC(hdc);
+    if (!hdcMem)
+      break;
+    hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+    if (!hbmMem)
+      break;
+    hOld = SelectObject(hdcMem, hbmMem);
+
+    // 清除背景
+    Gdiplus::Graphics graphicsMem(hdcMem);
+    graphicsMem.Clear(Gdiplus::Color(0, 0, 0, 0)); // 透明背景
+
+    // 设置抗锯齿模式
+    graphicsMem.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+
+    Gdiplus::Pen pen(Gdiplus::Color(/*screenshot ? 0 :*/ 255, 255, 0, 0), 5);
+    graphicsMem.DrawRectangle(&pen, left, top, width - 1, height - 1);
+
+    do {
+      break;
+      // Color color(20, 255, 215, 0);//!@ 土豪金
+      Gdiplus::Color color(/*IsScreenshot ? 0 : */ 100, 183, 110,
+                           121); //!@ 玫瑰金
+      Gdiplus::SolidBrush brush(color);
+
+      BLENDFUNCTION blend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+
+      graphicsMem.FillRectangle(
+          &brush,
+          Gdiplus::Rect(0, 0, rect.right - rect.left, rect.bottom - rect.top));
+      Gdiplus::Pen pen(Gdiplus::Color(/*IsScreenshot ? 0 :*/ 255, 255, 0, 0),
+                       5);
+      // 255, 215, 0
+      // Gdiplus::Pen pen(Gdiplus::Color(IsScreenshot ? 0 : 255, 255, 215, 0),
+      // 5);
+      graphicsMem.DrawRectangle(&pen,
+                                Gdiplus::Rect(0, 0, rect.right - rect.left - 1,
+                                              rect.bottom - rect.top - 1));
+
+      POINT ptDst = {rect.left, rect.top};
+      // POINT ptDst = {0, 0};
+      POINT ptSrc = {0, 0};
+      SIZE sizeWnd = {rect.right - rect.left, rect.bottom - rect.top};
+
+      UpdateLayeredWindow(hwnd_, hdc, &ptDst, &sizeWnd, hdcMem, &ptSrc, 0,
+                          &blend, ULW_ALPHA);
+    } while (0);
+
+// 绘制带透明度的矩形
+#if 0
+    Gdiplus::Color color(50, 183, 110, 121); // 透明度为 50 的玫瑰金颜色
+    Gdiplus::SolidBrush brush(color);
+    graphicsMem.FillRectangle(&brush, Gdiplus::Rect(rect.left, rect.top,
+                                                    rect.right - rect.left,
+                                                    rect.bottom - rect.top));
+#endif
+    BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
+  } while (0);
+
+  if (hdcMem && hOld)
+    SelectObject(hdcMem, hOld);
+  if (hbmMem)
+    DeleteObject(hbmMem);
+  if (hdcMem)
+    DeleteDC(hdcMem);
+  if (hwnd_ && hdc)
+    ReleaseDC(hwnd_, hdc);
+}
+LRESULT CALLBACK WindowUi::WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+                                      LPARAM lParam) {
+  static WindowUi *_this = reinterpret_cast<WindowUi *>(lParam);
+  if (_this) {
+    _this->hwnd_ = hWnd;
+  }
+  switch (uMsg) {
+  case WM_CREATE: {
+    return FALSE;
+  } break;
+  case WM_PAINT: {
+#if 0
+    // PAINTSTRUCT ps;
+    // HDC hdc = BeginPaint(hWnd, &ps);
+    // EndPaint(hWnd, &ps);
+    if (!dynamic_cast<Config *>(__gpOverlay->ConfigGet())->EnableScreenshot()) {
+      gs_windowui_screenshot_switch.store(false);
+    } else {
+      gs_windowui_screenshot_switch.store(true);
+    }
+    if (gs_windowui_screenshot_switch.load()) {
+      OnPaint(hWnd, true);
+      OnScreenshot(hWnd);
+      gs_windowui_screenshot_switch.store(false);
+    } else {
+      OnPaint(hWnd);
+    }
+#endif
+    if (_this) {
+      _this->OnPaint();
+    }
+  } break;
+  case WM_SIZE:
+  case WM_SIZING: {
+    if (_this) {
+      _this->SetRegion();
+    }
+  } break;
+  case WM_ERASEBKGND: {
+    return TRUE;
+  }
+  case WM_DESTROY: {
+    PostQuitMessage(0);
+    // std::cout << "Overlay module exit." << std::endl;
+  } break;
+  default:
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+  }
+  return 0;
 }

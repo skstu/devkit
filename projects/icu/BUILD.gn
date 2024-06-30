@@ -1,0 +1,12 @@
+source_set("source_icu") {
+  sources = [ "icu.cc" ]
+
+  public_configs = [
+    "//build/deps:icu",
+  ]
+  defines = [ "SHARED_IMPLEMENTATION" ]
+  deps = [ "//projects/stl:stl" ]
+}
+shared_library("icu") {
+  deps = [ ":source_icu" ]
+}

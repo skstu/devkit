@@ -1,33 +1,22 @@
 file(GLOB entries *)
 foreach(entry ${entries})
-    if(IS_DIRECTORY ${entry})
-        get_filename_component(origin_entry_name "${entry}" NAME)
+ if(NOT (IS_DIRECTORY ${entry}) OR (NOT (EXISTS ${entry}/CMakeLists.txt)))
+  continue()
+ endif() 
+ get_filename_component(entry_name "${entry}" NAME)
+ #====================================================================================
+ if(${entry_name} STREQUAL "inspection")
+    #add_subdirectory(${entry})
+ #====================================================================================
+ elseif(${entry_name} STREQUAL "win32" OR ${entry_name} STREQUAL "stl")
+ add_subdirectory(${entry})
+ set(project_folder_name "")
+ GFN_GET_DIRECTORY_PREV_NAME(${entry} project_folder_name)
+ set_target_properties(${entry_name} PROPERTIES FOLDER ${project_folder_name})
+ else()
 
-        if(NOT (IS_DIRECTORY ${entry}) OR (NOT (EXISTS ${entry}/CMakeLists.txt)))
-            continue()
-        endif()
-
-        if(${origin_entry_name} STREQUAL "inspection")
-            add_subdirectory(${entry})
-        elseif(${origin_entry_name} STREQUAL "devtools")
-
-        endif()
-        #if(${origin_entry_name} STREQUAL "asdklfhgkasdgasdgah")
-
-            #elseif(${origin_entry_name} STREQUAL "cmake-tests")
-        #elseif()
-            #add_subdirectory(${entry})
-            #set_target_properties(${origin_entry_name} PROPERTIES FOLDER "projects")  
-            #message(STATIC "${entry}/")
-        #endif()
-		#if(${origin_entry_name} STREQUAL "devtools")
-			#add_subdirectory(${entry})
-			#set(target_project_relative_path_name "")
-			#GLOBAL_GET_TARGET_PROJECT_RELATIVE_PATHNAME(${entry} target_project_relative_path_name)
-			#set_target_properties(${entry_name} PROPERTIES FOLDER ${target_project_relative_path_name})
-		#elseif()
-			
-		#endif()
-        #MESSAGE(${entry})
-    endif()
+ endif()
+ 
 endforeach(entry)
+
+

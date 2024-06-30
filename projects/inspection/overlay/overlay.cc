@@ -16,10 +16,17 @@ bool Overlay::Ready() const {
   return open_.load();
 }
 void Overlay::Init() {
+  config_ = new Config();
   Gdiplus::GdiplusStartup(&gdiplustoken_, &gdiplusStartupInput_, NULL);
 }
 void Overlay::UnInit() {
   Gdiplus::GdiplusShutdown(gdiplustoken_);
+  config_->Release();
+}
+IOverlay::IConfig *Overlay::ConfigGet() const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  auto pConfig = dynamic_cast<IOverlay::IConfig *>(config_);
+  return pConfig;
 }
 void Overlay::OnUioEvent(const uiohook::IUioEvent *pEvent) const {
   for (const auto &window : window_s_)
@@ -34,6 +41,16 @@ bool Overlay::Screenshot(const OverlayWindowType &type) const {
   }
   return result;
 }
+void Overlay::RegisterScreenshotFinishedCb(const tfScreenshotFinishedCb &cb) {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  screenshot_finished_cb_ = cb;
+}
+void Overlay::OnScreenshotFinished(const OverlayWindowType &type,
+                                   const IOverlay::IStream *data) const {
+  std::lock_guard<std::mutex> lock{*mutex_};
+  if (screenshot_finished_cb_)
+    screenshot_finished_cb_(type, data);
+}
 bool Overlay::Start(const OverlayWindowType &type) {
   do {
     if (open_.load())
@@ -46,6 +63,9 @@ bool Overlay::Start(const OverlayWindowType &type) {
     }
     if (OverlayWindowType::OVERLAY_WINDOW_BK & type) {
       window_s_.emplace_back(dynamic_cast<IWindow *>(new WindowBk()));
+    }
+    if (OverlayWindowType::OVERLAY_WINDOW_ELE & type) {
+      window_s_.emplace_back(dynamic_cast<IWindow *>(new WindowEle()));
     }
 
     for (auto it = window_s_.begin(); it != window_s_.end(); ++it) {

@@ -15,7 +15,9 @@ source_set("source_perform") {
   #defines = [ "SHARED_IMPLEMENTATION" ]
   deps = [
     #"//projects/opencv:opencv",
-    "//projects/inspection/inspect:inspection",
+    #"//projects/inspection/inspect:inspection",
+    "//projects/icu:icu",
+    "//projects/ossl:ossl",
     "//projects/sk:sk",
     "//projects/stl:stl",
   ]

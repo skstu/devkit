@@ -1,7 +1,7 @@
 group("inspection") {
   deps = [
     "automation:automation",
-    "inspect:inspection",
+    #"inspect:inspection",
     "overlay:overlay",
     "perform:perform",
     "uiohook:uiohook",

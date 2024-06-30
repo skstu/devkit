@@ -17,8 +17,11 @@ using namespace inspect;
 // #include <atlbase.h>
 // #include <atlcom.h>
 
+#include "config.h"
+#include "stream.h"
 #include "window.h"
 #include "window_bk.h"
+#include "window_ele.h"
 #include "window_cv.h"
 #include "window_ui.h"
 #include "overlay.h"

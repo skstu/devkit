@@ -7,4 +7,5 @@ static_library("stl") {
     "string.cc",
     "time.cc",
   ]
+  public_configs = [ "//build/deps:openssl" ]
 }

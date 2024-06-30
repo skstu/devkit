@@ -17,14 +17,22 @@ protected:
   void Release() const override final;
   void OnUioEvent(const uiohook::IUioEvent *) const override final;
   bool Screenshot(const OverlayWindowType &) const override final;
-
+  void
+  RegisterScreenshotFinishedCb(const tfScreenshotFinishedCb &) override final;
   void SetPosition(const long &x, const long &y, const long &cx,
                    const long &cy) const override final;
 
+public:
+  IOverlay::IConfig *ConfigGet() const override final;
+  void OnScreenshotFinished(const OverlayWindowType &,
+                            const IOverlay::IStream *) const;
+
 private:
+  tfScreenshotFinishedCb screenshot_finished_cb_ = nullptr;
   std::atomic_bool open_ = false;
   std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
   std::vector<IWindow *> window_s_;
+  Config *config_ = nullptr;
 };
 
 #ifdef __cplusplus

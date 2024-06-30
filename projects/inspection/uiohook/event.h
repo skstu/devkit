@@ -200,6 +200,7 @@ private:
       keypressed[static_cast<uint16_t>(UioVirtualKeyCodes::UIO_VC_TOTAL)];
   UioVirtualMouseButtons mousesbuttonpressed[static_cast<uint16_t>(
       UioVirtualMouseButtons::UIO_MOUSE_BUTTON_TOTAL)];
+  std::shared_ptr<std::mutex> mutex_ = std::make_shared<std::mutex>();
 };
 
 #endif //__PROJECTS_UIOHOOK_EVENT_H_

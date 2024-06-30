@@ -2,8 +2,6 @@ source_set("source_inspection") {
   sources = [
     "config.cc",
     "config.h",
-    "element.cc",
-    "element.h",
     "inspect.cc",
     "inspect.h",
     "stdafx.h",

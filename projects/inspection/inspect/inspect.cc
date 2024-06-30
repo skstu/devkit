@@ -20,8 +20,6 @@ void Inspect::Init() {
     if (ready_.load())
       break;
 
-    ready_.store(true);
-    break;
     std::string currentPath = sk::GetCurrentPath();
     std::cout << currentPath << std::endl;
 #if _DEBUG
@@ -184,22 +182,7 @@ void Inspect::Init() {
           },
           this);
 #endif
-#if 0
-    pAutomation_->RegisterElementCaptureFinishCb([&](const IElement *pElement) {
-      if (pElement) {
-#if 0
-        auto pos = pElement->GetPosition();
-        auto pt = pos->GetPoint();
-        std::string output = fmt::format("pt(x:{},y:{}) is one element.",
-                                         pt->GetX(), pt->GetY());
-        // std::cout << output << std::endl;
-        auto rect = pos->GetRect();
-        pElement->Release();
-#endif
-        pOverlay_->AppendElement(const_cast<IElement *>(pElement));
-      }
-    });
-#endif
+
     ready_.store(true);
   } while (0);
 }

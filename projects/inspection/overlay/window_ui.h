@@ -6,7 +6,14 @@ public:
   WindowUi();
   virtual ~WindowUi();
 
+private:
+  void SetRegion() const;
+  static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+                                     LPARAM lParam);
+  void OnPaint() const;
+
 protected:
+  void OnWindowIdle() override final;
   bool Screenshot() const override final;
   void Release() const override final;
   void OnCreateWindowSuccess() const override final;

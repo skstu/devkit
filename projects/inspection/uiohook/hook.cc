@@ -108,6 +108,56 @@ void Hook::Init() {
       std::make_pair(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_MIDDLE, false));
   uio_virtual_mouse_pressed_s_.insert(
       std::make_pair(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_RIGHT, false));
+
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F1, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F2, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F3, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F4, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F5, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F6, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F7, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F8, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F9, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F10, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F11, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F12, false));
+
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F13, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F14, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F15, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F16, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F17, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F18, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F19, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F20, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F21, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F22, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F23, false));
+  uio_virtual_key_pressed_s_.insert(
+      std::make_pair(UioVirtualKeyCodes::UIO_VC_F24, false));
 }
 void Hook::UnInit() {
   free(gsp_event_);
@@ -169,7 +219,6 @@ void Hook::OnEvent(const uiohook_event &event) const {
     pEvent->Release();
   }
 }
-#include <windows.h>
 bool Hook::Start() {
   do {
     if (open_.load())
@@ -178,9 +227,7 @@ bool Hook::Start() {
     threads_.emplace_back([this]() { Perform(); });
     threads_.emplace_back([this]() { Worker(); });
 
-    MessageBoxA(NULL, "1", NULL, MB_TOPMOST);
     std::unique_lock<std::mutex> lock{*gs_mutex};
-    MessageBoxA(NULL, "2", NULL, MB_TOPMOST);
     gs_cv_perform_thread.wait(lock, [this]() {
       bool result = true;
       switch (gs_hook_dispatch_status) {
@@ -194,11 +241,9 @@ bool Hook::Start() {
         result = false;
         break;
       }
-      MessageBoxA(NULL, "3", NULL, MB_TOPMOST);
       return result;
     });
   } while (0);
-  MessageBoxA(NULL, "4", NULL, MB_TOPMOST);
   return open_.load();
 }
 void Hook::Stop() {
@@ -233,6 +278,7 @@ void Hook::Stop() {
     threads_.clear();
   } while (0);
 }
+
 void Hook::Worker() {
   do {
     do {
@@ -340,6 +386,59 @@ void Hook::__MouseMoveTo(long x, long y, long step,
   // Move to the final position to ensure accuracy
   __MouseSetPos(x, y, btnType);
 }
+void Hook::SendClipboardTextA(const char *text, const size_t &textLen,
+                              const long &x, const long &y) const {
+  if (!text || textLen <= 0)
+    return;
+  SetClipboardText(text, textLen);
+  MouseClick(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT, x, y, 1);
+  std::lock_guard<std::mutex> lock{*mutex_};
+
+  // Press CTRL key
+  uiohook_event ctrl_press;
+  ctrl_press.type = EVENT_KEY_PRESSED;
+  ctrl_press.data.keyboard.keycode = VC_CONTROL_L; // Use left control key
+  hook_post_event(&ctrl_press);
+
+  // Press V key
+  uiohook_event v_press;
+  v_press.type = EVENT_KEY_PRESSED;
+  v_press.data.keyboard.keycode = VC_V; // Key code for V
+  hook_post_event(&v_press);
+
+  // Release V key
+  uiohook_event v_release;
+  v_release.type = EVENT_KEY_RELEASED;
+  v_release.data.keyboard.keycode = VC_V; // Key code for V
+  hook_post_event(&v_release);
+
+  // Release CTRL key
+  uiohook_event ctrl_release;
+  ctrl_release.type = EVENT_KEY_RELEASED;
+  ctrl_release.data.keyboard.keycode = VC_CONTROL_L; // Use left control key
+  hook_post_event(&ctrl_release);
+}
+void Hook::SendTextW(const wchar_t *src, const size_t &srcLen, const long &x,
+                     const long &y) const {
+  MouseClick(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT, x, y, 1);
+  std::lock_guard<std::mutex> lock{*mutex_};
+  if (!src || srcLen <= 0) {
+    return;
+  }
+  std::wstring strValue(src, srcLen);
+  std::vector<INPUT> vecInput;
+  for (auto ch : strValue) {
+    INPUT input = {0};
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = 0;
+    input.ki.wScan = ch;
+    input.ki.dwFlags = KEYEVENTF_UNICODE;
+    vecInput.push_back(input);
+  }
+  UINT uSent = SendInput(static_cast<UINT>(vecInput.size()), vecInput.data(),
+                         sizeof(INPUT));
+}
+
 void Hook::MouseWheel(const long &x, const long &y, const long &amount,
                       const long &rotation) const {
   std::lock_guard<std::mutex> lock{*mutex_};
@@ -377,16 +476,16 @@ void Hook::MouseDragged(const long &to_x, const long &to_y, const long &from_x,
   std::lock_guard<std::mutex> lock{*mutex_};
   __MouseSetPos(from_x, from_y);
   gsp_event_->time = stl::Time::TimeStamp<std::chrono::milliseconds>();
-  gsp_event_->data.mouse.x = from_x;
-  gsp_event_->data.mouse.y = from_x;
+  // gsp_event_->data.mouse.x = from_x;
+  // gsp_event_->data.mouse.y = from_x;
   gsp_event_->data.mouse.button =
       static_cast<uint16_t>(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT);
   gsp_event_->type = EVENT_MOUSE_PRESSED;
   hook_post_event(gsp_event_);
   __MouseMoveTo(to_x, to_y, 30, UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT);
   gsp_event_->time = stl::Time::TimeStamp<std::chrono::milliseconds>();
-  gsp_event_->data.mouse.x = to_x;
-  gsp_event_->data.mouse.y = to_y;
+  // gsp_event_->data.mouse.x = to_x;
+  // gsp_event_->data.mouse.y = to_y;
   gsp_event_->data.mouse.button =
       static_cast<uint16_t>(UioVirtualMouseButtons::UIO_MOUSE_BUTTON_LEFT);
   gsp_event_->type = EVENT_MOUSE_RELEASED;
@@ -430,6 +529,23 @@ void Hook::Perform() {
       gs_cv_perform_thread.notify_one();
       lock.unlock();
     } break;
+    case EVENT_KEY_PRESSED: {
+      int sk = 1;
+    }
+    case EVENT_KEY_RELEASED: {
+      int sk = 0;
+    }
+    case EVENT_MOUSE_RELEASED:
+      /*{
+        if (event->data.keyboard.keycode == VC_CONTROL_L ||
+            event->data.keyboard.keycode == VC_CONTROL_R) {
+          if (event->data.mouse.button == MOUSE_BUTTON1) {
+
+            auto sk = 0;
+          }
+        }
+      } break;*/
+
     default:
       __gpHook->AppendEvent(event);
       break;
@@ -476,6 +592,7 @@ void Hook::Free(void **p) const {
 }
 bool Hook::SetClipboardText(const char *text, const long &len) const {
   bool result = false;
+  std::lock_guard<std::mutex> lock{*mutex_};
   do {
     if (!text || len <= 0)
       break;
@@ -506,9 +623,10 @@ bool Hook::SetClipboardText(const char *text, const long &len) const {
   return result;
 }
 bool Hook::GetClipboardText(char **text, long *len) const {
+  bool result = false;
+  std::lock_guard<std::mutex> lock{*mutex_};
   *text = nullptr;
   *len = 0;
-  bool result = false;
   do {
     HANDLE hData = nullptr;
     if (FALSE == OpenClipboard(nullptr))

@@ -11,6 +11,5 @@ using namespace inspect;
 #include <cvpp.h>
 using namespace cvpp;
 #include "config.h"
-#include "element.h"
 #include "inspect.h"
 #endif ///__PROJECTS_INSPECTION_AFX_H_

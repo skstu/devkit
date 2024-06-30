@@ -48,5 +48,7 @@ endif(ENABLE_MAIN_PROJECT_COMPILE_TESTS)
 ]]
 
 
-#add_subdirectory(${SOLUTION_ROOT_DIR}/projects/ "projects")
+add_subdirectory(${SOLUTION_ROOT_DIR}/tests/)
 #set_target_properties(tests PROPERTIES FOLDER "tests")
+
+add_subdirectory(${SOLUTION_ROOT_DIR}/projects/)

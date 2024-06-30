@@ -2,15 +2,27 @@ source_set("source_automation") {
   sources = [
     "automation.cc",
     "automation.h",
+    "automation_focus_changed_event.cc",
+    "config.cc",
+    "config.h",
+    "element.cc",
+    "element.h",
+    "element_array.cc",
+    "element_array.h",
+    "resource.rc",
     "stdafx.h",
   ]
   include_dirs = [ "//projects/inspection/include" ]
   public_configs = [
     "//build/deps:openssl",
     "//build/deps:zlib",
+    "//build/deps:fmt",
   ]
   defines = [ "SHARED_IMPLEMENTATION" ]
-  deps = [ "//projects/stl:stl" ]
+  deps = [
+    "//projects/ossl:ossl",
+    "//projects/stl:stl",
+  ]
 }
 shared_library("automation") {
   deps = [ ":source_automation" ]
