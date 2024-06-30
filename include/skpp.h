@@ -20,6 +20,49 @@ static std::string GetCurrentPath() {
   sk_mem_free((void **)&path);
   return result;
 }
+
+static std::string StringToU8String(const std::string &input) {
+  std::string result;
+  char *to_name = nullptr;
+  size_t to_nameLen = 0;
+  char *res = nullptr;
+  size_t resLen = 0;
+  do {
+    if (input.empty())
+      break;
+    sk_icu_match_type_to_name(sk_icu_conv_type::ICU_CONV_TYPE_UTF8, &to_name,
+                              &to_nameLen);
+    sk_icu_convert(input.data(), input.size(), to_name, &res, &resLen);
+    if (!res)
+      break;
+    result.append(res, resLen);
+  } while (0);
+  sk_mem_free((void **)&to_name);
+  sk_mem_free((void **)&res);
+  return result;
+}
+static std::string WStringToString(const std::wstring &input) {
+  std::string result;
+  char *to_name = nullptr;
+  size_t to_nameLen = 0;
+  char *res = nullptr;
+  size_t resLen = 0;
+  do {
+    if (input.empty())
+      break;
+    sk_icu_match_type_to_name(sk_icu_conv_type::ICU_CONV_TYPE_ASCII, &to_name,
+                              &to_nameLen);
+    sk_icu_convert((char *)input.data(), input.size() * sizeof(wchar_t),
+                   to_name, &res, &resLen);
+    if (!res)
+      break;
+    result.append(res, resLen);
+  } while (0);
+  sk_mem_free((void **)&to_name);
+  sk_mem_free((void **)&res);
+  return result;
+}
+
 } // namespace sk
 
 #endif //__SKPP_H_

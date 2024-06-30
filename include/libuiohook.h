@@ -34,6 +34,31 @@ enum class UioVirtualKeyCodes : uint16_t {
   UIO_VC_Y = 0x0015,
   UIO_VC_Z = 0x002C,
   ///////////////////////
+  UIO_VC_F1 = 0x003B,
+  UIO_VC_F2 = 0x003C,
+  UIO_VC_F3 = 0x003D,
+  UIO_VC_F4 = 0x003E,
+  UIO_VC_F5 = 0x003F,
+  UIO_VC_F6 = 0x0040,
+  UIO_VC_F7 = 0x0041,
+  UIO_VC_F8 = 0x0042,
+  UIO_VC_F9 = 0x0043,
+  UIO_VC_F10 = 0x0044,
+  UIO_VC_F11 = 0x0057,
+  UIO_VC_F12 = 0x0058,
+  UIO_VC_F13 = 0x005B,
+  UIO_VC_F14 = 0x005C,
+  UIO_VC_F15 = 0x005D,
+  UIO_VC_F16 = 0x0063,
+  UIO_VC_F17 = 0x0064,
+  UIO_VC_F18 = 0x0065,
+  UIO_VC_F19 = 0x0066,
+  UIO_VC_F20 = 0x0067,
+  UIO_VC_F21 = 0x0068,
+  UIO_VC_F22 = 0x0069,
+  UIO_VC_F23 = 0x006A,
+  UIO_VC_F24 = 0x006B,
+  ///////////////////////
   UIO_VC_ESCAPE = 0x0001,
   UIO_VC_SHIFT_L = 0x002A,
   UIO_VC_SHIFT_R = 0x0036,
@@ -166,6 +191,10 @@ public:
                           const long &y, const unsigned long &count) const = 0;
   virtual void MouseDragged(const long &to_x, const long &to_y,
                             const long &from_x, const long &from_y) const = 0;
+  virtual void SendTextW(const wchar_t *, const size_t &, const long &x,
+                         const long &y) const = 0;
+  virtual void SendClipboardTextA(const char *, const size_t &, const long &x,
+                                  const long &y) const = 0;
   //!@ rotation == 1 (up)
   //!@ rotation == -1 (Then look down)
   virtual void MouseWheel(const long &x, const long &y, const long &amount,

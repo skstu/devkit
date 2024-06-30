@@ -64,6 +64,9 @@ config("default_cflags") {
       "-g",
       "-O0",
     ]
+    if (!enable_openssl_3_WnoDeprecatedDeclarations) {
+      common_flags += [ "-Wno-deprecated-declarations" ]
+    }
     if (enable_address_sanitizer) {
       common_flags += [
         "-fno-omit-frame-pointer",

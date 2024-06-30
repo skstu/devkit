@@ -45,11 +45,24 @@ config("icu") {
 }
 
 config("openssl") {
+  #ldflags = [ "-Wdeprecated-declarations" ]
   include_dirs = [ system_env.ROOT_DIR + "/bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/include" ]
   libs = [
     system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/lib64/libssl.a",
     system_env.ROOT_DIR + "//bin/${current_os}/${compiler_toolchain}/3rdparty/openssl/${current_cpu}/${compile_configure_type}/lib64/libcrypto.a",
   ]
+}
+
+config("python311") {
+  #ldflags = [ "-Wdeprecated-declarations" ]
+  include_dirs = [
+    "C:/Users/k34ub/source/work/rpaWindowsUI/tools/python/3.11/Include",
+    "C:/Users/k34ub/source/work/rpaWindowsUI/tools/python/3.11/Lib/site-packages/pybind11/include",
+  ]
+
+  #libs = [ "C:/Users/k34ub/source/work/rpaWindowsUI/tools/python/3.11/libs/python311.lib" ]
+  lib_dirs =
+      [ "C:/Users/k34ub/source/work/rpaWindowsUI/tools/python/3.11/libs/" ]
 }
 
 config("wxwidgets") {

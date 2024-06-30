@@ -1,5 +1,5 @@
 declare_args() {
-  is_debug = false
+  is_debug = true
 
   # Specify compile arch ["x86","x64"]
   compile_arch = ""
@@ -34,6 +34,9 @@ declare_args() {
 
   # WXUI library
   enable_static_library_wxui = false
+
+  # Openssl 3
+  enable_openssl_3_WnoDeprecatedDeclarations = false
 }
 
 declare_args() {
