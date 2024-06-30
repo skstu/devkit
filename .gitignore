@@ -5,3 +5,4 @@ store
 objs
 libs
 #build
+cmake_build

@@ -27,9 +27,15 @@ set_target_properties(dl PROPERTIES FOLDER "3rdparty")
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/libuiohook/ "libuiohook")
 set_target_properties(uiohook PROPERTIES FOLDER "3rdparty")
 
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/fmt/ "fmt")
+set_target_properties(fmt PROPERTIES FOLDER "3rdparty")
+
 if(MSVC AND ENABLE_MSVC_CRT_MT)
 MSVC_CRT_SET(dl "/MT")
 MSVC_CRT_SET(uiohook "/MT")
+MSVC_CRT_SET(fmt "/MT")
 endif(MSVC AND ENABLE_MSVC_CRT_MT)
 
 #[[

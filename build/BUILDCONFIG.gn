@@ -1,5 +1,5 @@
 declare_args() {
-  is_debug = true
+  is_debug = false
 
   # Specify compile arch ["x86","x64"]
   compile_arch = ""
@@ -14,7 +14,7 @@ declare_args() {
 
   # Supported ['gnu','clang','msvc',]
   # If the parameter is empty, enable the default value
-  compiler_toolchain = "clang"
+  compiler_toolchain = "msvc"
 
   # compile_enable_position_independent_code = false
   # -DCMAKE_POSITION_INDEPENDENT_CODE=OFF|ON
