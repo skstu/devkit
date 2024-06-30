@@ -2,11 +2,12 @@ file(GLOB entries *)
 foreach(entry ${entries})
  if(NOT (IS_DIRECTORY ${entry}) OR (NOT (EXISTS ${entry}/CMakeLists.txt)))
   continue()
- endif() 
+ endif()
+ #====================================================================================
  get_filename_component(entry_name "${entry}" NAME)
  #====================================================================================
  if(${entry_name} STREQUAL "inspection")
-    #add_subdirectory(${entry})
+    add_subdirectory(${entry})
  #====================================================================================
  elseif(${entry_name} STREQUAL "win32" OR ${entry_name} STREQUAL "stl")
  add_subdirectory(${entry})
