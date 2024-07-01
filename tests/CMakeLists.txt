@@ -7,7 +7,8 @@ foreach(entry ${entries})
  #====================================================================================
  if(NOT ${entry_name} STREQUAL "test_win32" AND 
  NOT ${entry_name} STREQUAL "test_ossl" AND
- NOT ${entry_name} STREQUAL "test_uiohook")
+ NOT ${entry_name} STREQUAL "test_uiohook" AND
+ NOT ${entry_name} STREQUAL "test_inspection")
  #====================================================================================
  #elseif(${entry_name} STREQUAL "asdgasdgasdg")
  # add_subdirectory(${entry})  
