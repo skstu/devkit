@@ -12,8 +12,24 @@ void Tools::Release() const {
   delete this;
 }
 
+std::string GetModulePath(const HINSTANCE& hModule = nullptr) {
+    std::string result;
+    do {
+        char Filename[MAX_PATH] = { 0 };
+        if (::GetModuleFileNameA(hModule, Filename, MAX_PATH) <= 0)
+            break;
+        if (FALSE == ::PathRemoveFileSpecA(Filename))
+            break;
+        result = Filename;
+        auto end = std::prev(result.end());
+        if (*end != '\\' && *end != '/')
+            result.push_back('\\');
+    } while (0);
+    return result;
+}
+
 void Tools::Init() {
-  current_process_path_ = sk::GetCurrentPath();
+  current_process_path_ = GetModulePath();
   data_dir_ = current_process_path_ + R"(\data\)";
   shared_file_capture_ = current_process_path_ + R"(\shared\capture.json)";
   shared_file_processes_ = current_process_path_ + R"(\shared\processes.json)";

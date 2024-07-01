@@ -948,6 +948,8 @@ public:
   public:
     static std::string MD5(const std::string &, const bool &lower = true);
     static bool MD5(const std::string &, std::string &);
+    static std::string HASH_SHA1(const std::string&, const bool& output_hex_string = true);
+    static std::string HASH_SHA256(const std::string&, const bool& output_hex_string = true);
     static std::string WemadeEncode(const std::string &strSrc);
     static std::string WemadeDecode(const std::string &in);
 

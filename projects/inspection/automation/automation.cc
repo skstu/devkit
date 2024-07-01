@@ -30,10 +30,10 @@ bool Automation::Ready() const {
 }
 void Automation::Init() {
   do {
-    if (!GetModuleHandle("win.dll")) {
+    if (!GetModuleHandleW(L"win.dll")) {
       is_destroy_win_dll_.store(true);
     }
-    pWin_ = win::IWin::Create("win.dll");
+    __gpWin = win::IWin::Create("win.dll");
     config_ = new Config();
     Gdiplus::GdiplusStartup(&gdiplustoken_, &gdiplusStartupInput_, NULL);
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
@@ -49,7 +49,7 @@ void Automation::UnInit() {
     for (auto &data : map_element_data_)
       data.second->Release();
     if (is_destroy_win_dll_.load())
-      win::IWin::Destroy(&pWin_);
+      win::IWin::Destroy(&__gpWin);
     ready_.store(false);
   } while (0);
 }
@@ -534,9 +534,9 @@ bool Automation::Setup(const char *dataPath) {
   std::lock_guard<std::mutex> lock{*mutex_};
   map_element_data_.clear();
   do {
-    if (!dataPath || !pWin_)
+    if (!dataPath || !__gpWin)
       break;
-    auto pDirs = pWin_->EnumFolder(dataPath, false);
+    auto pDirs = __gpWin->EnumFolder(dataPath, false);
     if (!pDirs)
       break;
     const std::string base(dataPath);
@@ -1455,7 +1455,7 @@ Automation::__CreateCondition(const Element *ele,
       VariantInit(&var);
       V_VT(&var) = VT_BOOL;
       V_I4(&var) =
-          pElement->IsControlElement() <= 0 ? VARIANT_FALSE : VARIANT_TRUE;
+          pElement->IsControlElement() == false ? VARIANT_FALSE : VARIANT_TRUE;
       if (S_OK != gpAutomation->CreatePropertyCondition(
                       UIA_IsControlElementPropertyId, var, &pCondition))
         break;
@@ -1465,7 +1465,7 @@ Automation::__CreateCondition(const Element *ele,
     if (conditions.empty())
       break;
 
-    condition_pas = SafeArrayCreateVector(VT_UNKNOWN, 0, conditions.size());
+    condition_pas = SafeArrayCreateVector(VT_UNKNOWN, 0, static_cast<unsigned long>(conditions.size()));
     if (!condition_pas)
       break;
     for (LONG i = 0; i < conditions.size(); ++i) {
@@ -1508,6 +1508,7 @@ bool Automation::__ConvertToVariant(const wchar_t *src, VARIANT &dst) const {
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
+win::IWin* __gpWin = nullptr;
 Automation *__gpAutomation = nullptr;
 #ifdef __cplusplus
 extern "C" {

@@ -217,7 +217,6 @@ void Element::operator<<(IUIAutomationElement *pElement) {
     return;
   BSTR bstrValue;
   UINT bstrValueLen = 0;
-  VARIANT varValue;
   RECT boundingRect;
   SAFEARRAY *runtimeIdArray = nullptr;
   BOOL bFlag = FALSE;
@@ -248,7 +247,7 @@ void Element::operator<<(IUIAutomationElement *pElement) {
   }
 
   // ControlType and LocalizedControlType
-  CONTROLTYPEID controlType;
+  CONTROLTYPEID controlType = 0;
   if (SUCCEEDED(pElement->get_CurrentControlType(&element_.attr.ControlType))) {
     if (SUCCEEDED(pElement->get_CurrentLocalizedControlType(&bstrValue))) {
       bstrValueLen = SysStringLen(bstrValue);
@@ -606,10 +605,18 @@ void Element::Final() {
     final_string.append(
         std::string((char *)&element_.__end__, sizeof(element_.__end__)));
 
-    std::string final_md5 = ossl::Ssl::MD5(final_string);
+    std::string final_md5;
+    char* md5_buffer = nullptr;
+    size_t md5_buffer_size = 0;
+    __gpWin->MD5(final_string.data(), final_string.size(), &md5_buffer, &md5_buffer_size);
+    final_md5.append(md5_buffer, md5_buffer_size);
+    __gpWin->FreePtr((void**)&md5_buffer);
+
     if (!final_md5.empty())
       __safe_memcpy(element_.md5, sizeof(element_.md5), final_md5.data(),
                     final_md5.size());
+
+#if 0
     std::string final_hmac_sha1 = ossl::Ssl::HMAC_SHA1(final_string, "");
     if (!final_hmac_sha1.empty())
       __safe_memcpy(element_.hmac_sha1, sizeof(element_.hmac_sha1),
@@ -618,6 +625,7 @@ void Element::Final() {
     if (!final_hmac_sha256.empty())
       __safe_memcpy(element_.hmac_sha256, sizeof(element_.hmac_sha256),
                     final_hmac_sha256.data(), final_hmac_sha256.size());
+#endif
   } while (0);
 }
 ///////////////////////////////////////////////////////////////////////////////////

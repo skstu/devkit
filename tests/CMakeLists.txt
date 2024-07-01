@@ -6,7 +6,8 @@ foreach(entry ${entries})
  get_filename_component(entry_name "${entry}" NAME)
  #====================================================================================
  if(NOT ${entry_name} STREQUAL "test_win32" AND 
- NOT ${entry_name} STREQUAL "test_ossl")
+ NOT ${entry_name} STREQUAL "test_ossl" AND
+ NOT ${entry_name} STREQUAL "test_uiohook")
  #====================================================================================
  #elseif(${entry_name} STREQUAL "asdgasdgasdg")
  # add_subdirectory(${entry})  

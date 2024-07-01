@@ -345,8 +345,8 @@ void Hook::__MouseSetPos(const long &x, const long &y,
   gsp_event_->time = stl::Time::TimeStamp<std::chrono::milliseconds>();
   gsp_event_->type = EVENT_MOUSE_MOVED;
   gsp_event_->data.mouse.button = static_cast<uint16_t>(btnType);
-  gsp_event_->data.mouse.x = x;
-  gsp_event_->data.mouse.y = y;
+  gsp_event_->data.mouse.x = static_cast<decltype(gsp_event_->data.mouse.x)>( x);
+  gsp_event_->data.mouse.y = static_cast<decltype(gsp_event_->data.mouse.y)>(y);
   hook_post_event(gsp_event_);
 }
 //!@ Private

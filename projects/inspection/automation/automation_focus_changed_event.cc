@@ -25,7 +25,6 @@ HRESULT STDMETHODCALLTYPE Automation::QueryInterface(REFIID riid,
 }
 HRESULT STDMETHODCALLTYPE
 Automation::HandleFocusChangedEvent(IUIAutomationElement *sender) {
-  HRESULT hr;
   do {
     if (!config_->EnableFocusChangedEvent())
       break;

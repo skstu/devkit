@@ -6,7 +6,7 @@
 #include <ossl.h>
 #include <inspection.h>
 using namespace inspect;
-#include <win.h>
+#include <win32.h>
 using namespace win;
 
 #define WIN32_LEAN_AND_MEAN

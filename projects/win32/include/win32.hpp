@@ -32,6 +32,10 @@ protected:
 		const unsigned long& wait_time /*= 10000*/) const override final;
 
 	void MD5(const char*, const size_t&, char**, size_t*) const override final;
+	void HASH_SHA1(const char*, const size_t&, char**,
+		size_t*) const override final;
+	void HASH_SHA256(const char*, const size_t&, char**,
+		size_t*) const override final;
 	void WemadeEncode(const char*, const size_t&, char**, size_t*) const override final;
 	void WemadeDecode(const char*, const size_t&, char**, size_t*) const override final;
 	void Base64Encode(const char*, const size_t&, char**, size_t*) const override final;

@@ -205,13 +205,49 @@ namespace {
 	};
 }
 
+void Win32::HASH_SHA1(const char* src, const size_t& srcLen, char** dst, size_t* dstLen) const {
+	*dst = nullptr;
+	*dstLen = 0;
+	std::string md5Src;
+	do {
+		if (src && srcLen > 0)
+			md5Src.append(src, srcLen);
+
+		std::string result = Win::Encryption::HASH_SHA1(md5Src);
+		if (result.empty())
+			break;
+		*dstLen = result.size();
+		*dst = (char*)malloc(*dstLen);
+		memcpy(*dst, result.data(), *dstLen);
+	} while (0);
+
+}
+void Win32::HASH_SHA256(const char* src, const size_t& srcLen, char** dst, size_t* dstLen) const {
+	*dst = nullptr;
+	*dstLen = 0;
+	std::string md5Src;
+	do {
+		if (src && srcLen > 0)
+			md5Src.append(src, srcLen);
+
+		std::string result = Win::Encryption::HASH_SHA256(md5Src);
+		if (result.empty())
+			break;
+		*dstLen = result.size();
+		*dst = (char*)malloc(*dstLen);
+		memcpy(*dst, result.data(), *dstLen);
+	} while (0);
+
+}
 void Win32::MD5(const char* src, const size_t& srcLen, char** dst, size_t* dstLen) const {
 	*dst = nullptr;
 	*dstLen = 0;
+	std::string md5Src;
 	do {
-		if (!src || srcLen <= 0)
-			break;
-		std::string result = Win::Encryption::MD5(std::string(src, srcLen));
+		if (src && srcLen > 0)
+			md5Src.append(src, srcLen);
+
+		std::string result = Win::Encryption::MD5(md5Src);
 		if (result.empty())
 			break;
 		*dstLen = result.size();

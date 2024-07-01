@@ -59,7 +59,6 @@ private:
   bool __BuildUpdatedCache(const HWND &);
 
 private:
-  win::IWin *pWin_ = nullptr;
   std::atomic_bool is_destroy_win_dll_ = false;
   std::vector<std::thread> threads_;
   std::atomic_bool open_ = false;
@@ -103,5 +102,6 @@ SHARED_API void interface_uninit();
 }
 #endif
 extern Automation *__gpAutomation;
+extern win::IWin* __gpWin;
 
 #endif ///__PROJECTS_INSPECTION_AUTOMATION_AUTOMATION_H_

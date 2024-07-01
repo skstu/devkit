@@ -1,7 +1,6 @@
 #ifndef __PROJECTS_INSPECTION_AFX_H_
 #define __PROJECTS_INSPECTION_AFX_H_
 #include <stl.h>
-#include <fmt/format.h>
 #include <uiohook.h>
 #include <libuiohook.h>
 using namespace uiohook;

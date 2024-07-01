@@ -1,5 +1,5 @@
 #include "stdafx.h"
-
+#if 0
 AutomationFocusChangedEvent::AutomationFocusChangedEvent() {
 }
 
@@ -48,3 +48,4 @@ HRESULT STDMETHODCALLTYPE AutomationFocusChangedEvent::HandleFocusChangedEvent(
 
   return S_OK;
 }
+#endif
