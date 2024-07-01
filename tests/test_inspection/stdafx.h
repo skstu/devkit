@@ -2,6 +2,7 @@
 #define __TEST_WX_AFX_H_
 #include <stl.h>
 #include <fmt/format.h>
+#include <win32.h>
 #include <inspection.h>
 #include <libuiohook.h>
 

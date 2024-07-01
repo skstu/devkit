@@ -1,10 +1,10 @@
 #ifndef __RAPID_XML_H_
 #define __RAPID_XML_H_
 
-#include "../3rdparty/rapidxml/rapidxml.hpp"
-#include "../3rdparty/rapidxml/rapidxml_iterators.hpp"
-#include "../3rdparty/rapidxml/rapidxml_print.hpp"
-#include "../3rdparty/rapidxml/rapidxml_utils.hpp"
+#include "../3rdlocal/rapidxml/rapidxml.hpp"
+#include "../3rdlocal/rapidxml/rapidxml_iterators.hpp"
+#include "../3rdlocal/rapidxml/rapidxml_print.hpp"
+#include "../3rdlocal/rapidxml/rapidxml_utils.hpp"
 
 using tf_apidxml_char_doc = rapidxml::xml_document<char>;
 using tf_rapidxml_wchar_doc = rapidxml::xml_document<wchar_t>;

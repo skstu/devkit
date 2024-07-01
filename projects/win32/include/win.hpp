@@ -422,7 +422,6 @@ public:
     protected:
       unsigned long m_RememberDataSize = 0;
     };
-
   public:
     class FileVersionInfoW final {
     public:
