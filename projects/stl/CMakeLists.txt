@@ -13,6 +13,7 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} 
 PRIVATE
+${SOLUTION_INCLUDE_DIR}
 ${CMAKE_CURRENT_SOURCE_DIR}
 ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
@@ -20,7 +21,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/include
 if(MSVC)
 MSVC_LINK_FLAGS_SET_CONSOLE(${PROJECT_NAME})
 MSVC_CRT_SET(${PROJECT_NAME} "/MT")
-MSVC_USE_PCH(${PROJECT_NAME} ${entry}/src/stdafx.h ${entry}/src/stdafx.cpp)
+MSVC_USE_PCH(${PROJECT_NAME} ${entry}/stdafx.h ${entry}/stdafx.cc)
 endif()
 
 #[[

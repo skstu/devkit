@@ -1,10 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
-project (Win32)
+project (Inspection)
 set(CMAKE_CXX_STANDARD 20)
 
 set(SOLUTION_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/)
 set(LOCAL_CMAKE_MODULES_PATH ${SOLUTION_ROOT_DIR}/cmake/modules/)
 set(SOLUTION_INCLUDE_DIR ${SOLUTION_ROOT_DIR}/include/)
+
+if(CMAKE_CONFIGURATION_TYPES)
+  set(VS_CONFIGURATION_TYPE $<CONFIG>)
+else()
+  set(VS_CONFIGURATION_TYPE ${CMAKE_BUILD_TYPE})
+endif()
+
 
 LIST(APPEND CMAKE_MODULE_PATH ${LOCAL_CMAKE_MODULES_PATH})
 include(global)
@@ -21,16 +28,19 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMakeTargets")
 
 # 3rdparty
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+set(FMT_DEBUG_POSTFIX "" CACHE STRING "FMT Debug libray postfix" FORCE)
+GFN_SET_TARGET_OUTDIR(${SOLUTION_ROOT_DIR} "bin" "objs" "libs")
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/dlfcn-win32/ "dlfcn-win32")
 set_target_properties(dl PROPERTIES FOLDER "3rdparty")
 
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/libuiohook/ "libuiohook")
 set_target_properties(uiohook PROPERTIES FOLDER "3rdparty")
 
-
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
 add_subdirectory(${SOLUTION_ROOT_DIR}/3rdparty/fmt/ "fmt")
 set_target_properties(fmt PROPERTIES FOLDER "3rdparty")
+GFN_SET_TARGET_OUTDIR("")
 
 if(MSVC AND ENABLE_MSVC_CRT_MT)
 MSVC_CRT_SET(dl "/MT")
@@ -58,3 +68,4 @@ add_subdirectory(${SOLUTION_ROOT_DIR}/tests/)
 #set_target_properties(tests PROPERTIES FOLDER "tests")
 
 add_subdirectory(${SOLUTION_ROOT_DIR}/projects/)
+

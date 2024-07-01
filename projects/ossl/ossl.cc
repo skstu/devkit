@@ -44,7 +44,7 @@ std::string Ssl::Base64Encode(const std::string &src, const bool &multiline) {
     b64 = BIO_push(b64, bmem);
     if (!b64)
       break;
-    long bio_write_length = BIO_write(b64, src.data(), src.size());
+    long bio_write_length = BIO_write(b64, src.data(), static_cast<int>(src.size()));
     if (bio_write_length <= 0)
       break;
     int sslret = BIO_flush(b64);

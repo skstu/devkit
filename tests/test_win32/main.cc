@@ -1,5 +1,6 @@
 #include "stdafx.h"
-
+#include <stl.h>
+#include <win.h>
 int main(int argc, char *argv[]) {
 
   std::string input;
