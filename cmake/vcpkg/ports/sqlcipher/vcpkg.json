@@ -1,0 +1,23 @@
+{
+  "name": "sqlcipher",
+  "version": "4.19.0",
+  "description": "SovranKit static SQLCipher with pinned native-host amalgamation generation and OpenSSL.",
+  "homepage": "https://github.com/sqlcipher/sqlcipher",
+  "license": "BSD-3-Clause",
+  "supports": "!uwp",
+  "dependencies": [
+    "openssl",
+    {
+      "name": "sqlcipher",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

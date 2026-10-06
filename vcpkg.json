@@ -1,0 +1,130 @@
+{
+  "name": "native-libs",
+  "version-semver": "0.1.0",
+  "builtin-baseline": "45f9f39362a4c52e2b1fbe57b7e649db7f3d96d4",
+  "features": {
+    "libcrypt": {
+      "description": "Dependencies for libcrypt",
+      "dependencies": [
+        {
+          "name": "libsodium",
+          "version>=": "1.0.22#1"
+        },
+        {
+          "name": "openssl",
+          "version>=": "3.6.3"
+        }
+      ]
+    },
+    "libnet": {
+      "description": "Dependencies for libnet",
+      "dependencies": [
+        {
+          "name": "curl",
+          "version>=": "8.21.0#1"
+        },
+        {
+          "name": "libuv",
+          "version>=": "1.52.1"
+        },
+        {
+          "name": "libjuice",
+          "version>=": "1.7.2#1"
+        },
+        {
+          "name": "ngtcp2",
+          "version>=": "1.25.0",
+          "features": [
+            "openssl"
+          ]
+        },
+        {
+          "name": "nlohmann-json",
+          "version>=": "3.12.0#2"
+        }
+      ]
+    },
+    "libsys": {
+      "description": "Dependencies for libsys",
+      "dependencies": [
+        {
+          "name": "libuv",
+          "version>=": "1.52.1"
+        },
+        {
+          "name": "nlohmann-json",
+          "version>=": "3.12.0#2"
+        }
+      ]
+    },
+    "liblog": {
+      "description": "Dependencies for liblog",
+      "dependencies": [
+        {
+          "name": "spdlog",
+          "version>=": "1.17.0#1"
+        },
+        {
+          "name": "nlohmann-json",
+          "version>=": "3.12.0#2"
+        }
+      ]
+    },
+    "libdb": {
+      "description": "Dependencies for libdb",
+      "dependencies": [
+        {
+          "name": "sqlcipher",
+          "version>=": "4.19.0"
+        }
+      ]
+    },
+    "libuvbrg": {
+      "description": "Dependencies for libuvbrg",
+      "dependencies": [
+        {
+          "name": "libuv",
+          "version>=": "1.52.1"
+        },
+        {
+          "name": "openssl",
+          "version>=": "3.6.3"
+        },
+        {
+          "name": "nlohmann-json",
+          "version>=": "3.12.0#2"
+        }
+      ]
+    },
+    "liburl": {
+      "description": "Dependencies for liburl",
+      "dependencies": [
+        {
+          "name": "uriparser",
+          "version>=": "1.0.0"
+        }
+      ]
+    },
+    "libwxui": {
+      "description": "Dependencies for libwxui",
+      "dependencies": [
+        {
+          "name": "wxwidgets",
+          "default-features": false
+        },
+        "fmt",
+        "rapidjson",
+        "utfcpp"
+      ]
+    },
+    "legacy-path": {
+      "description": "Dependencies for legacy-path",
+      "dependencies": [
+        {
+          "name": "libiconv",
+          "version>=": "1.19"
+        }
+      ]
+    }
+  }
+}

@@ -21,12 +21,6 @@ function(libsys_configure_target target)
   endif()
 endfunction()
 
-if(NOT COMMAND sovkit_manifest_get_list)
-  include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/SovkitBuildManifest.cmake")
-  sovkit_load_build_manifest(
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../projects/sdk/build.json")
-endif()
-
 # The SDK needs only system-directory resolution; do not pull GPU, proxy or
 # process-enumeration dependencies into every mobile build.
 add_library(libsys_directories STATIC src/directories.cc)
@@ -94,9 +88,6 @@ if(NOT TARGET sovrankit::libstl_core)
                    "${CMAKE_CURRENT_BINARY_DIR}/libstl")
 endif()
 
-sovkit_manifest_get_list(
-  LIBSYS_SOURCES targets libsys commonSources)
-
 if(WIN32)
   set(LIBSYS_PLATFORM windows)
 elseif(APPLE)
@@ -113,24 +104,10 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 else()
   message(FATAL_ERROR "libsys does not yet support ${CMAKE_SYSTEM_NAME}")
 endif()
-sovkit_manifest_get_list(
-  LIBSYS_PLATFORM_SOURCES targets libsys platforms ${LIBSYS_PLATFORM} sources)
-list(APPEND LIBSYS_SOURCES ${LIBSYS_PLATFORM_SOURCES})
-list(REMOVE_ITEM LIBSYS_SOURCES "3rdparty/libsys/src/directories.cc"
-  "3rdparty/libsys/src/file_lock.cc"
-  "3rdparty/libsys/src/apple/directories.mm" "3rdparty/libsys/src/console_input.cc"
-  "3rdparty/libsys/src/windows/console_input.cc" "3rdparty/libsys/src/posix/console_input.cc")
-sovkit_manifest_make_absolute(
-  LIBSYS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/../.." ${LIBSYS_SOURCES})
-sovkit_manifest_get_list(
-  LIBSYS_SYSTEM_LIBRARIES
-  targets libsys systemLibraries cmake ${LIBSYS_PLATFORM})
-sovkit_manifest_get_list(
-  LIBSYS_INCLUDE_DIRECTORIES targets libsys includeDirectories)
-sovkit_manifest_make_absolute(
-  LIBSYS_INCLUDE_DIRECTORIES
-  "${CMAKE_CURRENT_SOURCE_DIR}/../.."
-  ${LIBSYS_INCLUDE_DIRECTORIES})
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/Sources.cmake")
+set(LIBSYS_SOURCES ${LIBSYS_COMMON_SOURCES} ${LIBSYS_${LIBSYS_PLATFORM}_SOURCES})
+set(LIBSYS_SYSTEM_LIBRARIES ${LIBSYS_${LIBSYS_PLATFORM}_LIBRARIES})
+set(LIBSYS_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 add_library(libsys STATIC ${LIBSYS_SOURCES})
 add_library(sovrankit::libsys ALIAS libsys)

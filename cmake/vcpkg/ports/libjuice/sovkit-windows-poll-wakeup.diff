@@ -1,0 +1,16 @@
+--- a/src/conn_thread.c
++++ b/src/conn_thread.c
+@@ -135,4 +135,13 @@
+ 		if (timediff < 0)
+ 			timediff = 0;
++#ifdef _WIN32
++		// A successful zero-length UDP self-send need not wake WSAPoll on
++		// every Windows network stack/filter. Recheck stop/timer state even
++		// when that wake is lost, instead of stranding cleanup in thread_join.
++		// Keep UDP interrupts for prompt normal operation; this is a bound,
++		// not a delay or a change to ICE/application traffic.
++		if (timediff > 250)
++			timediff = 250;
++#endif
+ 
+ 		JLOG_VERBOSE("Entering poll for %d ms", (int)timediff);

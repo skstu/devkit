@@ -1,0 +1,118 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -63,6 +63,21 @@
+ 
+ typedef void (*juice_cb_state_changed_t)(juice_agent_t *agent, juice_state_t state, void *user_ptr);
+ typedef void (*juice_cb_candidate_t)(juice_agent_t *agent, const char *sdp, void *user_ptr);
++typedef struct juice_sovkit_check_stats {
++	uint64_t requests_sent;
++	uint64_t send_errors;
++	uint64_t requests_received;
++	uint64_t responses_received;
++	uint64_t responses_sent;
++	uint64_t validation_failures;
++	uint64_t check_timeouts;
++	uint64_t pairs_succeeded;
++	uint64_t role_conflicts;
++	uint64_t non_symmetric_responses;
++} juice_sovkit_check_stats_t;
++
++JUICE_EXPORT int juice_sovkit_get_check_stats(juice_agent_t *agent, juice_sovkit_check_stats_t *stats);
++
+ typedef void (*juice_cb_gathering_done_t)(juice_agent_t *agent, void *user_ptr);
+ typedef void (*juice_cb_recv_t)(juice_agent_t *agent, const char *data, size_t size,
+                                 void *user_ptr);
+--- a/src/agent.h
++++ b/src/agent.h
+@@ -126,6 +126,7 @@
+ } agent_stun_entry_t;
+ 
+ struct juice_agent {
++	juice_sovkit_check_stats_t sovkit_stats;
+ 	juice_config_t config;
+ 	juice_state_t state;
+ 	agent_mode_t mode;
+--- a/src/juice.c
++++ b/src/juice.c
+@@ -10,6 +10,7 @@
+ #include "addr.h"
+ #include "agent.h"
+ #include "ice.h"
++#include "conn.h"
+ 
+ #ifndef NO_SERVER
+ #include "server.h"
+@@ -102,6 +103,14 @@
+ 	return JUICE_ERR_FAILED;
+ }
+ 
++JUICE_EXPORT int juice_sovkit_get_check_stats(juice_agent_t *agent, juice_sovkit_check_stats_t *stats) {
++	if (!agent || !stats) return JUICE_ERR_INVALID;
++	conn_lock(agent);
++	*stats = agent->sovkit_stats;
++	conn_unlock(agent);
++	return JUICE_ERR_SUCCESS;
++}
++
+ JUICE_EXPORT juice_state_t juice_get_state(juice_agent_t *agent) { return agent_get_state(agent); }
+ 
+ JUICE_EXPORT int juice_get_selected_candidates(juice_agent_t *agent, char *local, size_t local_size,
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -972,6 +972,8 @@
+ 				}
+ 			}
+ 
++			if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK && entry->retransmissions < 0)
++				++agent->sovkit_stats.check_timeouts;
+ 			// Failure sending or end of retransmissions
+ 			JLOG_DEBUG("STUN entry %d: Failed", i);
+ 			entry->state = AGENT_STUN_ENTRY_STATE_FAILED;
+@@ -1354,6 +1356,7 @@
+ 		JLOG_VERBOSE("STUN message is from the remote peer");
+ 		// Verify the message now
+ 		if (agent_verify_stun_binding(agent, buf, size, msg)) {
++			++agent->sovkit_stats.validation_failures;
+ 			JLOG_WARN("STUN message verification failed");
+ 			return -1;
+ 		}
+@@ -1391,6 +1394,11 @@
+ 		    (msg->msg_class == STUN_CLASS_REQUEST || msg->msg_class == STUN_CLASS_RESP_SUCCESS)) {
+ 			JLOG_WARN("Missing integrity in STUN Binding message from remote peer, ignoring");
+ 			return -1;
++		}
++		if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK) {
++			if (msg->msg_class == STUN_CLASS_REQUEST) ++agent->sovkit_stats.requests_received;
++			if (msg->msg_class == STUN_CLASS_RESP_SUCCESS) ++agent->sovkit_stats.responses_received;
++			if (msg->msg_class == STUN_CLASS_RESP_ERROR && msg->error_code == 487) ++agent->sovkit_stats.role_conflicts;
+ 		}
+ 		return agent_process_stun_binding(agent, msg, entry, src, relayed);
+ 
+@@ -1572,12 +1580,14 @@
+ 				if (!addr_record_is_equal(src, &entry->record, true)) {
+ 					JLOG_DEBUG(
+ 					    "Candidate pair check failed (non-symmetric source address in response)");
++					++agent->sovkit_stats.non_symmetric_responses;
+ 					entry->state = AGENT_STUN_ENTRY_STATE_FAILED;
+ 					entry->next_transmission = 0;
+ 					pair->state = ICE_CANDIDATE_PAIR_STATE_FAILED;
+ 					break;
+ 				}
+ 
++				++agent->sovkit_stats.pairs_succeeded;
+ 				JLOG_DEBUG("Candidate pair check succeeded");
+ 				pair->state = ICE_CANDIDATE_PAIR_STATE_SUCCEEDED;
+ 			}
+@@ -1781,6 +1791,12 @@
+ 
+ 	// Direct send
+ 	int ret = agent_direct_send(agent, &entry->record, buffer, size, 0);
++	if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK) {
++		if (ret < 0) ++agent->sovkit_stats.send_errors;
++		else if (msg_class == STUN_CLASS_REQUEST) ++agent->sovkit_stats.requests_sent;
++		else if (msg_class == STUN_CLASS_RESP_SUCCESS || msg_class == STUN_CLASS_RESP_ERROR)
++			++agent->sovkit_stats.responses_sent;
++	}
+ 	if (ret < 0) {
+ 		if (ret == -SENETUNREACH)
+ 			JLOG_INFO("STUN binding failed: Network unreachable");

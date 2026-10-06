@@ -1,0 +1,120 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -73,7 +73,17 @@
+ 	uint64_t check_timeouts;
+ 	uint64_t pairs_succeeded;
+ 	uint64_t role_conflicts;
+-	uint64_t non_symmetric_responses;
++	uint64_t non_symmetric_responses;
++	uint64_t udp_datagrams_received;
++	uint64_t stun_datagrams_received;
++	uint64_t non_stun_datagrams_received;
++	uint64_t early_state_drops;
++	uint64_t malformed_stun_drops;
++	uint64_t binding_requests_observed;
++	uint64_t binding_responses_observed;
++	uint64_t unmatched_transaction_drops;
++	uint64_t unmatched_address_drops;
++	uint64_t missing_integrity_drops;
+ } juice_sovkit_check_stats_t;
+ 
+ JUICE_EXPORT int juice_sovkit_get_check_stats(juice_agent_t *agent, juice_sovkit_check_stats_t *stats);
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -783,7 +783,8 @@
+ }
+ 
+ int agent_conn_recv(juice_agent_t *agent, char *buf, size_t len, const addr_record_t *src) {
+-	agent_input(agent, buf, len, src, NULL);
++	++agent->sovkit_stats.udp_datagrams_received;
++	agent_input(agent, buf, len, src, NULL);
+ 	return 0; // ignore errors
+ }
+ 
+@@ -797,10 +798,13 @@
+                 const addr_record_t *relayed) {
+ 	JLOG_VERBOSE("Received datagram, size=%d", len);
+ 
+-	if (agent->state == JUICE_STATE_DISCONNECTED || agent->state == JUICE_STATE_GATHERING)
+-		return 0;
++	if (agent->state == JUICE_STATE_DISCONNECTED || agent->state == JUICE_STATE_GATHERING) {
++		++agent->sovkit_stats.early_state_drops;
++		return 0;
++	}
+ 
+-	if (is_stun_datagram(buf, len)) {
++	if (is_stun_datagram(buf, len)) {
++		++agent->sovkit_stats.stun_datagrams_received;
+ 		if (JLOG_DEBUG_ENABLED) {
+ 			char src_str[ADDR_MAX_STRING_LEN];
+ 			addr_record_to_string(src, src_str, ADDR_MAX_STRING_LEN);
+@@ -813,12 +817,14 @@
+ 			}
+ 		}
+ 		stun_message_t msg;
+-		if (stun_read(buf, len, &msg) < 0) {
++		if (stun_read(buf, len, &msg) < 0) {
++			++agent->sovkit_stats.malformed_stun_drops;
+ 			JLOG_ERROR("STUN message reading failed");
+ 			return -1;
+ 		}
+-		return agent_dispatch_stun(agent, buf, len, &msg, src, relayed);
+-	}
++		return agent_dispatch_stun(agent, buf, len, &msg, src, relayed);
++	}
++	++agent->sovkit_stats.non_stun_datagrams_received;
+ 
+ 	if (JLOG_DEBUG_ENABLED) {
+ 		char src_str[ADDR_MAX_STRING_LEN];
+@@ -1308,7 +1314,7 @@
+ 		return -1;
+ 	}
+ 	if (!stun_check_integrity(buf, size, msg, password)) {
+-		JLOG_WARN("STUN integrity check failed, password=\"%s\"", password);
++		JLOG_WARN("STUN integrity check failed");
+ 		return -1;
+ 	}
+ 	return 0;
+@@ -1352,7 +1358,11 @@
+ 
+ int agent_dispatch_stun(juice_agent_t *agent, void *buf, size_t size, stun_message_t *msg,
+                         const addr_record_t *src, const addr_record_t *relayed) {
+-	if (msg->msg_method == STUN_METHOD_BINDING && msg->has_integrity) {
++	if (msg->msg_method == STUN_METHOD_BINDING) {
++		if (msg->msg_class == STUN_CLASS_REQUEST) ++agent->sovkit_stats.binding_requests_observed;
++		if (STUN_IS_RESPONSE(msg->msg_class)) ++agent->sovkit_stats.binding_responses_observed;
++	}
++	if (msg->msg_method == STUN_METHOD_BINDING && msg->has_integrity) {
+ 		JLOG_VERBOSE("STUN message is from the remote peer");
+ 		// Verify the message now
+ 		if (agent_verify_stun_binding(agent, buf, size, msg)) {
+@@ -1371,7 +1381,8 @@
+ 		JLOG_VERBOSE("STUN message is a response, looking for transaction ID");
+ 		entry = agent_find_entry_from_transaction_id(agent, msg->transaction_id);
+ 		if (!entry) {
+-			JLOG_DEBUG("No STUN entry matching transaction ID, ignoring");
++			++agent->sovkit_stats.unmatched_transaction_drops;
++			JLOG_DEBUG("No STUN entry matching transaction ID, ignoring");
+ 			return -1;
+ 		}
+ 	} else {
+@@ -1382,7 +1393,8 @@
+ 		} else {
+ 			// This may happen normally, for instance when there is no space left for reflexive
+ 			// candidates
+-			JLOG_DEBUG("No STUN entry matching remote address, ignoring");
++			++agent->sovkit_stats.unmatched_address_drops;
++			JLOG_DEBUG("No STUN entry matching remote address, ignoring");
+ 			return 0;
+ 		}
+ 	}
+@@ -1392,7 +1404,8 @@
+ 		// Message was verified earlier, no need to re-verify
+ 		if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK && !msg->has_integrity &&
+ 		    (msg->msg_class == STUN_CLASS_REQUEST || msg->msg_class == STUN_CLASS_RESP_SUCCESS)) {
+-			JLOG_WARN("Missing integrity in STUN Binding message from remote peer, ignoring");
++			++agent->sovkit_stats.missing_integrity_drops;
++			JLOG_WARN("Missing integrity in STUN Binding message from remote peer, ignoring");
+ 			return -1;
+ 		}
+ 		if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK) {

@@ -1,0 +1,76 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -65,1 +65,11 @@
++typedef struct juice_sovkit_pcp_stats {
++	int enabled, state, result_code, send_status;
++	uint16_t internal_port, external_port;
++	uint32_t lifetime_seconds;
++	uint64_t remaining_ms, requests_sent, rejected_responses, renewals;
++} juice_sovkit_pcp_stats_t;
++JUICE_EXPORT int juice_sovkit_get_pcp_stats(juice_agent_t *agent, juice_sovkit_pcp_stats_t *stats);
++// State: 0 not-started, 1 requesting, 2 mapped, 3 unsupported, 4 rejected,
++// 5 timeout, 6 expired, 7 changed, 8 send/internal error. No nonce or IP export.
++
+ // One opt-in, six-sample diagnostic run on this agent's existing UDP socket.
+@@ -148,1 +158,4 @@
++	uint32_t sovkit_pcp_gateway_ipv4; // network order; zero disables
++	uint32_t sovkit_pcp_local_ipv4; // explicit bound IPv4, never THIRD_PARTY
++	uint8_t sovkit_pcp_nonce[12]; // caller-provided CSPRNG, never juice_random
+ 	uint16_t sovkit_filtering_second_port; // exclusive diagnostic agent; zero disables
+--- a/src/agent.h
++++ b/src/agent.h
+@@ -131,1 +131,8 @@
++	juice_sovkit_pcp_stats_t sovkit_pcp;
++	uint8_t sovkit_pcp_nonce[12];
++	uint32_t sovkit_pcp_external_ipv4;
++	uint64_t sovkit_pcp_next_send, sovkit_pcp_deadline, sovkit_pcp_expires;
++	uint64_t sovkit_pcp_request_started;
++	bool sovkit_pcp_stopping, sovkit_pcp_pending;
++
+ 	juice_sovkit_mapping_stats_t sovkit_filtering;
+--- a/src/juice.c
++++ b/src/juice.c
+@@ -106,1 +106,15 @@
++JUICE_EXPORT int juice_sovkit_get_pcp_stats(juice_agent_t *agent, juice_sovkit_pcp_stats_t *stats) {
++	if (!agent || !stats) return JUICE_ERR_INVALID;
++	conn_lock(agent);
++	*stats = agent->sovkit_pcp;
++	stats->enabled = agent->config.sovkit_pcp_gateway_ipv4 != 0;
++	uint64_t now = (uint64_t)current_timestamp();
++	stats->remaining_ms = stats->state == 2 && agent->sovkit_pcp_expires > now
++	    ? agent->sovkit_pcp_expires - now : 0;
++	if (stats->state == 2 && !stats->remaining_ms) stats->state = 6;
++	conn_unlock(agent);
++	return JUICE_ERR_SUCCESS;
++}
++
++
+ JUICE_EXPORT int juice_sovkit_get_filtering_stats(juice_agent_t *agent,
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -42,1 +42,3 @@
++static void sovkit_pcp_stop(juice_agent_t *agent);
++
+ static char *alloc_string_copy(const char *orig, bool *alloc_failed) {
+@@ -101,1 +103,4 @@
++	agent->config.sovkit_pcp_gateway_ipv4 = config->sovkit_pcp_gateway_ipv4;
++	agent->config.sovkit_pcp_local_ipv4 = config->sovkit_pcp_local_ipv4;
++	memcpy(agent->config.sovkit_pcp_nonce, config->sovkit_pcp_nonce, 12);
+ 	agent->config.sovkit_filtering_second_port = config->sovkit_filtering_second_port;
+@@ -172,2 +176,5 @@
+ 	if (agent->conn_impl) {
++		conn_lock(agent);
++		sovkit_pcp_stop(agent);
++		conn_unlock(agent);
+ 		conn_destroy(agent);
+@@ -785,2 +792,3 @@
+ #include "sovkit_filtering.inc"
++#include "sovkit_pcp.inc"
+ 
+@@ -789,1 +797,2 @@
++	if (ret >= 0) sovkit_pcp_update(agent, next_timestamp);
+ 	if (ret >= 0) sovkit_filtering_update(agent, next_timestamp);
+@@ -831,2 +840,3 @@
+ 	++agent->sovkit_stats.udp_datagrams_received;
++	if (sovkit_pcp_receive(agent, buf, len, src)) return 0;
+ 	// Header screening only, BEFORE STUN parsing/authentication. Exclude bulk QUIC.

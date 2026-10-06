@@ -1,0 +1,73 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -64,2 +64,21 @@
+ typedef void (*juice_cb_candidate_t)(juice_agent_t *agent, const char *sdp, void *user_ptr);
++// One opt-in, six-sample diagnostic run on this agent's existing UDP socket.
++#define JUICE_SOVKIT_MAPPING_SAMPLES 6
++typedef struct juice_sovkit_mapping_sample {
++	uint8_t transaction_id[12];
++	uint32_t mapped_ipv4; // network byte order; private diagnostic data
++	uint16_t server_port, mapped_port;
++	uint8_t state, sends; // 0 pending, 1 waiting, 2 response, 3 timeout, 4 send error
++	int send_status;
++	uint64_t sent_ms, received_ms;
++} juice_sovkit_mapping_sample_t;
++typedef struct juice_sovkit_mapping_stats {
++	int enabled, state; // 0 not started, 1 running, 2 complete, 3 timer gap, 4 invalid
++	uint64_t started_ms, last_tick_ms, age_ms;
++	uint64_t rejected_responses, duplicate_responses;
++	juice_sovkit_mapping_sample_t samples[JUICE_SOVKIT_MAPPING_SAMPLES];
++} juice_sovkit_mapping_stats_t;
++JUICE_EXPORT int juice_sovkit_get_mapping_stats(juice_agent_t *agent,
++                                               juice_sovkit_mapping_stats_t *stats);
++
+ // Opt-in, bounded endpoint aggregates. No payload, credentials or transaction IDs.
+@@ -125,3 +146,4 @@
+ typedef struct juice_config {
+ 	juice_concurrency_mode_t concurrency_mode;
++	uint16_t sovkit_mapping_second_port; // zero disables; numeric IPv4 STUN host only
+ 	int sovkit_endpoint_diagnostics; // default zero; only for local troubleshooting
+--- a/src/agent.h
++++ b/src/agent.h
+@@ -130,2 +130,3 @@
+ struct juice_agent {
++	juice_sovkit_mapping_stats_t sovkit_mapping;
+ 	juice_sovkit_check_stats_t sovkit_stats;
+--- a/src/juice.c
++++ b/src/juice.c
+@@ -103,1 +103,12 @@
++JUICE_EXPORT int juice_sovkit_get_mapping_stats(juice_agent_t *agent,
++                                               juice_sovkit_mapping_stats_t *stats) {
++	if (!agent || !stats) return JUICE_ERR_INVALID;
++	conn_lock(agent);
++	*stats = agent->sovkit_mapping;
++	stats->enabled = agent->config.sovkit_mapping_second_port != 0;
++	if (stats->state) stats->age_ms = (uint64_t)current_timestamp() - stats->started_ms;
++	conn_unlock(agent);
++	return JUICE_ERR_SUCCESS;
++}
++
+ JUICE_EXPORT int juice_sovkit_get_check_stats(juice_agent_t *agent, juice_sovkit_check_stats_t *stats) {
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -100,2 +100,3 @@
+ 	agent->config.concurrency_mode = config->concurrency_mode;
++	agent->config.sovkit_mapping_second_port = config->sovkit_mapping_second_port;
+ 	agent->config.sovkit_endpoint_diagnostics = config->sovkit_endpoint_diagnostics;
+@@ -782,3 +783,7 @@
++#include "sovkit_mapping.inc"
++
+ int agent_conn_update(juice_agent_t *agent, timestamp_t *next_timestamp) {
+-	return agent_bookkeeping(agent, next_timestamp);
++	int ret = agent_bookkeeping(agent, next_timestamp);
++	if (ret >= 0) sovkit_mapping_update(agent, next_timestamp);
++	return ret;
+ }
+@@ -830,2 +835,7 @@
+ 		sovkit_record_endpoint(agent, src, 0, len, 0);
++	if (sovkit_mapping_receive(agent, buf, len, src)) {
++		++agent->sovkit_stats.stun_datagrams_received;
++		++agent->sovkit_stats.binding_responses_observed;
++		return 0;
++	}
+ 	agent_input(agent, buf, len, src, NULL);

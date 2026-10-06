@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/NativeLibsBuild.cmake")
 
 add_library(libcompr_stream INTERFACE)
 add_library(sovrankit::libcompr_stream ALIAS libcompr_stream)
@@ -47,7 +48,7 @@ target_link_libraries(libcompr
     sovrankit::brotli
     LibArchive::LibArchive)
 
-sovrankit_set_warnings(libcompr)
+native_libs_set_warnings(libcompr)
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
   # Compression backends expose C byte buffers and retain their ABI casts.
   target_compile_options(libcompr PRIVATE -Wno-old-style-cast

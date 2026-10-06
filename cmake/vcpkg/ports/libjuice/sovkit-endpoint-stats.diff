@@ -1,0 +1,87 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -64,2 +64,11 @@
+ typedef void (*juice_cb_candidate_t)(juice_agent_t *agent, const char *sdp, void *user_ptr);
++// Opt-in, bounded endpoint aggregates. No payload, credentials or transaction IDs.
++#define JUICE_SOVKIT_ENDPOINT_LIMIT 64
++typedef struct juice_sovkit_endpoint {
++	char address[64];
++	uint16_t port;
++	uint8_t family, kind;
++	int send_status;
++	uint64_t count, bytes, first_ms, last_ms;
++} juice_sovkit_endpoint_t;
+ typedef struct juice_sovkit_check_stats {
+@@ -86,2 +86,6 @@
+ 	uint64_t missing_integrity_drops;
++	int endpoint_enabled;
++	uint32_t endpoint_count;
++	uint64_t endpoint_dropped, endpoint_started_ms;
++	juice_sovkit_endpoint_t endpoints[JUICE_SOVKIT_ENDPOINT_LIMIT];
+ } juice_sovkit_check_stats_t;
+@@ -125,3 +125,4 @@
+ typedef struct juice_config {
+ 	juice_concurrency_mode_t concurrency_mode;
++	int sovkit_endpoint_diagnostics; // default zero; only for local troubleshooting
+ 
+--- a/src/juice.c
++++ b/src/juice.c
+@@ -107,2 +107,3 @@
+ 	*stats = agent->sovkit_stats;
++	stats->endpoint_enabled = agent->config.sovkit_endpoint_diagnostics;
+ 	conn_unlock(agent);
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -100,2 +100,3 @@
+ 	agent->config.concurrency_mode = config->concurrency_mode;
++	agent->config.sovkit_endpoint_diagnostics = config->sovkit_endpoint_diagnostics;
+ 	agent->config.stun_server_host = alloc_string_copy(config->stun_server_host, &alloc_failed);
+@@ -785,3 +785,42 @@
++// All callers already hold the connection lock. Do no allocation, file I/O or callbacks.
++static void sovkit_record_endpoint(juice_agent_t *agent, const addr_record_t *record,
++                                   uint8_t kind, size_t bytes, int status) {
++	if (!agent->config.sovkit_endpoint_diagnostics) return;
++	juice_sovkit_check_stats_t *stats = &agent->sovkit_stats;
++	addr_record_t numeric = *record;
++	addr_unmap_inet6_v4mapped((struct sockaddr *)&numeric.addr, &numeric.len);
++	char host[64];
++	if (getnameinfo((const struct sockaddr *)&numeric.addr, numeric.len,
++	                host, sizeof(host), NULL, 0, NI_NUMERICHOST | NI_DGRAM)) {
++		++stats->endpoint_dropped;
++		return;
++	}
++	uint16_t port = addr_get_port((const struct sockaddr *)&numeric.addr);
++	uint8_t family = numeric.addr.ss_family == AF_INET ? 4 : 6;
++	uint64_t now = (uint64_t)current_timestamp();
++	if (!stats->endpoint_started_ms) stats->endpoint_started_ms = now;
++	uint32_t i;
++	for (i = 0; i < stats->endpoint_count; ++i) {
++		juice_sovkit_endpoint_t *item = &stats->endpoints[i];
++		if (item->port == port && item->family == family && item->kind == kind &&
++		    item->send_status == status && !strcmp(item->address, host)) break;
++	}
++	if (i == stats->endpoint_count) {
++		if (i == JUICE_SOVKIT_ENDPOINT_LIMIT) { ++stats->endpoint_dropped; return; }
++		juice_sovkit_endpoint_t *item = &stats->endpoints[stats->endpoint_count++];
++		snprintf(item->address, sizeof(item->address), "%s", host);
++		item->port = port; item->family = family; item->kind = kind; item->send_status = status;
++		item->first_ms = now - stats->endpoint_started_ms;
++	}
++	juice_sovkit_endpoint_t *item = &stats->endpoints[i];
++	++item->count;
++	item->bytes += bytes;
++	item->last_ms = now - stats->endpoint_started_ms;
++}
++
+ int agent_conn_recv(juice_agent_t *agent, char *buf, size_t len, const addr_record_t *src) {
+ 	++agent->sovkit_stats.udp_datagrams_received;
++	// Header screening only, BEFORE STUN parsing/authentication. Exclude bulk QUIC.
++	if (agent->config.sovkit_endpoint_diagnostics && is_stun_datagram(buf, len))
++		sovkit_record_endpoint(agent, src, 0, len, 0);
+ 	agent_input(agent, buf, len, src, NULL);
+@@ -1806,2 +1806,5 @@
+ 	int ret = agent_direct_send(agent, &entry->record, buffer, size, 0);
++	uint8_t diagnostic_kind = entry->type == AGENT_STUN_ENTRY_TYPE_CHECK
++	    ? (msg_class == STUN_CLASS_REQUEST ? 1 : 2) : 3;
++	sovkit_record_endpoint(agent, &entry->record, diagnostic_kind, (size_t)size, ret < 0 ? ret : 0);
+ 	if (entry->type == AGENT_STUN_ENTRY_TYPE_CHECK) {

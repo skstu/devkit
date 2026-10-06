@@ -1,0 +1,60 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -84,1 +84,3 @@
++JUICE_EXPORT int juice_sovkit_get_filtering_stats(juice_agent_t *agent,
++                                                 juice_sovkit_mapping_stats_t *stats);
+ // Opt-in, bounded endpoint aggregates. No payload, credentials or transaction IDs.
+@@ -148,1 +150,2 @@
++	uint16_t sovkit_filtering_second_port; // exclusive diagnostic agent; zero disables
+ 	uint16_t sovkit_mapping_second_port; // zero disables; numeric IPv4 STUN host only
+--- a/src/agent.h
++++ b/src/agent.h
+@@ -131,1 +131,3 @@
++	juice_sovkit_mapping_stats_t sovkit_filtering;
++	uint8_t sovkit_filtering_cookie[16]; // never exported in statistics
+ 	juice_sovkit_mapping_stats_t sovkit_mapping;
+--- a/src/juice.c
++++ b/src/juice.c
+@@ -58,1 +58,2 @@
++	if (agent->config.sovkit_filtering_second_port) return JUICE_ERR_INVALID;
+ 	return agent_set_remote_description(agent, sdp);
+@@ -65,1 +66,2 @@
++	if (agent->config.sovkit_filtering_second_port) return JUICE_ERR_INVALID;
+ 	return agent_add_remote_candidate(agent, sdp);
+@@ -73,1 +75,2 @@
++	if (agent->config.sovkit_filtering_second_port) return JUICE_ERR_INVALID;
+ 	if (agent_add_turn_server(agent, turn_server) < 0)
+@@ -103,1 +106,13 @@
++JUICE_EXPORT int juice_sovkit_get_filtering_stats(juice_agent_t *agent,
++                                                 juice_sovkit_mapping_stats_t *stats) {
++	if (!agent || !stats) return JUICE_ERR_INVALID;
++	conn_lock(agent);
++	*stats = agent->sovkit_filtering;
++	stats->enabled = agent->config.sovkit_filtering_second_port != 0;
++	if (stats->state) stats->age_ms = (uint64_t)current_timestamp() - stats->started_ms;
++	conn_unlock(agent);
++	return JUICE_ERR_SUCCESS;
++}
++
++
+ JUICE_EXPORT int juice_sovkit_get_mapping_stats(juice_agent_t *agent,
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -102,1 +102,2 @@
++	agent->config.sovkit_filtering_second_port = config->sovkit_filtering_second_port;
+ 	agent->config.sovkit_mapping_second_port = config->sovkit_mapping_second_port;
+@@ -783,2 +784,3 @@
+ #include "sovkit_mapping.inc"
++#include "sovkit_filtering.inc"
+ 
+@@ -787,1 +789,2 @@
++	if (ret >= 0) sovkit_filtering_update(agent, next_timestamp);
+ 	if (ret >= 0) sovkit_mapping_update(agent, next_timestamp);
+@@ -836,1 +839,7 @@
++	if (sovkit_filtering_receive(agent, buf, len, src)) {
++		++agent->sovkit_stats.stun_datagrams_received;
++		++agent->sovkit_stats.binding_responses_observed;
++		return 0;
++	}
++	if (!sovkit_filtering_allow_gather(agent, buf, len, src)) return 0;
+ 	if (sovkit_mapping_receive(agent, buf, len, src)) {

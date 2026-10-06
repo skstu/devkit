@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/NativeLibsBuild.cmake")
 
 # Both modes share definitions; choose one mode throughout a binary.
 option(LIBSTL_HEADER_ONLY "Use inline libstl implementations instead of a static library" OFF)
@@ -29,6 +30,6 @@ else()
   set_target_properties(libstl PROPERTIES PREFIX "" POSITION_INDEPENDENT_CODE TRUE)
   target_link_libraries(libstl PUBLIC libstl_core sovrankit::libpath)
   target_compile_definitions(libstl PUBLIC LIBSTL_HEADER_ONLY=0)
-  sovrankit_set_warnings(libstl)
+  native_libs_set_warnings(libstl)
 endif()
 add_library(sovrankit::libstl ALIAS libstl)

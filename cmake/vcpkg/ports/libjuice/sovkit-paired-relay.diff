@@ -1,0 +1,259 @@
+--- a/include/juice/juice.h
++++ b/include/juice/juice.h
+@@ -239,12 +239,21 @@
+ 
+ 	const char *realm;
+ 
++	// SovKit: forward only between live allocations with the same credentials.
++	// This mode never emits datagrams to arbitrary peer destinations.
++	bool sovkit_paired_only;
++	int (*sovkit_prepare_socket)(uintptr_t socket, int family, void *user_ptr);
++	// Called under the server lock before forwarding. Must not call server APIs.
++	bool (*sovkit_relay_budget)(size_t bytes, void *user_ptr);
++	void *sovkit_user_ptr;
++
+ } juice_server_config_t;
+ 
+ JUICE_EXPORT juice_server_t *juice_server_create(const juice_server_config_t *config);
+ JUICE_EXPORT void juice_server_destroy(juice_server_t *server);
+ 
+ JUICE_EXPORT uint16_t juice_server_get_port(juice_server_t *server);
++JUICE_EXPORT int juice_server_remove_credentials(juice_server_t *server, const char *username);
+ JUICE_EXPORT int juice_server_add_credentials(juice_server_t *server,
+                                               const juice_server_credentials_t *credentials,
+                                               unsigned long lifetime_ms);
+--- a/src/server.h
++++ b/src/server.h
+@@ -41,6 +41,7 @@
+ typedef struct server_turn_alloc {
+ 	server_turn_alloc_state_t state;
+ 	addr_record_t record;
++	addr_record_t sovkit_relayed;
+ 	juice_server_credentials_t *credentials;
+ 	uint8_t transaction_id[STUN_TRANSACTION_ID_SIZE];
+ 	timestamp_t timestamp;
+--- a/src/server.c
++++ b/src/server.c
+@@ -114,6 +114,8 @@
+ 	udp_socket_config_t socket_config;
+ 	memset(&socket_config, 0, sizeof(socket_config));
+ 	socket_config.bind_address = config->bind_address;
++	socket_config.sovkit_prepare_socket = config->sovkit_prepare_socket;
++	socket_config.sovkit_socket_user = config->sovkit_user_ptr;
+ 	socket_config.port_begin = config->port;
+ 	socket_config.port_end = config->port;
+ 
+@@ -130,6 +132,10 @@
+ 	server->config.max_allocations =
+ 	    config->max_allocations > 0 ? config->max_allocations : SERVER_DEFAULT_MAX_ALLOCATIONS;
+ 	server->config.max_peers = config->max_peers;
++	server->config.sovkit_paired_only = config->sovkit_paired_only;
++	server->config.sovkit_prepare_socket = config->sovkit_prepare_socket;
++	server->config.sovkit_relay_budget = config->sovkit_relay_budget;
++	server->config.sovkit_user_ptr = config->sovkit_user_ptr;
+ 	server->config.bind_address = alloc_string_copy(config->bind_address, &alloc_failed);
+ 	server->config.external_address = alloc_string_copy(config->external_address, &alloc_failed);
+ 	server->config.port = config->port;
+@@ -291,6 +297,29 @@
+ 		node->credentials.allocations_quota = server->config.max_allocations;
+ 
+ 	mutex_unlock(&server->mutex);
++	server_interrupt(server);
++	return 0;
++}
++
++JUICE_EXPORT int juice_server_remove_credentials(juice_server_t *server, const char *username) {
++	if (!server || !username) return -1;
++	mutex_lock(&server->mutex);
++	juice_credentials_list_t **item = &server->credentials;
++	while (*item) {
++		juice_credentials_list_t *node = *item;
++		if (strcmp(node->credentials.username, username) != 0) { item = &node->next; continue; }
++		for (int i = 0; i < server->allocs_count; ++i) {
++			server_turn_alloc_t *alloc = server->allocs + i;
++			if (alloc->state == SERVER_TURN_ALLOC_FULL && alloc->credentials == &node->credentials)
++				delete_allocation(alloc);
++		}
++		*item = node->next;
++		free((void *)node->credentials.username);
++		free((void *)node->credentials.password);
++		free(node);
++	}
++	mutex_unlock(&server->mutex);
++	server_interrupt(server);
+ 	return 0;
+ }
+ 
+@@ -384,6 +413,8 @@
+ 			}
+ 		}
+ 
++		if (nfd != (nfds_t)(1 + server->allocs_count)) continue;
++
+ 		if (server->thread_stopped) {
+ 			JLOG_VERBOSE("Server destruction requested");
+ 			break;
+@@ -414,6 +445,9 @@
+ int server_send(juice_server_t *server, const addr_record_t *dst, const char *data, size_t size) {
+ 	JLOG_VERBOSE("Sending datagram, size=%d", size);
+ 
++	if (server->config.sovkit_paired_only && server->config.sovkit_relay_budget &&
++	    !server->config.sovkit_relay_budget(size + 64 + 64 * ((size + 1199) / 1200), server->config.sovkit_user_ptr))
++		return -1;
+ 	int ret = udp_sendto(server->sock, data, size, dst);
+ 	if (ret < 0 && sockerrno != SEAGAIN && sockerrno != SEWOULDBLOCK)
+ 		JLOG_WARN("Send failed, errno=%d", sockerrno);
+@@ -439,7 +473,7 @@
+ 
+ int server_recv(juice_server_t *server) {
+ 	JLOG_VERBOSE("Receiving datagrams");
+-	while (true) {
++	for (unsigned batch = 0; batch < 64; ++batch) {
+ 		char buffer[BUFFER_SIZE];
+ 		addr_record_t record;
+ 		int len = udp_recvfrom(server->sock, buffer, BUFFER_SIZE, &record);
+@@ -457,6 +491,9 @@
+ 		}
+ 
+ 		addr_unmap_inet6_v4mapped((struct sockaddr *)&record.addr, &record.len);
++		if (server->config.sovkit_paired_only && server->config.sovkit_relay_budget &&
++		    !server->config.sovkit_relay_budget((size_t)len + 64 + 64 * ((len + 1199) / 1200), server->config.sovkit_user_ptr))
++			continue;
+ 		server_input(server, buffer, len, &record);
+ 	}
+ 
+@@ -477,6 +514,8 @@
+ 			return -1;
+ 		}
+ 		addr_unmap_inet6_v4mapped((struct sockaddr *)&record.addr, &record.len);
++		if (server->config.sovkit_paired_only)
++			continue;
+ 
+ 		// RFC 5766 8. Permissions:
+ 		// When a UDP datagram arrives at the relayed transport address for the allocation, the
+@@ -611,6 +650,12 @@
+ 	while (*pnode) {
+ 		if ((*pnode)->timestamp && (*pnode)->timestamp <= now) {
+ 			JLOG_DEBUG("Credentials timed out");
++			for (int i = 0; i < server->allocs_count; ++i) {
++				server_turn_alloc_t *alloc = server->allocs + i;
++				if (alloc->state == SERVER_TURN_ALLOC_FULL &&
++				    alloc->credentials == &(*pnode)->credentials)
++					delete_allocation(alloc);
++			}
+ 			juice_credentials_list_t *next = (*pnode)->next;
+ 			free((void *)(*pnode)->credentials.username);
+ 			free((void *)(*pnode)->credentials.password);
+@@ -619,6 +664,8 @@
+ 			continue;
+ 		}
+ 
++		if ((*pnode)->timestamp && (*pnode)->timestamp < *next_timestamp)
++			*next_timestamp = (*pnode)->timestamp;
+ 		pnode = &(*pnode)->next;
+ 	}
+ 
+@@ -739,7 +786,7 @@
+ 			}
+ 
+ 			if (!credentials)
+-				JLOG_WARN("No credentials for username \"%s\"", msg->credentials.username);
++			JLOG_WARN("TURN allocation authentication rejected");
+ 		}
+ 		if (!credentials) {
+ 			server_answer_stun_error(server, msg->transaction_id, src, msg->msg_method,
+@@ -750,7 +797,7 @@
+ 
+ 		// Check credentials
+ 		if (!stun_check_integrity(buf, size, msg, credentials->password)) {
+-			JLOG_WARN("STUN authentication failed for username \"%s\"", msg->credentials.username);
++			JLOG_WARN("TURN allocation authentication rejected");
+ 			server_answer_stun_error(server, msg->transaction_id, src, msg->msg_method,
+ 			                         401,   // Unauthorized
+ 			                         NULL); // No username
+@@ -885,6 +932,8 @@
+ 		udp_socket_config_t socket_config;
+ 		memset(&socket_config, 0, sizeof(socket_config));
+ 		socket_config.bind_address = server->config.bind_address;
++		socket_config.sovkit_prepare_socket = server->config.sovkit_prepare_socket;
++		socket_config.sovkit_socket_user = server->config.sovkit_user_ptr;
+ 		socket_config.port_begin = server->config.relay_port_range_begin;
+ 		socket_config.port_end = server->config.relay_port_range_end;
+ 		alloc->sock = udp_create_socket(&socket_config);
+@@ -956,6 +1005,8 @@
+ 			goto error;
+ 		}
+ 
++		alloc->sovkit_relayed = *relayed;
++
+ 		if (JLOG_INFO_ENABLED) {
+ 			char src_str[ADDR_MAX_STRING_LEN];
+ 			addr_record_to_string(src, src_str, ADDR_MAX_STRING_LEN);
+@@ -1105,6 +1156,36 @@
+ 	return server_stun_send(server, src, &ans, credentials->password);
+ }
+ 
++// Same-room forwarding preserves standard TURN Data indications while keeping
++// the payload inside this server. No routing to private networks or the Internet.
++static int sovkit_paired_forward(juice_server_t *server, server_turn_alloc_t *source,
++                                  const addr_record_t *peer, const char *data, size_t size) {
++	for (int i = 0; i < server->allocs_count; ++i) {
++		server_turn_alloc_t *target = server->allocs + i;
++		if (target == source || target->state != SERVER_TURN_ALLOC_FULL ||
++		    target->timestamp <= current_timestamp() ||
++		    target->credentials != source->credentials ||
++		    !addr_record_is_equal(&target->sovkit_relayed, peer, true) ||
++		    !turn_has_permission(&target->map, &source->sovkit_relayed))
++			continue;
++		// Recheck permission immediately before forwarding; packet I/O accounts bytes.
++		if (server->config.sovkit_relay_budget &&
++		    !server->config.sovkit_relay_budget(0, server->config.sovkit_user_ptr))
++			return -1;
++		stun_message_t msg;
++		memset(&msg, 0, sizeof(msg));
++		msg.msg_class = STUN_CLASS_INDICATION;
++		msg.msg_method = STUN_METHOD_DATA;
++		msg.peers_size = 1;
++		msg.peers[0] = source->sovkit_relayed;
++		msg.data = data;
++		msg.data_size = size;
++		juice_random(msg.transaction_id, STUN_TRANSACTION_ID_SIZE);
++		return server_stun_send(server, &target->record, &msg, NULL);
++	}
++	return -1;
++}
++
+ int server_process_turn_send(juice_server_t *server, const stun_message_t *msg,
+                              const addr_record_t *src) {
+ 	if (msg->msg_class != STUN_CLASS_INDICATION)
+@@ -1139,6 +1220,8 @@
+ 
+ 	JLOG_VERBOSE("Forwarding datagram to peer, size=%zu", msg->data_size);
+ 
++	if (server->config.sovkit_paired_only)
++		return sovkit_paired_forward(server, alloc, peer, msg->data, msg->data_size);
+ 	int ret = udp_sendto(alloc->sock, msg->data, msg->data_size, peer);
+ 	if (ret < 0 && sockerrno != SEAGAIN && sockerrno != SEWOULDBLOCK)
+ 		JLOG_WARN("Forwarding failed, errno=%d", sockerrno);
+@@ -1179,6 +1262,8 @@
+ 
+ 	JLOG_VERBOSE("Forwarding datagram to peer, size=%zu", len);
+ 
++	if (server->config.sovkit_paired_only)
++		return sovkit_paired_forward(server, alloc, &record, buf, len);
+ 	int ret = udp_sendto(alloc->sock, buf, len, &record);
+ 	if (ret < 0 && sockerrno != SEAGAIN && sockerrno != SEWOULDBLOCK)
+ 		JLOG_WARN("Send failed, errno=%d", sockerrno);
+--- a/src/addr.c
++++ b/src/addr.c
+@@ -260,7 +260,9 @@
+ 	hints.ai_socktype = socktype;
+ 	hints.ai_protocol = socktype == SOCK_STREAM ? IPPROTO_TCP : IPPROTO_UDP;
+ #ifdef AI_ADDRCONFIG
+-	hints.ai_flags = AI_ADDRCONFIG;
++	// Numeric endpoints must also work on loopback-only IPv6 networks.
++	// AI_ADDRCONFIG on glibc excludes loopback interfaces by design.
++	hints.ai_flags = addr_is_numeric_hostname(hostname) ? AI_NUMERICHOST : AI_ADDRCONFIG;
+ #endif
+ 	struct addrinfo *ai_list = NULL;
+ 	if (getaddrinfo(hostname, service, &hints, &ai_list)) {

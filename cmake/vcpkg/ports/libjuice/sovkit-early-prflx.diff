@@ -1,0 +1,32 @@
+--- a/src/agent.c
++++ b/src/agent.c
+@@ -558,3 +558,23 @@
+-	agent->remote = remote;
++	// Authenticated checks may arrive before the remote SDP (RFC 8445 7.3).
++	// Existing pairs point into agent->remote.candidates. Replacing that array
++	// with parsed SDP silently retargets those pointers to unrelated host/srflx
++	// candidates while STUN entries still send to the learned peer endpoint.
++	// Preserve existing indices; append only new SDP endpoints, without sorting.
++	const int existing_candidates = agent->remote.candidates_count;
++	ice_description_t merged = remote;
++	merged.candidates_count = 0;
++	for (int i = 0; i < existing_candidates; ++i)
++		ice_add_candidate(agent->remote.candidates + i, &merged);
++	for (int i = 0; i < remote.candidates_count; ++i) {
++		ice_candidate_t *candidate = remote.candidates + i;
++		if (ice_find_candidate_from_addr(&merged, &candidate->resolved, ICE_CANDIDATE_TYPE_UNKNOWN))
++			continue;
++		if (ice_add_candidate(candidate, &merged)) {
++			// Transactional failure: leave the live description and pairs intact.
++			conn_unlock(agent);
++			return JUICE_ERR_INVALID;
++		}
++	}
++	agent->remote = merged;
+ 
+ 	agent_update_pac_timer(agent);
+@@ -581,3 +601,3 @@
+ 	JLOG_DEBUG("Adding %d candidates from remote description", (int)agent->remote.candidates_count);
+-	for (int i = 0; i < agent->remote.candidates_count; ++i) {
++	for (int i = existing_candidates; i < agent->remote.candidates_count; ++i) {
+ 		ice_candidate_t *remote = agent->remote.candidates + i;

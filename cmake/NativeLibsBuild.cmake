@@ -1,0 +1,15 @@
+include_guard(GLOBAL)
+
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/../VERSION" NATIVE_LIBS_VERSION)
+if(NOT NATIVE_LIBS_VERSION MATCHES "^[0-9]+\.[0-9]+\.[0-9]+$")
+  message(FATAL_ERROR "native-libs VERSION must contain a three-part version")
+endif()
+
+function(native_libs_set_warnings target)
+  if(MSVC)
+    target_compile_options("${target}" PRIVATE /utf-8 /W4 /permissive-)
+    target_compile_definitions("${target}" PRIVATE NOMINMAX)
+  else()
+    target_compile_options("${target}" PRIVATE -Wall -Wextra -Wpedantic)
+  endif()
+endfunction()

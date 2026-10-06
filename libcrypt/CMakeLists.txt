@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/NativeLibsBuild.cmake")
 
 # Web3-oriented cryptographic primitives backed by libsodium.  The public API
 # intentionally exposes byte containers rather than libsodium types, keeping
@@ -23,7 +24,7 @@ target_include_directories(libcrypt PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_link_libraries(libcrypt PRIVATE unofficial-sodium::sodium OpenSSL::Crypto)
 
-sovrankit_set_warnings(libcrypt)
+native_libs_set_warnings(libcrypt)
 
 # Deterministic vectors compile a separate copy; production always generates
 # its own ephemeral keys and does not export the injection method.
@@ -34,5 +35,5 @@ if(BUILD_TESTING)
   target_compile_definitions(libcrypt_testing PUBLIC LIBCRYPT_TESTING=1)
   target_include_directories(libcrypt_testing PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
   target_link_libraries(libcrypt_testing PRIVATE unofficial-sodium::sodium OpenSSL::Crypto)
-  sovrankit_set_warnings(libcrypt_testing)
+  native_libs_set_warnings(libcrypt_testing)
 endif()

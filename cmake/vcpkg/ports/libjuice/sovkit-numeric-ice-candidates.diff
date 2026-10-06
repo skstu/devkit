@@ -1,0 +1,14 @@
+--- a/src/ice.c
++++ b/src/ice.c
+@@ -212,7 +212,10 @@
+ 		hints.ai_protocol = IPPROTO_UDP;
+ 	}
+ #ifdef AI_ADDRCONFIG
+-	hints.ai_flags = AI_ADDRCONFIG;
++	// Match addr_resolve: numeric ICE candidates do not require DNS or a
++	// non-loopback interface of that family. glibc's AI_ADDRCONFIG would
++	// otherwise reject ::1 and leave the resolved sockaddr length at zero.
++	hints.ai_flags = addr_is_numeric_hostname(candidate->hostname) ? 0 : AI_ADDRCONFIG;
+ #endif
+ 	if (mode != ICE_RESOLVE_MODE_LOOKUP)
+ 		hints.ai_flags |= AI_NUMERICHOST | AI_NUMERICSERV;
