@@ -1,0 +1,47 @@
+#pragma once
+
+// Compatibility umbrella. New code can include individual libstl/*.hpp headers.
+#include <algorithm>
+#include <charconv>
+#include <cctype>
+#include <cmath>
+#include <cstdint>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <string>
+#include <string_view>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
+#include <set>
+#include <vector>
+#include <deque>
+#include <list>
+#include <unordered_set>
+#include <thread>
+#include <chrono>
+#include <queue>
+#include <regex>
+#include <random>
+#include <sstream>
+#include <optional>
+#include <variant>
+#include <limits>
+#include <future>
+#include <functional>
+#include <utility>
+#include <clocale>
+#include <type_traits>
+
+#include <libstl/container.hpp>
+#include <libstl/cache.hpp>
+#include <libstl/main_proc.hpp>
+#include <libstl/packet.hpp>
+#include <libstl/encoding.hpp>
+#include <libstl/time.hpp>
+#include <libstl/seed.hpp>
+#include <libstl/utils.hpp>

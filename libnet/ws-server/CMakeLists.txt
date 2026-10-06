@@ -1,0 +1,18 @@
+# Standalone loopback event transport; no SDK, libhv, HTTP client or TLS.
+cmake_minimum_required(VERSION 3.21)
+enable_language(C)
+set(LIBNET_UWS_SOURCE_DIR "" CACHE PATH "Verified uWebSockets 20.79.0 source")
+set(LIBNET_USOCKETS_SOURCE_DIR "" CACHE PATH "Verified uSockets 0.8.8 source")
+if(NOT EXISTS "${LIBNET_UWS_SOURCE_DIR}/src/App.h" OR NOT EXISTS "${LIBNET_USOCKETS_SOURCE_DIR}/src/libusockets.h")
+  message(FATAL_ERROR "Explicit verified uWebSockets/uSockets source directories required; see ws-server/dependencies.json")
+endif()
+file(GLOB usockets_sources CONFIGURE_DEPENDS "${LIBNET_USOCKETS_SOURCE_DIR}/src/*.c"
+  "${LIBNET_USOCKETS_SOURCE_DIR}/src/eventing/*.c" "${LIBNET_USOCKETS_SOURCE_DIR}/src/crypto/*.c")
+add_library(libnet_event_sockets STATIC ${usockets_sources})
+target_include_directories(libnet_event_sockets PUBLIC "${LIBNET_USOCKETS_SOURCE_DIR}/src")
+target_compile_definitions(libnet_event_sockets PUBLIC LIBUS_NO_SSL)
+add_library(libnet_event_server STATIC bounded_event_server.cc)
+target_compile_features(libnet_event_server PUBLIC cxx_std_20)
+target_include_directories(libnet_event_server PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}" PRIVATE "${LIBNET_UWS_SOURCE_DIR}/src")
+target_compile_definitions(libnet_event_server PRIVATE UWS_NO_ZLIB)
+target_link_libraries(libnet_event_server PRIVATE libnet_event_sockets)
