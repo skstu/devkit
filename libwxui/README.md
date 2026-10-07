@@ -53,6 +53,20 @@ fmt、RapidJSON、utfcpp。可通过 `add_subdirectory` 集成，不需要原宿
 </VerticalLayout>
 ```
 
+## 原生桌面封装
+
+- `Timer::Start(milliseconds, callback)` / `Stop()` 在 UI 线程使用；析构自动停止，模态窗口期间继续工作。回调可停止自身，宿主应在所捕获的状态销毁前停止计时器。
+- `UtcNow`、`ParseUtc`、`FormatUtc` 使用标准 `sys_seconds`，严格 UTC 文本不经过本地时区；`FormatLocalTime` 负责原生本地显示及夏令时，非法输入原样保留。时间范围的业务限制由应用判断。
+- `WriteFileAtomically` 完整替换文件；`EnableTooltips`、`Bell`、`ContainsIgnoringCase` 提供原生提示与 Unicode 文本能力。
+- `DesktopWindow::SetFont` 只使用已安装字体，缺失时保留系统回退；`Raise`、`SetClientExtent` 封装窗口操作。`ShowDialog` 内统一处理无修饰键 Escape 取消。
+- `FormEdit` 处理 Tab/Shift+Tab、Enter 通知及可选 `OnStep`；`OnNavigate` 可指定表单顺序。`NativeChoice` 处理可访问选择框及 macOS 键盘焦点；消费者不必取得原生窗口。
+- `Edit::SelectAll` 封装原生选中；逻辑 Edit 销毁时同步释放原生输入框和回调，虚拟列表不再遗留输入窗口。
+- `PaneCanvas` 提供拖动、缩放、层次及输入框遮挡；应用覆写 `MinimumPaneSize`、`InitialPaneBounds`、`PaneOrder` 决定布局。`PaneLayout` 是普通 C++ 数据，持久化格式由应用负责。
+- `ResizablePane`、`DecimalButton::SetIndicator`、`StackIconButton` 负责绘制；数字涨跌和产品状态由应用传入，不在库内推断。上述六种控件均已注册为 XML 标签。
+- `Control::ScreenOrigin` 返回屏幕坐标，不暴露原生窗口操作。
+
+相关离线检查可用 `-DLIBWXUI_BUILD_TESTING=ON` 编译 `wxui_desktop_services_test`，运行 `ctest -R libwxui.desktop_services --output-on-failure`；需要可用的桌面会话。测试固定时区验证夏令时，不读取真实账户数据。
+
 ## 绘制与资源边界
 
 UIManager 按更新区域裁剪；macOS 复用原生 DC 的 graphics context，其他后端每次

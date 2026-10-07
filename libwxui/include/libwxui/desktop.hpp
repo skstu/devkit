@@ -39,6 +39,10 @@ public:
         return control;
     }
     void Present();
+    void Raise();
+    void SetClientExtent(Extent size);
+    // Use the preferred installed face, retaining native fallback if absent.
+    void SetFont(const std::string& preferredFace, double logicalPixels);
     void SetStatus(const std::string& text, int field = 0);
     void SetTitle(const std::string& text);
     void LoadLanguageXml(const std::string& language, const std::string& xml);

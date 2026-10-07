@@ -35,6 +35,8 @@
 #include "libwxui/manager.hpp"
 #include "libwxui/application.hpp"
 #include "libwxui/desktop.hpp"
+#include "libwxui/desktop_util.hpp"
+#include "libwxui/panes.hpp"
 
 /// /*_ Memade®（新生™） _**/
 /// /*_ Sun, 26 Apr 2026 07:08:51 GMT _**/

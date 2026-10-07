@@ -55,6 +55,13 @@ void ControlFactory::RegisterBuiltins() {
     REG("Slider",                Slider);
     REG("Edit",                  Edit);
 
+    REG("FormEdit",              FormEdit);
+    REG("NativeChoice",          NativeChoice);
+    REG("PaneCanvas",            PaneCanvas);
+    REG("ResizablePane",         ResizablePane);
+    REG("DecimalButton",         DecimalButton);
+    REG("StackIconButton",        StackIconButton);
+
     // ScrollBar
     REG("ScrollBar",             ScrollBar);
 

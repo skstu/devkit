@@ -1,6 +1,7 @@
 #include <libwxui.hpp>
 #include <libwxui/appearance.hpp>
 #include <wx/dirdlg.h>
+#include <wx/fontenum.h>
 #include <wx/display.h>
 #include <wx/filedlg.h>
 #include <wx/msgdlg.h>
@@ -130,6 +131,13 @@ namespace wxui {
 			impl_->frame->Show();
         }
 	}
+    void DesktopWindow::Raise() { if (impl_->frame) impl_->frame->Raise(); }
+    void DesktopWindow::SetClientExtent(Extent size) { if (impl_->frame) impl_->frame->SetClientSize(size.width, size.height); }
+    void DesktopWindow::SetFont(const std::string& preferredFace, double logicalPixels) {
+        auto font = impl_->manager->GetUIFont();
+        if (wxFontEnumerator::IsValidFacename(Utf8ToWxString(preferredFace))) font.SetFaceName(Utf8ToWxString(preferredFace));
+        impl_->manager->SetUIFont(FontWithLogicalSize(font, logicalPixels));
+    }
 	void DesktopWindow::SetStatus(const std::string& text, int field) {
 		if (impl_->frame)
 			SetFrameStatusText(impl_->frame, Utf8ToWxString(text), field);
@@ -245,6 +253,12 @@ namespace wxui {
 			close->Bind("click", [&dialog](const auto&) { dialog.EndModal(wxID_CANCEL); });
 		if (auto* accept = manager->FindControl("accept"))
 			accept->Bind("click", [&dialog](const auto&) { dialog.EndModal(wxID_OK); });
+        dialog.Bind(wxEVT_CHAR_HOOK, [&dialog](wxKeyEvent& event) {
+            if (event.GetKeyCode() == WXK_ESCAPE && !event.HasAnyModifiers() && dialog.IsModal()) {
+                dialog.EndModal(wxID_CANCEL); return;
+            }
+            event.Skip();
+        });
 		if (initialize) initialize(*manager->GetRoot());
 		auto* sizer = new wxBoxSizer(wxVERTICAL);
 		sizer->Add(manager, 1, wxEXPAND);

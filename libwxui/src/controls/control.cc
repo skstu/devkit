@@ -11,6 +11,12 @@
 #include <memory>
 
 namespace wxui {
+std::pair<int,int> Control::ScreenOrigin() const {
+    if (!manager_) return {rect_.x,rect_.y};
+    const auto point=manager_->ClientToScreen(rect_.GetTopLeft());
+    return {point.x,point.y};
+}
+
 namespace {
 
 double RoundedRadius(const wxRect& rect, const wxSize& round) {

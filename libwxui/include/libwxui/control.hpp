@@ -37,6 +37,7 @@ public:
 
     // ── Geometry ─────────────────────────────────────────────────────────
     [[nodiscard]] wxRect GetRect()       const { return rect_; }
+    [[nodiscard]] std::pair<int,int> ScreenOrigin() const;
     [[nodiscard]] int GetWidth() const { return rect_.width; }
     [[nodiscard]] int GetHeight() const { return rect_.height; }
     [[nodiscard]] wxRect GetPadding()    const { return padding_; }

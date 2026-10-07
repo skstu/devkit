@@ -858,7 +858,11 @@ Edit::Edit() {
 }
 
 Edit::~Edit() {
-    // textCtrl_ is a wxWindow child of manager_; wxWidgets handles its lifetime
+    if (textCtrl_) {
+        const auto old = textCtrl_->GetRect();
+        delete textCtrl_; // Synchronous: bound callbacks capture this logical edit.
+        if (manager_ && !manager_->IsBeingDeleted()) manager_->RefreshRect(old, false);
+    }
 }
 
 void Edit::SetAttribute(const std::string& key, const std::string& val) {
@@ -906,6 +910,7 @@ void Edit::CreateNativeCtrl() {
     textCtrl_ = new wxTextCtrl(manager_, wxID_ANY,
                                Utf8ToWxString(text_), rect_.GetTopLeft(),
                                rect_.GetSize(), style);
+    textCtrl_->Bind(wxEVT_DESTROY, [this](wxWindowDestroyEvent& event) { textCtrl_ = nullptr; event.Skip(); });
     DisableTextCtrlSmartSubstitutions(textCtrl_);
     BindTextCtrlEditShortcuts(textCtrl_);
     textCtrl_->Bind(wxEVT_TEXT, [this](wxCommandEvent& event) {
@@ -1051,6 +1056,8 @@ void Edit::SetPassword(bool p) {
     // Password style cannot be changed at runtime in wxTextCtrl;
     // recreate if needed (simplify: mark flag, recreate on next show)
 }
+
+void Edit::SelectAll() { if (textCtrl_) textCtrl_->SelectAll(); }
 
 void Edit::SetMaxChar(int n) {
     maxChar_ = std::max(0, n);

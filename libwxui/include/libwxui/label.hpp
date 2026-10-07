@@ -217,6 +217,9 @@ public:
     void SetReadOnly(bool r);
     void SetPassword(bool p);
     void SetMaxChar(int n);
+    void SelectAll();
+protected:
+    wxTextCtrl* NativeTextControl() const { return textCtrl_; }
 
 private:
     void CreateNativeCtrl();
