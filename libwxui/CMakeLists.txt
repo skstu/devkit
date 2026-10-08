@@ -17,6 +17,15 @@ else()
   target_compile_options(wxui_dependencies INTERFACE ${WXUI_WX_CXX_FLAGS})
   target_link_libraries(wxui_dependencies INTERFACE ${wxWidgets_LIBRARIES})
 endif()
+# Resolve cached Apple SDK libm paths using the active toolchain.
+# Some NanoSVG binary packages retain the producer's SDK path.
+if(APPLE AND TARGET NanoSVG::nanosvg)
+  get_target_property(wxui_svg_links NanoSVG::nanosvg INTERFACE_LINK_LIBRARIES)
+  if(wxui_svg_links)
+    list(TRANSFORM wxui_svg_links REPLACE ".*/MacOSX[^/]*[.]sdk/usr/lib/libm[.]tbd$" "m")
+    set_property(TARGET NanoSVG::nanosvg PROPERTY INTERFACE_LINK_LIBRARIES "${wxui_svg_links}")
+  endif()
+endif()
 # Standalone build of the libwxui snapshot supplied with this repository.
 # No OrbitBridge helper macros, directory globals or private libraries.
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS src/*.cc)
