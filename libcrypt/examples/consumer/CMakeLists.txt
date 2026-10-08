@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.24)
+project(crypt_consumer LANGUAGES C)
+find_package(devkitCrypt 0.1.1 EXACT CONFIG REQUIRED)
+add_executable(crypt_consumer main.c)
+target_link_libraries(crypt_consumer PRIVATE devkit::crypt)
+set_target_properties(crypt_consumer PROPERTIES BUILD_WITH_INSTALL_RPATH ON)
+devkit_crypt_bundle(crypt_consumer)

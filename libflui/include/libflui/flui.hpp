@@ -174,7 +174,13 @@ public:
     auto p = attributes_.find(key);
     return p == attributes_.end() ? fallback : p->second;
   }
-  virtual void SetText(const std::string &s) { SetAttribute("text", s); }
+  virtual void SetText(const std::string &s) {
+    if (attributes_.count("textkey")) SetAttribute("textkey", "");
+    SetAttribute("text", s);
+  }
+  void SetTextKey(const std::string &key, const std::map<std::string,std::string> &args = {}) {
+    SetAttribute("textkey", key); SetAttribute("textargs", detail::attrs(args));
+  }
   std::string GetText() const { return Attribute("text"); }
   std::string GetName() const { return Attribute("name"); }
   void SetFixedWidth(int v) { SetAttribute("width", std::to_string(v)); }
@@ -321,6 +327,8 @@ class Container : public Control {
 public:
   explicit Container(std::string tag = "Container") : Control(std::move(tag)) {}
 };
+class ScrollLayout : public Container { public: ScrollLayout() : Container("ScrollLayout") {} };
+class WrapLayout : public Container { public: WrapLayout() : Container("WrapLayout") {} };
 class VerticalLayout : public Container {
 public:
   VerticalLayout() : Container("VerticalLayout") {}
@@ -832,7 +840,9 @@ public:
     return std::make_shared<T>();
     FLUI_CREATE(Control)
     FLUI_CREATE(Container)
-    FLUI_CREATE(VerticalLayout)
+    FLUI_CREATE(ScrollLayout)
+  FLUI_CREATE(WrapLayout)
+  FLUI_CREATE(VerticalLayout)
     FLUI_CREATE(HorizontalLayout) FLUI_CREATE(Label) FLUI_CREATE(Button)
         FLUI_CREATE(Icon) FLUI_CREATE(DecimalLabel) FLUI_CREATE(DecimalButton)
             FLUI_CREATE(Edit) FLUI_CREATE(Combo) FLUI_CREATE(Option)
@@ -1065,7 +1075,10 @@ class DesktopWindow {
   static inline size_t count_ = 0;
   static inline std::vector<DesktopWindow *> all_;
   void Property(const char *key, const std::string &value) {
-    check(flui_window_property(state_->handle, span(key), span(value)));
+    const auto status=flui_window_property(state_->handle, span(key), span(value));
+    // OS-owned single-surface hosts cannot enforce desktop minimum dimensions.
+    if(status==FLUI_UNSUPPORTED && std::string(key)=="minimum") return;
+    check(status);
   }
 
 public:
@@ -1140,6 +1153,11 @@ public:
   void SetTheme(const std::string &name, const std::string &tokens = "{}") {
     state_->root->SetAttribute("theme", name);
     state_->root->SetAttribute("theme_tokens", tokens);
+  }
+  void SetLanguage(const std::string &locale) { state_->root->SetAttribute("locale", locale); }
+  void SetTranslations(const std::string &catalogs, const std::string &fallback = "en") {
+    state_->root->SetAttribute("translations", catalogs);
+    state_->root->SetAttribute("fallback_locale", fallback);
   }
   void SetFont(const std::string &f, double size) {
     state_->root->SetFont(f, size);
@@ -1304,7 +1322,11 @@ inline auto UtcNow() { return std::chrono::system_clock::now(); }
 inline std::string FormatUtc(std::chrono::system_clock::time_point point) {
   const auto t = std::chrono::system_clock::to_time_t(point);
   std::tm tm{};
-  gmtime_r(&t, &tm);
+#ifdef _WIN32
+  if (gmtime_s(&tm, &t)) return {};
+#else
+  if (!gmtime_r(&t, &tm)) return {};
+#endif
   char out[32];
   std::strftime(out, sizeof(out), "%Y-%m-%dT%H:%M:%SZ", &tm);
   return out;
@@ -1316,7 +1338,11 @@ ParseUtc(std::string s) {
   in >> std::get_time(&tm, "%Y-%m-%dT%H:%M:%SZ");
   if (in.fail() || in.peek() != std::char_traits<char>::eof())
     return {};
+#ifdef _WIN32
+  auto t = _mkgmtime(&tm);
+#else
   auto t = timegm(&tm);
+#endif
   if (t < 0 || FormatUtc(std::chrono::system_clock::from_time_t(t)) != s)
     return {};
   return std::chrono::system_clock::from_time_t(t);
@@ -1330,7 +1356,11 @@ inline std::string FormatLocalTime(std::string s) {
     return s;
   auto stamp = std::chrono::system_clock::to_time_t(*t);
   std::tm tm{};
-  localtime_r(&stamp, &tm);
+#ifdef _WIN32
+  if (localtime_s(&tm, &stamp)) return s;
+#else
+  if (!localtime_r(&stamp, &tm)) return s;
+#endif
   char out[40];
   std::strftime(out, sizeof(out), "%Y-%m-%d %H:%M:%S", &tm);
   return out;

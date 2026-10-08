@@ -28,6 +28,7 @@ typedef int32_t flui_status;
 #define FLUI_RUNTIME_ERROR 7
 #define FLUI_DOCUMENT_ERROR 8
 #define FLUI_LIMIT_EXCEEDED 9
+#define FLUI_UNSUPPORTED 10
 #define FLUI_EVENT_READY 1u
 #define FLUI_EVENT_ACTION 2u
 #define FLUI_EVENT_COMPLETE 3u
@@ -61,7 +62,9 @@ typedef struct flui_window_options {
   flui_event_callback on_event;
   void *user;
 } flui_window_options;
-/* ABI v1: all calls and callbacks on the OS main thread, except abi_version().
+/* ABI v1: UI calls/callbacks use the profile's owner thread; abi_version() and
+ * desktop.h's flui_dispatch are thread-safe. Native macOS: OS main thread.
+ * Experimental SDK-owned host: entry/callback thread; see host.h.
  * Create starts a hidden window; READY arrives through the host's event loop.
  * Strings are copied before return. No allocation must be freed across the ABI.
  * Callback may submit commands or quit; destroy/run from callback returns BUSY.

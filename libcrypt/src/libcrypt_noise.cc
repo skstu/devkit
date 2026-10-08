@@ -134,6 +134,7 @@ private:
 
 class SymmetricState final {
 public:
+  ~SymmetricState() { Crypt::SecureZero(ck_); Crypt::SecureZero(h_); }
   bool Initialize(std::span<const std::uint8_t> prologue) {
     if (kProtocolName.size() <= h_.size()) {
       std::copy(kProtocolName.begin(), kProtocolName.end(), h_.begin());

@@ -1,4 +1,9 @@
 import 'dart:convert';
+
+import 'localization.dart';
+
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -13,6 +18,8 @@ const retainedTags = {
   'Window',
   'Control',
   'Container',
+  'ScrollLayout',
+  'WrapLayout',
   'VerticalLayout',
   'HorizontalLayout',
   'Label',
@@ -121,8 +128,19 @@ const retainedAttributes = {
   'select_all',
   'focus',
   'traverse',
+  'locale',
+  'fallback_locale',
+  'translations',
+  'textkey',
+  'textargs',
+  'hintkey',
+  'hintargs',
+  'tooltipkey',
+  'tooltipargs',
+  'safe_area',
   'theme',
   'theme_tokens',
+  'theme_dark_tokens',
   'role',
   'tooltips',
   'dialog',
@@ -201,7 +219,13 @@ class RetainedModel {
           v != 'true' &&
           v != 'false')
         throw FormatException('Invalid ${e.key}');
-      if ({'items_json', 'bars', 'snapshot', 'theme_tokens'}.contains(e.key)) {
+      if ({
+        'items_json',
+        'bars',
+        'snapshot',
+        'theme_tokens',
+        'theme_dark_tokens',
+      }.contains(e.key)) {
         final data = jsonDecode(v);
         if (e.key == 'items_json' &&
             (data is! List ||
@@ -218,9 +242,15 @@ class RetainedModel {
                       r.any((v) => v is! String),
                 )))
           throw const FormatException('Invalid plot values');
-        if (e.key == 'theme_tokens' &&
+        if ((e.key == 'theme_tokens' || e.key == 'theme_dark_tokens') &&
             (data is! Map || data.values.any((v) => v is! String)))
           throw const FormatException('Invalid theme tokens');
+      }
+      if (e.key == 'translations') UiStrings.validate(jsonDecode(v));
+      if ({'textargs', 'hintargs', 'tooltipargs'}.contains(e.key)) {
+        final data = jsonDecode(v);
+        if (data is! Map || data.values.any((v) => v is! String))
+          throw const FormatException('Invalid translation arguments');
       }
       result[e.key] = v;
     }
@@ -326,9 +356,15 @@ class RetainedModel {
 // Named defaults can be overridden by a Window's theme_tokens JSON. Layout and
 // widget behavior do not depend on a theme; explicit XML styles take precedence.
 class UiPalette {
-  const UiPalette(this.tokens);
+  const UiPalette(this.tokens, [this.strings]);
+  final UiStrings? strings;
+  String text(RNode n, String field) =>
+      strings?.field(n.attrs, field) ?? n.text(field);
   final Map<String, String> tokens;
-  static UiPalette from(RNode root) {
+  static UiPalette from(
+    RNode root, {
+    Brightness brightness = Brightness.light,
+  }) {
     final name = root.text('theme', 'neutral');
     final values = <String, String>{
       'surface': '#f0f0f0',
@@ -352,21 +388,47 @@ class UiPalette {
         'radius': '3',
         'font': 'Tahoma',
       });
-    if (name == 'classic-2003')
+    if (name == 'classic-2000' || name == 'classic-2003')
       values.addAll({
         'surface': '#d4d0c8',
         'accent': '#0a246a',
-        'buttonTop': '#f1efe8',
+        'buttonTop': name == 'classic-2000' ? '#d4d0c8' : '#f1efe8',
         'buttonBottom': '#d4d0c8',
         'border': '#808080',
         'radius': '0',
         'font': 'Tahoma',
       });
+    final dark =
+        name == 'dark' || (name == 'system' && brightness == Brightness.dark);
+    if (dark)
+      values.addAll({
+        'surface': '#191919',
+        'panel': '#252525',
+        'text': '#eeeeee',
+        'muted': '#999999',
+        'border': '#444444',
+        'buttonTop': '#333333',
+        'buttonBottom': '#333333',
+      });
+    values['brightness'] = dark ? 'dark' : 'light';
+    values['classic'] = name == 'classic-2000' ? 'true' : 'false';
     if (root.attrs.containsKey('theme_tokens'))
       values.addAll(
         Map<String, String>.from(jsonDecode(root.text('theme_tokens')) as Map),
       );
-    return UiPalette(values);
+    if (dark && root.attrs.containsKey('theme_dark_tokens'))
+      values.addAll(
+        Map<String, String>.from(
+          jsonDecode(root.text('theme_dark_tokens')) as Map,
+        ),
+      );
+    return UiPalette(
+      values,
+      UiStrings.from(
+        root.attrs,
+        WidgetsBinding.instance.platformDispatcher.locales,
+      ),
+    );
   }
 
   String resolve(String text) =>
@@ -381,9 +443,37 @@ class UiPalette {
   }
 }
 
-class RetainedApp extends StatelessWidget {
+class RetainedApp extends StatefulWidget {
   const RetainedApp({super.key, required this.model});
   final RetainedModel model;
+  @override
+  State<RetainedApp> createState() => _RetainedAppState();
+}
+
+class _RetainedAppState extends State<RetainedApp> with WidgetsBindingObserver {
+  RetainedModel get model => widget.model;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<RNode?>(
     valueListenable: model.root,
@@ -392,14 +482,33 @@ class RetainedApp extends StatelessWidget {
         : ListenableBuilder(
             listenable: root,
             builder: (_, _) {
-              final palette = UiPalette.from(root);
+              final palette = UiPalette.from(
+                root,
+                brightness: WidgetsBinding
+                    .instance
+                    .platformDispatcher
+                    .platformBrightness,
+              );
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
+                locale: palette.strings!.flutterLocale,
+                supportedLocales: const [
+                  Locale('en'),
+                  Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans'),
+                  Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+                ],
+                localizationsDelegates: GlobalMaterialLocalizations.delegates,
                 theme: ThemeData(
                   useMaterial3: false,
+                  brightness: palette.tokens['brightness'] == 'dark'
+                      ? Brightness.dark
+                      : Brightness.light,
                   fontFamily: root.text('font', palette.tokens['font']!),
                   visualDensity: VisualDensity.compact,
                   colorScheme: ColorScheme.fromSeed(
+                    brightness: palette.tokens['brightness'] == 'dark'
+                        ? Brightness.dark
+                        : Brightness.light,
                     seedColor: palette.color(palette.tokens['accent']!),
                   ),
                 ),
@@ -407,29 +516,36 @@ class RetainedApp extends StatelessWidget {
                   backgroundColor: palette.color(
                     root.text('bkcolor', palette.tokens['surface']!),
                   ),
-                  body: DefaultTextStyle(
-                    style: TextStyle(
-                      fontFamily: root.text('font', palette.tokens['font']!),
-                      fontSize: root.number('fontsize', 13),
-                      color: palette.color(
-                        root.text('defaultfontcolor', palette.tokens['text']!),
+                  body: SafeArea(
+                    top: root.flag("safe_area"),
+                    bottom: root.flag("safe_area"),
+                    child: DefaultTextStyle(
+                      style: TextStyle(
+                        fontFamily: root.text('font', palette.tokens['font']!),
+                        fontSize: root.number('fontsize', 13),
+                        color: palette.color(
+                          root.text(
+                            'defaultfontcolor',
+                            palette.tokens['text']!,
+                          ),
+                        ),
+                        height: 1.1,
                       ),
-                      height: 1.1,
-                    ),
-                    child: CallbackShortcuts(
-                      bindings: {
-                        if (root.flag('dialog'))
-                          const SingleActivator(
-                            LogicalKeyboardKey.escape,
-                          ): () =>
-                              model.action('0:close', ''),
-                      },
-                      child: Focus(
-                        autofocus: true,
-                        child: TreeView(
-                          node: root,
-                          model: model,
-                          palette: palette,
+                      child: CallbackShortcuts(
+                        bindings: {
+                          if (root.flag('dialog'))
+                            const SingleActivator(
+                              LogicalKeyboardKey.escape,
+                            ): () =>
+                                model.action('0:close', ''),
+                        },
+                        child: Focus(
+                          autofocus: true,
+                          child: TreeView(
+                            node: root,
+                            model: model,
+                            palette: palette,
+                          ),
                         ),
                       ),
                     ),
@@ -550,7 +666,7 @@ class PlainLabelRender extends RenderBox {
             palette.color(node.text('textcolor'), const Color(0xff888888)),
           );
     painter.text = TextSpan(
-      text: node.text('text'),
+      text: palette.text(node, 'text'),
       style: style.copyWith(color: color),
     );
     painter.textScaler = scaler;
@@ -605,7 +721,7 @@ class PlainLabelRender extends RenderBox {
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
-    config.label = node.text('text');
+    config.label = palette.text(node, 'text');
     config.textDirection = TextDirection.ltr;
   }
 }
@@ -785,7 +901,7 @@ class _TreeViewState extends State<TreeView> {
         scaler: MediaQuery.textScalerOf(context),
         fallbackColor: inherited.color ?? Colors.black,
       );
-    final text = n.text('text'),
+    final text = palette.text(n, 'text'),
         align = n.text('align') == 'center'
             ? TextAlign.center
             : n.text('align') == 'right'
@@ -992,7 +1108,10 @@ class _TreeViewState extends State<TreeView> {
           : TextAlign.left,
       style: DefaultTextStyle.of(context).style.copyWith(
         fontSize: n.number('fontsize', 13),
-        color: color('textcolor', Colors.black),
+        color: color(
+          'textcolor',
+          DefaultTextStyle.of(context).style.color ?? Colors.black,
+        ),
       ),
       textAlignVertical: TextAlignVertical.center,
       decoration: InputDecoration(
@@ -1002,7 +1121,7 @@ class _TreeViewState extends State<TreeView> {
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
         disabledBorder: InputBorder.none,
-        hintText: n.text('hint'),
+        hintText: palette.text(n, 'hint'),
         counterText: '',
       ),
       onSubmitted: (_) {
@@ -1114,7 +1233,9 @@ class _TreeViewState extends State<TreeView> {
         ),
         bottom = color(
           'bkcolor2',
-          themedButton ? palette.color(r'$buttonBottom') : top,
+          themedButton && !n.attrs.containsKey('bkcolor')
+              ? palette.color(r'$buttonBottom')
+              : top,
         );
     final border = edges(n.text('bordersize', themedButton ? '1' : '0'));
     final borderColor = color(
@@ -1122,7 +1243,7 @@ class _TreeViewState extends State<TreeView> {
       themedButton ? palette.color(r'$border') : const Color(0xff909090),
     );
     final radius =
-        double.tryParse(n.text('borderround')) ??
+        double.tryParse(palette.resolve(n.text('borderround'))) ??
         (n.text('cornerradius').isNotEmpty
             ? double.tryParse(n.text('cornerradius').split(',').first) ?? 0
             : themedButton
@@ -1163,12 +1284,19 @@ class _TreeViewState extends State<TreeView> {
       decoration: decoration,
       child: Padding(padding: edges(n.text('inset', '0')), child: result),
     );
-    if (n.flag('bevel'))
-      result = CustomPaint(foregroundPainter: BevelPainter(), child: result);
-    if (n.text('tooltip').isNotEmpty &&
+    final classic = palette.tokens['classic'] == 'true';
+    if (n.flag('bevel') ||
+        (classic && (themedButton || n.text('role') == 'inset')))
+      result = CustomPaint(
+        foregroundPainter: BevelPainter(
+          sunken: classic && n.text('role') == 'inset',
+        ),
+        child: result,
+      );
+    if (palette.text(n, 'tooltip').isNotEmpty &&
         m.root.value?.flag('tooltips', true) != false)
       result = Tooltip(
-        message: n.text('tooltip'),
+        message: palette.text(n, 'tooltip'),
         waitDuration: const Duration(milliseconds: 600),
         child: result,
       );
@@ -1196,6 +1324,29 @@ class _TreeViewState extends State<TreeView> {
               .where((c) => c.flag('visible', true))
               .map(child)
               .toList(),
+        );
+      case 'ScrollLayout':
+        result = SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final c in n.children.where((c) => c.flag('visible', true)))
+                SizedBox(height: c.number('height', 40), child: child(c)),
+            ],
+          ),
+        );
+      case 'WrapLayout':
+        result = Wrap(
+          spacing: n.number('childpadding'),
+          runSpacing: n.number('childpadding'),
+          children: [
+            for (final c in n.children.where((c) => c.flag('visible', true)))
+              SizedBox(
+                width: c.number('width', 100),
+                height: c.number('height', 34),
+                child: child(c),
+              ),
+          ],
         );
       case 'VerticalLayout':
       case 'Pane':
@@ -1501,23 +1652,32 @@ class _PaneSurfaceState extends State<PaneSurface> {
 }
 
 class BevelPainter extends CustomPainter {
+  BevelPainter({this.sunken = false});
+  final bool sunken;
   @override
   void paint(Canvas canvas, Size s) {
     final p = Paint()
       ..strokeWidth = 1
-      ..color = Colors.white.withValues(alpha: .6);
+      ..color = sunken
+          ? const Color(0xff808080)
+          : Colors.white.withValues(alpha: .8);
     canvas.drawLine(const Offset(.5, .5), Offset(s.width - .5, .5), p);
     canvas.drawLine(const Offset(.5, .5), Offset(.5, s.height - .5), p);
-    p.color = Colors.black.withValues(alpha: .25);
+    p.color = sunken ? Colors.white : Colors.black.withValues(alpha: .5);
     canvas.drawLine(
       Offset(.5, s.height - .5),
+      Offset(s.width - .5, s.height - .5),
+      p,
+    );
+    canvas.drawLine(
+      Offset(s.width - .5, .5),
       Offset(s.width - .5, s.height - .5),
       p,
     );
   }
 
   @override
-  bool shouldRepaint(BevelPainter old) => false;
+  bool shouldRepaint(BevelPainter old) => old.sunken != sunken;
 }
 
 class PlotPainter extends CustomPainter {

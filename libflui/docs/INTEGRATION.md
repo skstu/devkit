@@ -9,10 +9,12 @@ the installed package. The examples are offline and contain no account credentia
 ## Supported package
 
 The initial package is **0.1.1 preview / ABI 1 / macOS arm64 / Release AOT**.
-Only this platform has been validated. The build deployment target is macOS 12,
+This is the currently distributed platform package. The build deployment target is macOS 12,
 but that is not evidence of testing on macOS 12; current validation used macOS 26.5.
-Windows, Linux, Intel-only and universal packages are not released. Public Windows
-export macros reserve a future ABI spelling; they do not implement that backend.
+Windows, Linux, Intel-only and universal packages are not released. Unreleased
+Android/iOS/Windows/Linux host previews and their narrower capability/thread contract
+are documented in [HOST_PREVIEW.md](HOST_PREVIEW.md). The instructions below
+apply to the distributed macOS native-window profile.
 
 Install Xcode Command Line Tools, CMake 3.24+ and a C/C++ compiler. Ninja is optional.
 C users include `libflui/flui.h` (and `desktop.h` for retained controls). The sample
@@ -121,6 +123,10 @@ Use measured `DesktopWindow::OnLayout` geometry for paging and sizing. READY and
 queue-idle do not mean layout or display completed. Theme names `neutral`, `xp-blue`
 and `classic-2003` provide semantic defaults and token overrides; they are not full
 Windows emulation. Business controllers must not depend on theme implementation.
+
+Unreleased local previews also support `system`, `light`, `dark` and
+`classic-2000`; see the retained reference for dark tokens. These extensions
+require a matching renderer package, not just updated headers.
 
 ## Troubleshooting and current limits
 

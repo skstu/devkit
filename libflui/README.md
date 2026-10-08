@@ -3,8 +3,10 @@
 Experimental C ABI UI SDK. Authoritative source lives in devkit; the Flutter
 renderer, engine version and runtime deployment are maintained here. Consumers
 include `<libflui/flui.h>` and link `devkit::libflui`. They do not build Dart or
-include Flutter headers. The first backend is macOS; other platforms are not
-implemented. No business application or trading SDK is a dependency.
+include Flutter headers. The independently distributed backend is macOS;
+unreleased Android/iOS/Windows/Linux host previews and their narrower capabilities are
+documented in [Host preview](docs/HOST_PREVIEW.md). No business application or
+trading SDK is a dependency.
 
 For third parties, start with [Integration](docs/INTEGRATION.md). Maintainers and
 SDK distributors should read [Distribution](docs/DISTRIBUTION.md). See

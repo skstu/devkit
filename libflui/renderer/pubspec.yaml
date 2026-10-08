@@ -6,6 +6,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.3
+  ffi: 2.2.0
   xml: 6.6.1
   collection: 1.19.1
 dev_dependencies:

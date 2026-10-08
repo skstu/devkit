@@ -1,0 +1,1 @@
+DEVKIT_CRYPT_1 { global: dkcrypt_*; local: *; };

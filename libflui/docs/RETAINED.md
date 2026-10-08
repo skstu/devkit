@@ -48,7 +48,7 @@ Do not change IDs on every quote tick.
 
 | Control | Purpose / attributes |
 | --- | --- |
-| Window | Root; `theme`, `theme_tokens` (JSON object encoded as a string), `font`, `fontsize`, `bkcolor`, `defaultfontcolor`, `dialog` |
+| Window | Root; `theme`, `theme_tokens`, `theme_dark_tokens` (JSON objects encoded as strings), `font`, `fontsize`, `bkcolor`, `defaultfontcolor`, `dialog` |
 | VerticalLayout / HorizontalLayout | Weighted children; `padding`, `childpadding`; children use `height`/`width` or `weight` |
 | Label / DecimalLabel | Exact `text`, `fontsize`, `bold`, `textcolor`, `align` (`left`, `center`, `right`), `wordwrap` |
 | Button / DecimalButton | Same text styling plus `enabled`; click emits an action |
@@ -100,3 +100,44 @@ must still validate business actions against their current model.
 This retained schema is a preview API versioned with the SDK. It is not a network
 protocol or a script environment. Use complete matched headers/library/runtime and
 revalidate raw-document consumers when upgrading a 0.x minor version.
+
+## Adaptive appearance (unreleased)
+
+`theme="system"` observes the engine platform appearance without polling. Supply
+light/base colors in `theme_tokens` and dark overrides in `theme_dark_tokens`.
+`theme="light"` / `"dark"` select a fixed appearance; dark overrides apply only
+for dark or a dark system appearance. A theme change preserves control identity,
+editor text, focus and composing state. Explicit color literals remain fixed.
+`borderround` also accepts a numeric token such as `$corner`.
+
+`classic-2000` provides square, gray controls, a navy accent and Tahoma fallback.
+`role="button"` receives raised edges, `role="inset"` sunken edges. This is a
+client-area theme; the native OS window title bar is retained.
+
+## Localization and narrow layouts (unreleased)
+
+The application supplies its own language catalogs. Set root attributes locale
+(system, zh-Hans, zh-Hant or en), fallback_locale (default en) and translations
+(a JSON object encoded as an attribute string). Each catalog maps message keys
+to plain strings or plural forms with an other entry. This release targets these
+three locales; it does not promise arbitrary locale, RTL, date or currency support.
+
+Use textkey/textargs, hintkey/hintargs and tooltipkey/tooltipargs. Argument
+attributes contain JSON objects with string values. Example catalogs:
+{"en":{"send":"Send","files":{"one":"{count} file","other":"{count} files"}},
+"zh-Hans":{"send":"发送"},"zh-Hant":{"send":"傳送"}}.
+A missing key falls back to the fallback catalog, then [key]; plural messages
+require a finite count argument. Parameters are plain text, not XML or code.
+Plural counts are UI counts; identifiers and exact business quantities must not
+be parsed through this numeric path.
+
+C++ consumers use DesktopWindow::SetTranslations, SetLanguage and
+Control::SetTextKey. SetText clears textkey for literal/user content. Never
+translate received messages, device names, user drafts or filenames through the
+catalog. Stable control IDs retain the editor, focus and composing state while
+the locale or appearance changes.
+
+Root safe_area=true respects platform insets. ScrollLayout scrolls a vertical
+column of bounded-height children (default 40); use it for settings, not unbounded
+history. WrapLayout wraps bounded-size children (default 100 by 34) and uses
+childpadding between items and runs. Existing List remains the virtualized list.

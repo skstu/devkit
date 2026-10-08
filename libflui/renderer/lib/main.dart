@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+import 'native_host.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +12,10 @@ import 'retained.dart';
 
 const channel = MethodChannel('devkit.libflui/v1');
 void main() {
+  if (!Platform.isMacOS) {
+    runNativeHost();
+    return;
+  }
   WidgetsFlutterBinding.ensureInitialized();
   final model = UiModel((name, value) {
     unawaited(

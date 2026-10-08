@@ -411,4 +411,110 @@ void main() {
     expect(p.color(r'$surface'), const Color(0xffece9d8));
     expect(p.color(r'$accent'), const Color(0xff123456));
   });
+  testWidgets(
+    'system appearance preserves focused composition and fixed theme ignores it',
+    (tester) async {
+      final dispatcher = tester.binding.platformDispatcher;
+      dispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(dispatcher.clearPlatformBrightnessTestValue);
+      final model = RetainedModel((_, _) {});
+      model.setTree(
+        jsonEncode(
+          node(
+            '1',
+            'Window',
+            {
+              'theme': 'system',
+              'theme_tokens': '{"panel":"#ffffff"}',
+              'theme_dark_tokens': '{"panel":"#181818"}',
+            },
+            [
+              node('2', 'VerticalLayout', {}, [
+                node('3', 'Edit', {'height': '40'}),
+                node('4', 'Control', {}),
+              ]),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpWidget(RetainedApp(model: model));
+      await tester.pump();
+      await tester.tap(find.byType(EditableText));
+      await tester.pump();
+      final editor = tester.widget<EditableText>(find.byType(EditableText));
+      const draft = TextEditingValue(
+        text: '中文草稿',
+        selection: TextSelection.collapsed(offset: 4),
+        composing: TextRange(start: 2, end: 4),
+      );
+      editor.controller.value = draft;
+      dispatcher.platformBrightnessTestValue = Brightness.dark;
+      await tester.pumpAndSettle();
+      final updated = tester.widget<EditableText>(find.byType(EditableText));
+      expect(updated.controller, same(editor.controller));
+      expect(updated.controller.value, draft);
+      expect(updated.focusNode.hasFocus, isTrue);
+      expect(
+        Theme.of(tester.element(find.byType(EditableText))).brightness,
+        Brightness.dark,
+      );
+      expect(
+        UiPalette.from(
+          model.root.value!,
+          brightness: Brightness.dark,
+        ).color(r'$panel'),
+        const Color(0xff181818),
+      );
+      model.patch(
+        jsonEncode([
+          {
+            'id': '1',
+            'attrs': {'theme': 'light'},
+          },
+        ]),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.byType(EditableText))).brightness,
+        Brightness.light,
+      );
+      expect(updated.controller.value, draft);
+      model.patch(
+        jsonEncode([
+          {
+            'id': '1',
+            'attrs': {'theme': 'system'},
+          },
+        ]),
+      );
+      dispatcher.platformBrightnessTestValue = Brightness.light;
+      await tester.pumpAndSettle();
+      expect(
+        Theme.of(tester.element(find.byType(EditableText))).brightness,
+        Brightness.light,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+  test('dark token validation is atomic and classic palette is square', () {
+    final model = RetainedModel((_, _) {});
+    model.setTree(
+      jsonEncode(node('1', 'Window', {'theme': 'classic-2000'}, [])),
+    );
+    expect(
+      () => model.patch(
+        jsonEncode([
+          {
+            'id': '1',
+            'attrs': {'theme': 'dark', 'theme_dark_tokens': '{"panel":5}'},
+          },
+        ]),
+      ),
+      throwsFormatException,
+    );
+    expect(model.root.value!.text('theme'), 'classic-2000');
+    final palette = UiPalette.from(model.root.value!);
+    expect(palette.tokens['radius'], '0');
+    expect(palette.color(r'$surface'), const Color(0xffd4d0c8));
+  });
 }

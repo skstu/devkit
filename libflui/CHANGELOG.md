@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- Consumer-owned translation catalogs with system/explicit Simplified Chinese,
+  Traditional Chinese and English, fallback, named parameters and plural messages.
+  Locale changes preserve editor identity, focus and composing text.
+- Safe-area, scroll and wrap layouts for narrow screens; experimental SDK-owned
+  Android/iOS/Windows/Linux host with an event-driven C ABI bridge. See HOST_PREVIEW.md
+  for evidence and limitations; this is not a released cross-platform SDK.
+- Windows uses the official locked engine plus Release AOT; native host modules
+  use the static MSVC runtime. No private static Flutter engine is built.
+
+- Linux x86_64 producer profile uses an enforced Ubuntu 22.04 baseline, static
+  native C++ runtime linkage and executable-relative runtime library loading.
+
+- Retained documents can follow system light/dark appearance with separate token
+  maps, without changing the C ABI or rebuilding the editor tree.
+- Classic 2000 palette, tokenized corner radius and raised/sunken control edges.
+
 ## 0.1.1 preview — 2026-10-08
 
 Initial independently consumable macOS arm64 binary SDK; not a production or
