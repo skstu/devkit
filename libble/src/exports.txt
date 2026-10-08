@@ -1,0 +1,14 @@
+_dkble_abi_version
+_dkble_version
+_dkble_create
+_dkble_destroy
+_dkble_start
+_dkble_stop
+_dkble_connect
+_dkble_probe
+_dkble_cancel_probe
+_dkble_adopt_probe
+_dkble_disconnect
+_dkble_send
+_dkble_recover
+_dkble_dispatch

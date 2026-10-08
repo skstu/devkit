@@ -98,3 +98,14 @@ triplet. `libnet/tools/package_sdk.py --build <build> --dependencies <installed-
 verifies tests, exports, runtime dependencies, licenses and exact file hashes.
 The package builder currently validates macOS arm64 / macOS 13+ only. Dirty
 source requires `--allow-dirty` and is labeled as a development preview.
+
+## BLE and ICE binary SDK previews
+
+`libble` extracts the existing Apple BLE engine into a C ABI runtime with no
+Flutter dependency. `libice` packages the pinned libjuice UDP ICE agent behind
+its own C ABI. Both currently have a macOS arm64 development package, pure-C
+installed consumer, and exact source/payload provenance. Product integration
+and physical BLE/WAN testing are a later joint phase.
+
+See [libble](libble/README.md), [its extraction contract](libble/docs/EXTRACTION.md),
+and [libice](libice/README.md). `libsys` remains a static source component.

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.24)
+project(ice_consumer LANGUAGES C)
+find_package(devkitIce 0.1.1 EXACT CONFIG REQUIRED)
+add_executable(ice_consumer main.c)
+target_link_libraries(ice_consumer PRIVATE devkit::ice)
+devkit_ice_bundle(ice_consumer)

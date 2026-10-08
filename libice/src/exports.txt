@@ -1,0 +1,12 @@
+_dkice_abi_version
+_dkice_version
+_dkice_backend_version
+_dkice_create
+_dkice_gather
+_dkice_local_description
+_dkice_remote_description
+_dkice_send
+_dkice_dispatch
+_dkice_get_status
+_dkice_stop
+_dkice_destroy

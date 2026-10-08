@@ -133,6 +133,14 @@
         "libuv",
         "openssl"
       ]
+    },
+    "libice": {
+      "description": "Standalone ICE SDK providers",
+      "dependencies": [
+        "libjuice",
+        "libuv",
+        "openssl"
+      ]
     }
   },
   "overrides": [

@@ -1,0 +1,17 @@
+# Deploy the exact private runtime next to an application or shared consumer.
+function(devkit_ice_bundle target)
+  if(WIN32)
+    set(runtime_name "$<TARGET_FILE_NAME:devkit::ice>")
+  else()
+    set(runtime_name "$<TARGET_SONAME_FILE_NAME:devkit::ice>")
+  endif()
+  add_custom_command(TARGET ${target} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:devkit::ice>" "$<TARGET_FILE_DIR:${target}>/${runtime_name}" VERBATIM)
+  if(APPLE)
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "@loader_path")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "@loader_path")
+  elseif(UNIX)
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "$ORIGIN")
+  endif()
+endfunction()

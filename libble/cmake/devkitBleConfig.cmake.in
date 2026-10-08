@@ -1,0 +1,4 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/devkitBleTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/BundleRuntime.cmake")
+check_required_components(devkitBle)

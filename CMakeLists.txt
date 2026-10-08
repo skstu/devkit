@@ -9,7 +9,7 @@ option(LIBSYS_COMPONENTS_ONLY "Build small system components without the platfor
 # manifest is affected; embedded consumers own their dependency resolution.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   foreach(component IN LISTS NATIVE_LIBS_COMPONENTS)
-    if(component MATCHES "^(libcrypt|libnet|libsys|liblog|libdb|libuvbrg|liburl|libwxui|libfix)$")
+    if(component MATCHES "^(libcrypt|libnet|libsys|liblog|libdb|libuvbrg|liburl|libwxui|libfix|libice)$")
       list(APPEND VCPKG_MANIFEST_FEATURES "${component}")
     endif()
   endforeach()
@@ -27,7 +27,7 @@ if(MSVC)
   set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-set(native_libs_supported libpath libstl libcompr libsys libcrypt libnet liblog libdb libuvbrg liburl libwxui libfix libflui)
+set(native_libs_supported libpath libstl libcompr libsys libcrypt libnet liblog libdb libuvbrg liburl libwxui libfix libflui libble libice)
 foreach(component IN LISTS NATIVE_LIBS_COMPONENTS)
   if(NOT component IN_LIST native_libs_supported)
     message(FATAL_ERROR "Unsupported component: ${component}; libengjs is retained legacy code")

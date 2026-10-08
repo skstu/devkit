@@ -1,4 +1,9 @@
 {
+  "libble": {
+    "version": "0.1.1",
+    "status": "experimental-macos-sdk",
+    "license": "libble/LICENSE"
+  },
   "libcompr": {
     "version": "0.1.1",
     "status": "stream-only",
@@ -28,6 +33,11 @@
     "version": "0.1.1",
     "status": "experimental-macos-sdk",
     "license": "libflui/LICENSE"
+  },
+  "libice": {
+    "version": "0.1.1",
+    "status": "experimental-macos-sdk",
+    "license": "libice/LICENSE"
   },
   "liblog": {
     "version": "0.1.1",
