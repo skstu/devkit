@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.24)
+project(net_consumer LANGUAGES C)
+find_package(devkitNet CONFIG REQUIRED)
+add_executable(net_consumer main.c)
+target_link_libraries(net_consumer PRIVATE devkit::net)
+devkit_net_bundle(net_consumer)

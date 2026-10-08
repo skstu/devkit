@@ -33,6 +33,9 @@ QuicLoopbackResult RunQuicLoopbackProbe(
     std::string_view payload,
     std::chrono::milliseconds timeout = std::chrono::seconds(3));
 
+QuicLoopbackResult RunQuicLoopbackProbeWithAlpn(std::string_view payload,
+    std::chrono::milliseconds timeout, std::string_view alpn);
+
 enum class QuicProviderEventType : std::uint8_t {
   bearer_ready,
   record,
@@ -82,6 +85,10 @@ public:
 
   bool Start(Endpoint local_ipv4, Endpoint local_ipv6, DatagramSender sender,
              std::size_t maximum_connections = 16);
+  bool StartWithAlpn(Endpoint local_ipv4, Endpoint local_ipv6, DatagramSender sender,
+                     std::size_t maximum_connections, std::string_view alpn);
+  std::size_t ConnectionCount() const;
+  bool HasPendingEvents() const;
   void Stop();
   bool started() const;
 

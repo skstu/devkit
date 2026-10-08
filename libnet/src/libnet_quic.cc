@@ -29,8 +29,6 @@
 namespace libnet {
 namespace {
 
-constexpr std::array<unsigned char, 9> kAlpn = {8,   's', 'o', 'v', 'k',
-                                                'i', 't', '/', '1'};
 constexpr std::size_t kPacketBytes = 1350;
 constexpr std::size_t kMaximumTxPacketBytes = 1200;
 constexpr std::size_t kMaximumProviderRecordBytes = 64 * 1024 + 20;
@@ -78,7 +76,7 @@ bool InstallEphemeralCertificate(SSL_CTX *context) {
       X509_set_pubkey(certificate.get(), key.get()) != 1)
     return false;
   X509_NAME *name = X509_get_subject_name(certificate.get());
-  constexpr unsigned char common_name[] = "SovKit ephemeral QUIC bearer";
+  constexpr unsigned char common_name[] = "Ephemeral QUIC bearer";
   if (name == nullptr ||
       X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, common_name,
                                  static_cast<int>(sizeof(common_name) - 1), -1,
@@ -93,15 +91,16 @@ bool InstallEphemeralCertificate(SSL_CTX *context) {
 }
 
 int SelectAlpn(SSL *, const unsigned char **output, unsigned char *output_len,
-               const unsigned char *input, unsigned int input_len, void *) {
+               const unsigned char *input, unsigned int input_len, void *user) {
+  const auto &alpn = *static_cast<const std::vector<unsigned char> *>(user);
   std::size_t offset = 0;
   while (offset < input_len) {
     const std::size_t length = input[offset++];
     if (length > input_len - offset)
       return SSL_TLSEXT_ERR_ALERT_FATAL;
-    if (length == kAlpn[0] &&
+    if (length == alpn[0] &&
         std::equal(input + offset, input + offset + length,
-                   kAlpn.begin() + 1)) {
+                   alpn.begin() + 1)) {
       *output = input + offset;
       *output_len = static_cast<unsigned char>(length);
       return SSL_TLSEXT_ERR_OK;
@@ -124,7 +123,7 @@ SslContext CreateClientContext() {
   return context;
 }
 
-SslContext CreateServerContext() {
+SslContext CreateServerContext(const std::vector<unsigned char> &alpn) {
   SslContext context(SSL_CTX_new(TLS_server_method()), SSL_CTX_free);
   if (!context ||
       SSL_CTX_set_min_proto_version(context.get(), TLS1_3_VERSION) != 1 ||
@@ -135,7 +134,7 @@ SslContext CreateServerContext() {
   SSL_CTX_set_options(context.get(), SSL_OP_NO_TICKET);
   SSL_CTX_set_num_tickets(context.get(), 0);
   SSL_CTX_set_max_early_data(context.get(), 0);
-  SSL_CTX_set_alpn_select_cb(context.get(), SelectAlpn, nullptr);
+  SSL_CTX_set_alpn_select_cb(context.get(), SelectAlpn, const_cast<std::vector<unsigned char> *>(&alpn));
   return context;
 }
 
@@ -155,8 +154,9 @@ public:
     bool closed = false, finishing = false, fin_sent = false;
   };
 
-  Connection(Role role, SSL_CTX *ssl_context, Endpoint local, Endpoint remote)
-      : role_(role), ssl_context_(ssl_context), local_(std::move(local)),
+  Connection(Role role, SSL_CTX *ssl_context, Endpoint local, Endpoint remote,
+             const std::vector<unsigned char> &alpn)
+      : alpn_(alpn), role_(role), ssl_context_(ssl_context), local_(std::move(local)),
         remote_(std::move(remote)) {
     random_failed_ = !Random(static_secret_);
   }
@@ -728,8 +728,8 @@ private:
     SSL_set_app_data(ssl_, &connection_reference_);
     if (client) {
       SSL_set_connect_state(ssl_);
-      if (SSL_set_alpn_protos(ssl_, kAlpn.data(),
-                              static_cast<unsigned int>(kAlpn.size())) != 0)
+      if (SSL_set_alpn_protos(ssl_, alpn_.data(),
+                              static_cast<unsigned int>(alpn_.size())) != 0)
         return Fail("client ALPN configuration failed");
     } else {
       SSL_set_accept_state(ssl_);
@@ -860,6 +860,7 @@ private:
     new_local_cids_.emplace_back(cid.data, cid.data + cid.datalen);
   }
 
+  std::vector<unsigned char> alpn_;
   Role role_;
   SSL_CTX *ssl_context_ = nullptr;
   Endpoint local_;
@@ -1046,14 +1047,17 @@ struct QuicProvider::Impl {
   }
 
   bool Start(Endpoint ipv4, Endpoint ipv6, DatagramSender value,
-             std::size_t maximum) {
+             std::size_t maximum, std::string_view protocol) {
+    if (protocol.empty() || protocol.size() > 255) return false;
     if (started || !ipv4.valid() || !value || maximum == 0 || maximum > 256)
       return false;
     if (!AcquireCryptoRuntime())
       return false;
     crypto_initialized = true;
+    alpn.assign(1, static_cast<unsigned char>(protocol.size()));
+    alpn.insert(alpn.end(), protocol.begin(), protocol.end());
     client_context = CreateClientContext();
-    server_context = CreateServerContext();
+    server_context = CreateServerContext(alpn);
     if (!client_context || !server_context) {
       Stop();
       return false;
@@ -1091,7 +1095,7 @@ struct QuicProvider::Impl {
     auto entry = std::make_unique<Entry>();
     entry->id = id;
     entry->connection = std::make_unique<Connection>(
-        Connection::Role::client, client_context.get(), LocalFor(peer), peer);
+        Connection::Role::client, client_context.get(), LocalFor(peer), peer, alpn);
     entry->connection->EnableFraming();
     if (!entry->connection->StartClient())
       return 0;
@@ -1136,7 +1140,7 @@ struct QuicProvider::Impl {
       entry->id = id;
       entry->connection = std::make_unique<Connection>(
           Connection::Role::server, server_context.get(), LocalFor(source),
-          source);
+          source, alpn);
       entry->connection->EnableFraming();
       entries[id] = std::move(entry);
       peer_routes[source.ToString()] = id;
@@ -1249,6 +1253,7 @@ struct QuicProvider::Impl {
     events.push_back({type, id, peer, {}, std::move(detail)});
   }
 
+  std::vector<unsigned char> alpn;
   bool started = false;
   bool crypto_initialized = false;
   std::size_t maximum_connections = 0;
@@ -1271,8 +1276,15 @@ bool QuicProvider::Start(Endpoint local_ipv4, Endpoint local_ipv6,
                          DatagramSender sender,
                          std::size_t maximum_connections) {
   return impl_->Start(std::move(local_ipv4), std::move(local_ipv6),
-                      std::move(sender), maximum_connections);
+                      std::move(sender), maximum_connections, "sovkit/1");
 }
+
+bool QuicProvider::StartWithAlpn(Endpoint ipv4, Endpoint ipv6, DatagramSender sender,
+    std::size_t maximum, std::string_view alpn) {
+  return impl_->Start(std::move(ipv4), std::move(ipv6), std::move(sender), maximum, alpn);
+}
+std::size_t QuicProvider::ConnectionCount() const { return impl_->entries.size(); }
+bool QuicProvider::HasPendingEvents() const { return !impl_->events.empty(); }
 
 void QuicProvider::Stop() { impl_->Stop(); }
 bool QuicProvider::started() const { return impl_->started; }
@@ -1356,10 +1368,16 @@ std::vector<QuicProviderEvent> QuicProvider::TakeEvents() {
 
 QuicLoopbackResult RunQuicLoopbackProbe(std::string_view payload,
                                         std::chrono::milliseconds timeout) {
+  return RunQuicLoopbackProbeWithAlpn(payload, timeout, "sovkit/1");
+}
+
+QuicLoopbackResult RunQuicLoopbackProbeWithAlpn(std::string_view payload,
+    std::chrono::milliseconds timeout, std::string_view protocol) {
   static std::mutex probe_mutex;
   const std::lock_guard<std::mutex> probe_lock(probe_mutex);
   QuicLoopbackResult result;
-  if (payload.empty() || payload.size() > 64 * 1024 || timeout.count() <= 0) {
+  if (payload.empty() || payload.size() > 64 * 1024 || timeout.count() <= 0 ||
+      protocol.empty() || protocol.size() > 255) {
     result.error = "invalid QUIC loopback probe arguments";
     return result;
   }
@@ -1370,18 +1388,20 @@ QuicLoopbackResult RunQuicLoopbackProbe(std::string_view payload,
   struct CryptoCleanup {
     ~CryptoCleanup() { ReleaseCryptoRuntime(); }
   } cleanup;
+  std::vector<unsigned char> alpn{static_cast<unsigned char>(protocol.size())};
+  alpn.insert(alpn.end(), protocol.begin(), protocol.end());
   SslContext client_context = CreateClientContext();
-  SslContext server_context = CreateServerContext();
+  SslContext server_context = CreateServerContext(alpn);
   if (!client_context || !server_context) {
     result.error = "QUIC TLS context initialization failed";
     return result;
   }
   Connection client(Connection::Role::client, client_context.get(),
                     *Endpoint::Parse("127.0.0.1", 41001),
-                    *Endpoint::Parse("127.0.0.1", 41002));
+                    *Endpoint::Parse("127.0.0.1", 41002), alpn);
   Connection server(Connection::Role::server, server_context.get(),
                     *Endpoint::Parse("127.0.0.1", 41002),
-                    *Endpoint::Parse("127.0.0.1", 41001));
+                    *Endpoint::Parse("127.0.0.1", 41001), alpn);
   UdpLoopbackLink link;
   if (!link.Initialize(&client, &server)) {
     result.error = link.error();
@@ -1402,7 +1422,7 @@ QuicLoopbackResult RunQuicLoopbackProbe(std::string_view payload,
   result.early_data_enabled = client.early_data_accepted();
   result.alpn = client.alpn();
   result.cipher = client.cipher();
-  if (result.alpn != "sovkit/1" || result.cipher.empty()) {
+  if (result.alpn != protocol || result.cipher.empty()) {
     result.error = "QUIC TLS negotiation result is invalid";
     return result;
   }

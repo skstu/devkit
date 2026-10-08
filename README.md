@@ -77,3 +77,24 @@ The existing `NATIVE_LIBS_*` options and component aliases remain compatible.
 renderer. Build/install it independently; consumers use its installed CMake package
 and headers without a Flutter toolchain. See [libflui](libflui/README.md).
 Its sample shares one business controller with a separate libwxui adapter.
+
+## libnet binary SDK
+
+The first independent networking slice is built from `libnet/sdk` and exports
+`libnet/net.h` plus `libdevkit_net` (ABI 1). It contains the event loop, bounded
+UDP listener/sends, QUIC records/streams and a local conformance probe. Providers
+are statically linked inside the shared library; consumers need no libuv,
+ngtcp2 or OpenSSL headers. ICE/TCP/HTTP source targets remain separate for now.
+See [the lifecycle and authentication contract](libnet/docs/SDK.md).
+
+```cmake
+find_package(devkitNet 0.1.1 EXACT CONFIG REQUIRED)
+target_link_libraries(app PRIVATE devkit::net)
+devkit_net_bundle(app)
+```
+
+Configure `libnet/sdk` using the chosen vcpkg toolchain and static provider
+triplet. `libnet/tools/package_sdk.py --build <build> --dependencies <installed-triplet>`
+verifies tests, exports, runtime dependencies, licenses and exact file hashes.
+The package builder currently validates macOS arm64 / macOS 13+ only. Dirty
+source requires `--allow-dirty` and is labeled as a development preview.

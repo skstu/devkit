@@ -1,6 +1,7 @@
 # libnet
 
-libnet provides the portable native networking primitives used by SovKit.
+libnet provides portable native networking primitives. The independent C ABI
+dynamic SDK is built from `libnet/sdk`; see [SDK scope and contract](docs/SDK.md).
 
 ## Capabilities
 
@@ -21,8 +22,9 @@ libnet provides the portable native networking primitives used by SovKit.
   route.
 - Optional WebSocket client/server backends.
 
-TLS peer and hostname verification are enabled by default. Disable them only for
-controlled development endpoints.
+HTTP TLS peer and hostname verification are enabled by default. QUIC here is
+an ephemeral, unauthenticated bearer: applications must authenticate their own
+protocol before granting access. Its READY event is not an identity assertion.
 
 ## CMake
 
