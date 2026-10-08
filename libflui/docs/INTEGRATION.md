@@ -113,9 +113,9 @@ Retained trees have `{id, tag, attrs, children}`; IDs and attribute values are
 strings. Keep IDs stable. A patch array of `{id, attrs}` **replaces the full
 attribute map** for each listed control, rather than merging individual keys.
 A whole patch is validated before application. The C++ layer maintains this map
-and batches changes for you. Direct C consumers should follow the vocabulary in
-`renderer/lib/retained.dart` when extending beyond the documented sample; that
-advanced schema is still a preview surface, not a frozen wire standard.
+and batches changes for you. Direct C consumers can use the shipped [Retained API reference](RETAINED.md);
+it documents a complete form, patch semantics and action payloads without requiring
+renderer source. Advanced retained schemas remain preview APIs.
 
 Use measured `DesktopWindow::OnLayout` geometry for paging and sizing. READY and
 queue-idle do not mean layout or display completed. Theme names `neutral`, `xp-blue`
