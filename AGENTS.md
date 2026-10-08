@@ -8,3 +8,8 @@ patch releases must preserve it. No cross-toolchain C++ binary ABI is promised.
 Keep business identity, pairing, trading state and product policy in consumers.
 Build out of tree. Do not access real user identities, credentials or databases in tests.
 libengjs and the full libcompr archive backend are retained legacy code, not validated releases.
+
+libflui exposes a versioned C ABI; do not expose Flutter, Objective-C, or C++ types.
+Keep its renderer, engine lock and runtime packaging together. Consumers must not
+maintain Dart projects for it. Build output stays outside source. macOS is the
+initial backend; other platforms require implementation and validation.

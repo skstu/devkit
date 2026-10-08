@@ -1,0 +1,15 @@
+<Window bkcolor="#ffffff" inset="24,24,24,24">
+  <VerticalLayout childpadding="16">
+    <Label height="38" text="报价样板 · 离线模拟" fontsize="24" bold="true"/>
+    <List name="quotes" height="180"><ListHeader height="28"><ListHeaderItem width="150" text="产品"/><ListHeaderItem width="150" text="买价"/><ListHeaderItem width="150" text="卖价"/></ListHeader></List>
+    <Label name="selection" height="28"/>
+    <HorizontalLayout height="44" childpadding="16">
+      <Label text="数量" width="45"/>
+      <Edit name="quantity" width="110" text="1"/>
+      <Button name="submit" width="130" text="模拟提交" align="center" bkcolor="#265d77" textcolor="#ffffff"/>
+      <Control/>
+    </HorizontalLayout>
+    <Label name="result" height="64" wordwrap="true"/>
+    <Control/>
+  </VerticalLayout>
+</Window>

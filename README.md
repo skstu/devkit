@@ -70,3 +70,10 @@ FIX (`libfix`) is opt-in: `NATIVE_LIBS_COMPONENTS=libfix`, target `devkit::libfi
 It reuses the small `libnet_uv` transport without HTTP/ICE/QUIC dependencies.
 See [libfix](libfix/README.md) for threading, TLS, persistence and recovery contracts.
 The existing `NATIVE_LIBS_*` options and component aliases remain compatible.
+
+## libflui binary UI SDK
+
+`libflui` is an opt-in experimental component with a C ABI and a private Flutter
+renderer. Build/install it independently; consumers use its installed CMake package
+and headers without a Flutter toolchain. See [libflui](libflui/README.md).
+Its sample shares one business controller with a separate libwxui adapter.

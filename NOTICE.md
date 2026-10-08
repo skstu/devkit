@@ -12,3 +12,6 @@ cmake/vcpkg and cmake/triplets were imported from SovKit; original upstream
 notices and patch terms continue to apply, with SovKit-original portions Apache-2.0.
 
 libfix is extracted and generalized from tdbrg under Apache-2.0; see libfix/NOTICE.md.
+
+libflui is new MIT-licensed code. Its binary SDK bundles Flutter and dependency
+notices; engine and renderer artifacts retain their upstream licenses.

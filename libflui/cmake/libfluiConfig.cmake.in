@@ -1,0 +1,5 @@
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/libfluiTargets.cmake")
+set(LIBFLUI_RUNTIME_DIR "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/libflui_runtime.bundle")
+include("${CMAKE_CURRENT_LIST_DIR}/BundleRuntime.cmake")
+check_required_components(libflui)

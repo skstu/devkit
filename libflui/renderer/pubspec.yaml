@@ -1,0 +1,15 @@
+name: devkit_flui_renderer
+publish_to: none
+version: 0.1.1
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  xml: 6.6.1
+  collection: 1.19.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true

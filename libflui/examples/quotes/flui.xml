@@ -1,0 +1,20 @@
+<Window>
+  <VerticalLayout padding="24" gap="16">
+    <Label text="报价样板 · 离线模拟" fontsize="24" bold="true"/>
+    <HorizontalLayout padding="12"><Label text="产品" width="150"/><Label text="买价" width="150"/><Label text="卖价"/></HorizontalLayout>
+    <List name="quotes" height="150" items="{quotes}" selected="{selected}" action="quote.select">
+      <HorizontalLayout>
+        <Label text="{item.symbol}" width="150"/>
+        <Label text="{item.bid}" width="150"/>
+        <Label text="{item.ask}"/>
+      </HorizontalLayout>
+    </List>
+    <Label name="selection" text="{selection}"/>
+    <HorizontalLayout gap="16">
+      <Label text="数量"/>
+      <Edit name="quantity" value="{quantity}" action="quantity.changed" width="110"/>
+      <Button name="submit" text="模拟提交" action="order.submit"/>
+    </HorizontalLayout>
+    <Label name="result" text="{result}"/>
+  </VerticalLayout>
+</Window>
