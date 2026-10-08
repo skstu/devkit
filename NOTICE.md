@@ -10,3 +10,5 @@ licenses. Preserve the vcpkg overlays and covered-source patches when distributi
 tests/foundation_reuse_test.cpp was imported from SovKit under Apache-2.0.
 cmake/vcpkg and cmake/triplets were imported from SovKit; original upstream
 notices and patch terms continue to apply, with SovKit-original portions Apache-2.0.
+
+libfix is extracted and generalized from tdbrg under Apache-2.0; see libfix/NOTICE.md.

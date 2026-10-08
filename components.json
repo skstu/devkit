@@ -1,61 +1,66 @@
 {
   "libcompr": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "stream-only",
     "license": "libcompr/LICENSE"
   },
   "libcrypt": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libcrypt/LICENSE"
   },
   "libdb": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libdb/LICENSE"
   },
   "libengjs": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "legacy",
     "license": "libengjs/LICENSE"
   },
+  "libfix": {
+    "version": "0.1.1",
+    "status": "source-component",
+    "license": "libfix/LICENSE"
+  },
   "liblog": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "liblog/LICENSE"
   },
   "libnet": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libnet/LICENSE"
   },
   "libpath": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libpath/LICENSE"
   },
   "libstl": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libstl/LICENSE"
   },
   "libsys": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libsys/LICENSE"
   },
   "liburl": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "liburl/LICENSE"
   },
   "libuvbrg": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libuvbrg/LICENSE"
   },
   "libwxui": {
-    "version": "0.1.0",
+    "version": "0.1.1",
     "status": "source-component",
     "license": "libwxui/LICENSE"
   }

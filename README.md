@@ -1,11 +1,11 @@
-# native-libs
+# devkit
 
 SKSTU shared C++20 native libraries, extracted from SovKit. Authoritative source:
-https://github.com/skstu/native-libs . Business projects consume pinned commits.
+https://github.com/skstu/devkit . Business projects consume pinned commits.
 
 ## Version and compatibility
 
-All components share the root `VERSION` (initial development series **0.1.0**).
+All components share the root `VERSION` (initial development series **0.1.x**, current **0.1.1**).
 `components.json` lists each component's version, status and license. A version
 does not certify all platforms or legacy features. During 0.x, minor releases
 may change source interfaces; patch releases preserve them. Existing namespaces
@@ -65,3 +65,8 @@ rule, not filesystem access control. Consumers should reject dirty dependencies.
 See [original API contracts](docs/FOUNDATION.md), [import provenance](migration/ORIGIN.md)
 and [license notices](NOTICE.md). Imported source implementations are unchanged;
 the migration adjusts build ownership, version metadata and documentation.
+
+FIX (`libfix`) is opt-in: `NATIVE_LIBS_COMPONENTS=libfix`, target `devkit::libfix`.
+It reuses the small `libnet_uv` transport without HTTP/ICE/QUIC dependencies.
+See [libfix](libfix/README.md) for threading, TLS, persistence and recovery contracts.
+The existing `NATIVE_LIBS_*` options and component aliases remain compatible.

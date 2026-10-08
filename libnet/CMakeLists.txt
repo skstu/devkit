@@ -37,7 +37,7 @@ if(LIBNET_HTTP_ONLY)
   return()
 endif()
 
-find_package(libuv CONFIG REQUIRED)
+include(cmake/Uv.cmake)
 find_package(LibJuice CONFIG REQUIRED)
 find_package(ngtcp2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -60,7 +60,7 @@ add_library(libnet_transport STATIC
   include/libnet_transport_provider.h
   src/libnet_transport_provider.cc
   include/libnet_uv.h
-  src/libnet_uv.cc)
+)
 add_library(sovrankit::libnet_transport ALIAS libnet_transport)
 
 set_target_properties(libnet_transport PROPERTIES
@@ -81,7 +81,7 @@ endif()
 
 target_link_libraries(
   libnet_transport
-  PUBLIC ${LIBNET_LIBUV_TARGET} LibJuice::LibJuice
+  PUBLIC libnet_uv LibJuice::LibJuice
   PRIVATE ngtcp2::ngtcp2_static ngtcp2::ngtcp2_crypto_ossl_static nlohmann_json::nlohmann_json)
 if(ANDROID)
   target_link_libraries(libnet_transport PRIVATE android)

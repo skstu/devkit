@@ -1,4 +1,4 @@
-# native-libs
+# devkit
 
 This repository is the authoritative development location for shared native libraries.
 Consumers pin a commit and must not edit their dependency checkout in place.

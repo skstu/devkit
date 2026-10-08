@@ -1,6 +1,6 @@
 {
-  "name": "native-libs",
-  "version-semver": "0.1.0",
+  "name": "devkit",
+  "version-semver": "0.1.1",
   "builtin-baseline": "45f9f39362a4c52e2b1fbe57b7e649db7f3d96d4",
   "features": {
     "libcrypt": {
@@ -125,6 +125,21 @@
           "version>=": "1.19"
         }
       ]
+    },
+    "libfix": {
+      "description": "QuickFIX sessions over asynchronous libuv TLS",
+      "dependencies": [
+        "quickfix",
+        "libuv",
+        "openssl"
+      ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "name": "quickfix",
+      "version": "1.16.0",
+      "port-version": 3
+    }
+  ]
 }

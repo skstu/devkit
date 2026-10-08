@@ -1,0 +1,55 @@
+--- a/src/C++/Session.h
++++ b/src/C++/Session.h
+@@ -21,6 +21,9 @@
+ 
+ #ifndef FIX_SESSION_H
+ #define FIX_SESSION_H
++
++// SovranKit private overlay: NonStopSession applies before constructor time checks.
++#define QUICKFIX_NONSTOP_SESSION_CONSTRUCTOR 1
+ 
+ #ifdef _MSC_VER
+ #pragma warning(disable : 4503 4355 4786 4290)
+@@ -53,7 +56,8 @@
+       const DataDictionaryProvider &,
+       const TimeRange &,
+       int heartBtInt,
+-      LogFactory *pLogFactory);
++      LogFactory *pLogFactory,
++      bool isNonStopSession = false);
+   virtual ~Session();
+ 
+   void logon() {
+--- a/src/C++/Session.cpp
++++ b/src/C++/Session.cpp
+@@ -49,7 +49,8 @@
+     const DataDictionaryProvider &dataDictionaryProvider,
+     const TimeRange &sessionTime,
+     int heartBtInt,
+-    LogFactory *pLogFactory)
++    LogFactory *pLogFactory,
++    bool isNonStopSession)
+     : m_timestamper(std::move(timestamper)),
+       m_application(application),
+       m_sessionID(sessionID),
+@@ -69,7 +70,7 @@
+       m_persistMessages(true),
+       m_validateLengthAndChecksum(true),
+       m_sendNextExpectedMsgSeqNum(false),
+-      m_isNonStopSession(false),
++      m_isNonStopSession(isNonStopSession),
+       m_state(m_timestamper()),
+       m_dataDictionaryProvider(dataDictionaryProvider),
+       m_messageStoreFactory(messageStoreFactory),
+--- a/src/C++/SessionFactory.cpp
++++ b/src/C++/SessionFactory.cpp
+@@ -137,7 +137,8 @@
+       dataDictionaryProvider,
+       sessionTimeRange,
+       heartBtInt,
+-      m_pLogFactory));
++      m_pLogFactory,
++      isNonStopSession));
+ 
+   pSession->setSenderDefaultApplVerID(defaultApplVerID);
+ 
