@@ -87,6 +87,22 @@ static void broadcast_and_ipv6() {
   CHECK(dknet_udp_send(lan.context,ipv6,&broadcast,reinterpret_cast<const uint8_t*>("x"),1,0)==DKNET_INVALID);
   lan.timer(0,5000); lan.run();
 }
+static void ipv6_scopes() {
+  size_t count=0; CHECK(dknet_interface_list(nullptr,0,&count)==DKNET_OK);
+  std::vector<dknet_interface> rows(count); CHECK(dknet_interface_list(rows.data(),rows.size(),&count)==DKNET_OK);
+  const dknet_interface* loopback=nullptr;
+  for(const auto& row:rows) if(row.family==6 && row.index && (row.flags&DKNET_INTERFACE_INTERNAL)) { loopback=&row; break; }
+  CHECK(loopback);
+  Lan lan; auto id=lan.open("::",0,DKNET_UDP_IPV6_ONLY);
+  const auto numeric=std::string("::%")+std::to_string(loopback->index);
+  CHECK(dknet_udp_multicast_interface(lan.context,id,numeric.c_str())==DKNET_OK);
+  CHECK(dknet_udp_multicast_interface(lan.context,id,"::%4294967295")!=DKNET_OK);
+  CHECK(dknet_udp_multicast_interface(lan.context,id,"::%0")==DKNET_INVALID);
+  CHECK(dknet_udp_multicast_interface(lan.context,id,"::%4294967296")==DKNET_INVALID);
+  // Missing/zero explicit scopes must not silently join on the default NIC.
+  CHECK(dknet_udp_membership(lan.context,id,"ff02::fb","::%4294967295",1)!=DKNET_OK);
+  CHECK(dknet_udp_membership(lan.context,id,"ff02::fb","::%0",1)==DKNET_INVALID);
+}
 static void limits_failure_and_close() {
   Lan lan(2,2,4); auto a=lan.open(); auto remote=lan.local(a);
   auto conflict=Lan::options("127.0.0.1",remote.port,0); uint64_t bad=99;
@@ -168,7 +184,7 @@ static void affinity_and_wake() {
   CHECK(requests>0); joined.set_value(); owner.join(); CHECK(wakes>0);
 }
 int main() {
-  snapshots(); broadcast_and_ipv6(); limits_failure_and_close();
+  snapshots(); broadcast_and_ipv6(); ipv6_scopes(); limits_failure_and_close();
   failed_rebind_is_truthful(); shutdown_silences_and_callback_failure(); affinity_and_wake();
   std::puts("LAN lifecycle: broadcast/IPv6, snapshot changes, queue/socket budgets, failure drain, close/rebind, shutdown and affinity passed");
 }

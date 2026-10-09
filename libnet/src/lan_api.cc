@@ -3,6 +3,7 @@
 #include <uv.h>
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstring>
 #include <limits>
 #include <map>
@@ -23,10 +24,26 @@ template<class F> int32_t protect(F&& f) noexcept {
   try { return f(); } catch (...) { return DKNET_INTERNAL; }
 }
 bool text(const char* p, size_t bound) { return p && std::memchr(p, 0, bound); }
+uint32_t index(const char* name);
 int parse(const dknet_endpoint& p, sockaddr_storage& out) {
   if (p.reserved || !text(p.address, sizeof(p.address))) return UV_EINVAL;
   int r=uv_ip4_addr(p.address,p.port,reinterpret_cast<sockaddr_in*>(&out));
-  if (r) r=uv_ip6_addr(p.address,p.port,reinterpret_cast<sockaddr_in6*>(&out));
+  if (!r) return 0;
+  const char* scope=std::strchr(p.address,'%');
+  char base[64]{}; uint32_t scope_id=0;
+  if (scope) {
+    const auto size=static_cast<size_t>(scope-p.address);
+    if (!size || !scope[1] || std::strchr(scope+1,'%')) return UV_EINVAL;
+    std::memcpy(base,p.address,size);
+    const auto* begin=scope+1; const auto* end=begin+std::strlen(begin);
+    if (std::all_of(begin,end,[](char c){return c>='0' && c<='9';})) {
+      const auto result=std::from_chars(begin,end,scope_id);
+      if (result.ec!=std::errc{} || result.ptr!=end || !scope_id) return UV_EINVAL;
+    } else if (!(scope_id=index(begin))) return UV_EINVAL;
+  }
+  auto* address=reinterpret_cast<sockaddr_in6*>(&out);
+  r=uv_ip6_addr(scope?base:p.address,p.port,address);
+  if (!r) address->sin6_scope_id=scope_id;
   return r;
 }
 dknet_endpoint external(const sockaddr* p) {
@@ -55,6 +72,25 @@ uint32_t index(const char* name) {
 #else
   return if_nametoindex(name);
 #endif
+}
+// libuv's Unix multicast parser interprets a suffix as an interface name,
+// while the public ABI uses portable numeric scopes. Resolve locally here;
+// an explicit missing interface must never become the OS default (scope 0).
+int native_interface(const char* input,std::string& output) {
+  output=input?input:"";
+  if (output.empty()) return 0;
+  dknet_endpoint endpoint{}; sockaddr_storage address{};
+  if (output.size()>=sizeof(endpoint.address)) return UV_EINVAL;
+  std::memcpy(endpoint.address,output.c_str(),output.size()+1);
+  const int status=parse(endpoint,address); if (status) return status;
+  if (address.ss_family!=AF_INET6) return 0;
+  const auto scope=reinterpret_cast<sockaddr_in6*>(&address)->sin6_scope_id;
+  if (!scope) return 0;
+  char name[UV_IF_NAMESIZE]{}; size_t length=sizeof(name);
+  const int resolved=uv_if_indextoiid(scope,name,&length);
+  if (resolved) return resolved;
+  output=output.substr(0,output.find('%'))+"%"+name;
+  return 0;
 }
 int enumerate(std::vector<dknet_interface>& result) {
   uv_interface_address_t* entries=nullptr; int count=0;
@@ -191,9 +227,14 @@ struct dknet_lan_context::Udp {
     int status=uv_udp_set_multicast_ttl(&handle,static_cast<int>(config.multicast_ttl));
     if(!status) status=uv_udp_set_multicast_loop(&handle,static_cast<int>(config.multicast_loop));
     if(!status && family==4) status=uv_udp_set_broadcast(&handle,(config.flags&DKNET_UDP_BROADCAST)?1:0);
-    if(!status && !outgoing_interface.empty()) status=uv_udp_set_multicast_interface(&handle,outgoing_interface.c_str());
-    for(const auto& [group,interface_address]:memberships)
-      if(!status) status=uv_udp_set_membership(&handle,group.c_str(),interface_address.empty()?nullptr:interface_address.c_str(),UV_JOIN_GROUP);
+    if(!status && !outgoing_interface.empty()) {
+      std::string native; status=native_interface(outgoing_interface.c_str(),native);
+      if(!status) status=uv_udp_set_multicast_interface(&handle,native.c_str());
+    }
+    for(const auto& [group,interface_address]:memberships) if(!status) {
+      std::string native; status=native_interface(interface_address.c_str(),native);
+      if(!status) status=uv_udp_set_membership(&handle,group.c_str(),native.empty()?nullptr:native.c_str(),UV_JOIN_GROUP);
+    }
     return status;
   }
   static void alloc(uv_handle_t* h,size_t,uv_buf_t* out) {
@@ -405,9 +446,11 @@ int32_t DKNET_CALL dknet_udp_membership(dknet_lan_context* c,uint64_t id,const c
     if(join && i!=p->memberships.end()) return DKNET_OK;
     if(!join && i==p->memberships.end()) return DKNET_NOT_FOUND;
     if(join && p->memberships.size()>=c->config.maximum_memberships) return DKNET_BUSY;
+    std::string native; const int resolved=native_interface(interface_address,native);
+    if(resolved) return c->io(resolved);
     // Allocate the retained key before applying a side effect.
     if(join) p->memberships.push_back(key);
-    const int status=uv_udp_set_membership(&p->handle,group,(interface_address && *interface_address)?interface_address:nullptr,join?UV_JOIN_GROUP:UV_LEAVE_GROUP);
+    const int status=uv_udp_set_membership(&p->handle,group,native.empty()?nullptr:native.c_str(),join?UV_JOIN_GROUP:UV_LEAVE_GROUP);
     if(status) { if(join) p->memberships.pop_back(); return c->io(status); }
     if(!join) p->memberships.erase(i);
     return DKNET_OK;
@@ -419,7 +462,9 @@ int32_t DKNET_CALL dknet_udp_multicast_interface(dknet_lan_context* c,uint64_t i
     if(!c->live()) return DKNET_STATE; auto* p=c->find(id); if(!p) return DKNET_NOT_FOUND; if(!p->live()) return DKNET_STATE;
     std::string value=interface_address?interface_address:"";
     if(!value.empty()) { dknet_endpoint input{}; sockaddr_storage address{}; std::memcpy(input.address,value.c_str(),value.size()+1); if(parse(input,address) || (address.ss_family==AF_INET?4u:6u)!=p->family) return DKNET_INVALID; }
-    const auto r=c->io(uv_udp_set_multicast_interface(&p->handle,value.empty()?nullptr:value.c_str()));
+    std::string native; const int resolved=native_interface(value.c_str(),native);
+    if(resolved) return c->io(resolved);
+    const auto r=c->io(uv_udp_set_multicast_interface(&p->handle,native.empty()?nullptr:native.c_str()));
     if(!r) p->outgoing_interface=std::move(value); return r;
   });
 }

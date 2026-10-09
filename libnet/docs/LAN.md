@@ -72,7 +72,9 @@ the new snapshot; rebind is not an automatic routing policy.
 explicit numeric local interface or the OS default. Repeated identical joins
 are idempotent; leaving an unknown membership returns NOT_FOUND. Keys are
 literal group/interface pairs. Specify a scope for IPv6 discovery (for example
-`::%5` as the interface). `dknet_udp_multicast_interface` sets outbound interface
+`::%5` as the interface). Numeric scopes are preserved in endpoint parsing and translated to the native
+interface representation inside the SDK. Unknown explicit interfaces fail
+instead of silently using scope zero. `dknet_udp_multicast_interface` sets outbound interface
 selection. Broadcast requires the explicit IPv4 BROADCAST flag; its destination
 is supplied by the host, typically from the enumerated broadcast address.
 
