@@ -196,3 +196,30 @@ public func abiDispatch(_ raw: OpaquePointer?, _ maximum: UInt32, _ callback: dk
     return delivered
   }
 }
+
+@_cdecl("dkble_set_options")
+public func abiSetOptions(_ raw: OpaquePointer?, _ value: UnsafePointer<dkble_options>?) -> Int32 {
+  access(raw) { c in
+    guard let value = value else { return -1 }
+    let v = value.pointee
+    guard v.struct_size == MemoryLayout<dkble_options>.size, v.abi_version == 1,
+      (1000...120000).contains(v.connect_timeout_ms), (1000...120000).contains(v.send_timeout_ms),
+      (250...60000).contains(v.retry_delay_ms), (1000...120000).contains(v.candidate_ttl_ms),
+      (1...4).contains(v.maximum_links), (1...64).contains(v.maximum_candidates) else { return -1 }
+    guard c.stopped else { return -2 }
+    c.engine.options = BleOptions(connectTimeout: Double(v.connect_timeout_ms)/1000,
+      sendTimeout: Double(v.send_timeout_ms)/1000, retryDelay: Double(v.retry_delay_ms)/1000,
+      candidateTtl: Double(v.candidate_ttl_ms)/1000,
+      maximumLinks: Int(v.maximum_links), maximumCandidates: Int(v.maximum_candidates))
+    return 0
+  }
+}
+
+@_cdecl("dkble_set_read_interval")
+public func abiReadInterval(_ raw: OpaquePointer?, _ interval: UInt32) -> Int32 {
+  access(raw) { c in
+    guard (10...1000).contains(interval) else { return -1 }
+    guard c.stopped else { return -2 }
+    c.engine.readInterval = Double(interval)/1000; return 0
+  }
+}

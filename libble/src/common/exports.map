@@ -1,0 +1,7 @@
+{
+  global:
+    dkble_*;
+    Java_com_skstu_devkit_ble_BleRuntime_nativeInitialize;
+    Java_com_skstu_devkit_ble_BleEngine_nativeEvent;
+  local: *;
+};

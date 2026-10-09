@@ -36,4 +36,10 @@ once. ABI fixtures cover lifetime, wrong thread, reentrancy and lazy creation.
 No radio scans, real devices, identities or stores were used. Physical packet
 capture, role interchange, address rotation, power toggles and background tests
 are deliberately deferred to the joint libble/libice integration requested by
-the user. Existing platform bridges are retained until that replacement passes.
+the user. Superseding user instruction on 2026-10-10: remove the legacy
+consumer implementation immediately and then regress. SovKit has now deleted
+the old engines, invitation GATT, Flutter channels and dedicated build/test
+wiring. libble is the only radio implementation; NFC and business authentication,
+framing, recovery policy and durable receipts remain. Current radio/product
+limitations are recorded in RADIO_VALIDATION_20261010.md; deletion is not
+acceptance. The source commit above remains extraction provenance only.

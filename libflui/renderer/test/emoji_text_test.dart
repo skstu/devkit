@@ -89,6 +89,7 @@ void main() {
           if (child is TextSpan) collectComposing(child, effective);
         }
       }
+
       collectComposing(span, field.style!);
       expect(composingRuns.join(), '输入');
       m.patch(
@@ -162,6 +163,70 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(metrics.length, greaterThan(count));
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
+    'intrinsic widths fit short text and emoji independently of wrapping',
+    (tester) async {
+      final widths = <int>[];
+      final heights = <int>[];
+      final m = RetainedModel((name, value) {
+        if (name == '3:textwidth') widths.add(int.parse(value));
+        if (name == '3:textmeasure') {
+          final fields = value.split(',');
+          expect(fields.length, 2);
+          heights.add(int.parse(fields.last));
+        }
+      });
+      final attrs = <String, String>{
+        'text': '1',
+        'fontsize': '14',
+        'emojiscale': '1.4',
+        'width': '250',
+        'height': '300',
+        'wordwrap': 'true',
+        'event_textwidth': 'true',
+        'event_textmeasure': 'true',
+      };
+      m.setTree(
+        jsonEncode(
+          node('1', 'Window', {}, [
+            node('2', 'HorizontalLayout', {}, [
+              node('3', 'Label', attrs),
+              node('4', 'Control', {}),
+            ]),
+          ]),
+        ),
+      );
+      await tester.pumpWidget(RetainedApp(model: m));
+      await tester.pumpAndSettle();
+      expect(widths.last, inInclusiveRange(1, 30));
+      Future<void> patch(Map<String, String> changes) async {
+        attrs.addAll(changes);
+        m.patch(
+          jsonEncode([
+            {
+              'id': '3',
+              'attrs': {...attrs},
+            },
+          ]),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await patch({'text': '😀'});
+      final singleEmoji = widths.last;
+      expect(singleEmoji, inInclusiveRange(1, 60));
+      await patch({'text': '😀😀'});
+      expect(widths.last, greaterThan(singleEmoji));
+      await patch({'text': '短消息 😀 后文'});
+      final naturalWidth = widths.last, unwrappedHeight = heights.last;
+      await patch({'width': '40'});
+      expect(widths.last, naturalWidth);
+      expect(heights.last, greaterThan(unwrappedHeight));
+      await patch({'fontsize': '20'});
+      expect(widths.last, greaterThan(naturalWidth));
       expect(tester.takeException(), isNull);
     },
   );

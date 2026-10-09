@@ -1,6 +1,14 @@
 import Foundation
 @main struct StateTest {
   static func main() {
+    let epoch = BleReadSession.newEpoch(), next = BleReadSession.newEpoch()
+    let bytes = Data([0,1,255])
+    precondition(epoch.count == 8 && epoch != next)
+    precondition(BleReadSession.decode(BleReadSession.packet(1, epoch, bytes), epoch) == bytes)
+    precondition(BleReadSession.decode(BleReadSession.packet(1, epoch, bytes), next) == nil)
+    precondition(BleReadSession.decode(BleReadSession.packet(0, epoch), epoch) == Data())
+    precondition(BleReadSession.decode(Data([0]), epoch) == nil)
+    precondition(BleReadSession.decode(BleReadSession.packet(2, epoch), epoch) == nil)
     let checks = BleEngine.regressionChecks()
     for key in checks.keys.sorted() { precondition(checks[key] == true, key) }
     // Test the actual mailbox with synthetic bytes, never a radio manager.

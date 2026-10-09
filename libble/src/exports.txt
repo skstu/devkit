@@ -12,3 +12,5 @@ _dkble_disconnect
 _dkble_send
 _dkble_recover
 _dkble_dispatch
+_dkble_set_options
+_dkble_set_read_interval

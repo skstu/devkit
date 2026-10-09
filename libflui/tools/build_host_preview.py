@@ -12,6 +12,8 @@ p.add_argument('--work',type=Path,required=True)
 p.add_argument('--android-ndk',type=Path)
 p.add_argument('--bundle-id',required=True)
 p.add_argument('--display-name', default='Libflui Preview')
+p.add_argument('--chinese-display-name', help='Optional consumer name for Chinese system languages')
+p.add_argument('--logo-dir', type=Path, help='Consumer-generated platform icon directory')
 p.add_argument('--client-cmake-arg', action='append', default=[])
 p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background declarations, merged into SDK-owned host')
 p.add_argument('--embed-framework', action='append', type=Path, default=[])
@@ -84,7 +86,16 @@ if a.platform=='android':
     s=s.replace('minSdk = flutter.minSdkVersion','minSdk = 24')
     gradle.write_text(s)
     manifestxml=host/'android/app/src/main/AndroidManifest.xml'
-    manifestxml.write_text(manifestxml.read_text().replace('android:label="libflui_host"','android:label="直予 UI Preview"'))
+    from xml.sax.saxutils import escape
+    manifestxml.write_text(manifestxml.read_text().replace('android:label="libflui_host"','android:label="@string/app_name"'),encoding='utf-8')
+    names={'values':a.display_name}
+    if a.chinese_display_name:names['values-zh']=a.chinese_display_name
+    for folder,name in names.items():
+        resources=host/'android/app/src/main/res'/folder;resources.mkdir(parents=True,exist_ok=True)
+        (resources/'app_name.xml').write_text('<resources><string name="app_name">'+escape(name)+'</string></resources>\n',encoding='utf-8')
+    if a.logo_dir:
+        for folder in (a.logo_dir/'android').iterdir():
+            if folder.is_dir():shutil.copytree(folder,host/'android/app/src/main/res'/folder.name,dirs_exist_ok=True)
     run([flutter,'--suppress-analytics','--no-version-check','build','apk','--release','--target-platform','android-arm64','--no-pub'],host)
     print('APK:',host/'build/app/outputs/flutter-apk/app-release.apk')
 elif a.platform=='linux':
@@ -96,7 +107,11 @@ elif a.platform=='linux':
     text=re.sub(r'set\(APPLICATION_ID "[^"]+"\)', 'set(APPLICATION_ID "'+a.bundle_id+'")',text)
     runner.write_text(text)
     main=host/'linux/runner/my_application.cc'
-    main.write_text(main.read_text().replace('"libflui_host"','"Zhiyu UI Preview"'))
+    name=json.dumps(a.display_name,ensure_ascii=False)
+    if a.chinese_display_name:
+        name='(g_str_has_prefix(g_get_language_names()[0], "zh") ? '+json.dumps(a.chinese_display_name,ensure_ascii=False)+' : '+name+')'
+    text=main.read_text().replace('"libflui_host"',name)
+    main.write_text(text,encoding='utf-8')
     run([flutter,'--suppress-analytics','--no-version-check','build','linux','--release','--no-pub'],host)
     output=host/'build/linux/x64/release/bundle'
     shutil.copy2(prefix/'lib/libflui.so',output/'lib/libflui.so')
@@ -110,7 +125,11 @@ elif a.platform=='windows':
         text=text.replace('project(', 'set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")\nproject(',1)
     runner.write_text(text)
     main=host/'windows/runner/main.cpp'
-    main.write_text(main.read_text().replace('L"libflui_host"','L"Zhiyu UI Preview"'))
+    name='L'+json.dumps(a.display_name,ensure_ascii=False)
+    if a.chinese_display_name:
+        name='(PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_CHINESE ? L'+json.dumps(a.chinese_display_name,ensure_ascii=False)+' : '+name+')'
+    main.write_text(main.read_text().replace('L"libflui_host"',name),encoding='utf-8')
+    if a.logo_dir:shutil.copy2(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
     run([flutter,'--suppress-analytics','--no-version-check','build','windows','--release','--no-pub'],host)
     output=host/'build/windows/x64/runner/Release'
     shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
@@ -130,8 +149,13 @@ else:
         if not set(overlay).issubset(allowed):p.error('Only declared Bluetooth privacy/background keys are accepted')
         data.update(overlay)
     plist.write_bytes(plistlib.dumps(data))
+    if a.logo_dir:shutil.copytree(a.logo_dir/'apple/ios/AppIcon.appiconset',host/'ios/Runner/Assets.xcassets/AppIcon.appiconset',dirs_exist_ok=True)
     run([flutter,'--suppress-analytics','--no-version-check','build','ios','--release','--no-codesign','--no-pub'],host)
     app=host/'build/ios/iphoneos/Runner.app'
+    if a.chinese_display_name:
+        for locale,name in [('en',a.display_name),('zh-Hans',a.chinese_display_name),('zh-Hant',a.chinese_display_name)]:
+            folder=app/(locale+'.lproj');folder.mkdir(exist_ok=True)
+            (folder/'InfoPlist.strings').write_text('"CFBundleDisplayName" = '+json.dumps(name,ensure_ascii=False)+';\n"CFBundleName" = '+json.dumps(name,ensure_ascii=False)+';\n',encoding='utf-8')
     for source in [prefix/'lib/flui.framework',clientbuild/'FluiClient.framework',*a.embed_framework]:
         target=app/'Frameworks'/source.name
         if target.exists():shutil.rmtree(target)

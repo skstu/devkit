@@ -13,6 +13,7 @@
 #include <functional>
 #include <iomanip>
 #include <map>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <set>
@@ -149,6 +150,7 @@ protected:
       listeners_;
   Rect rect_{};
   int measuredTextWidth_ = -1, measuredTextHeight_ = 0;
+  int measuredTextIntrinsicWidth_ = -1;
   void Changed(bool structure = false) {
     if (auto s = owner_.lock()) {
       if (structure)
@@ -168,8 +170,10 @@ public:
     if (attributes_.contains(key) && attributes_[key] == value)
       return;
     attributes_[key] = value;
-    if (key == "text" || key == "fontsize" || key == "font" || key == "emojiscale" || key == "wordwrap")
+    if (key == "text" || key == "fontsize" || key == "font" || key == "emojiscale" || key == "wordwrap" || key == "bold") {
       measuredTextWidth_ = -1;
+      measuredTextIntrinsicWidth_ = -1;
+    }
     Changed();
   }
   std::string Attribute(const std::string &key,
@@ -286,6 +290,14 @@ public:
       }
       return;
     }
+    if (event == "textwidth") {
+      const auto v = detail::integers(value);
+      if (v.size() == 1 && v[0] >= 0 && v[0] <= std::numeric_limits<int>::max()) {
+        measuredTextIntrinsicWidth_ = static_cast<int>(v[0]);
+        Notify(event, value, v[0]);
+      }
+      return;
+    }
     if (event == "click" && (!IsEnabled() || !IsVisible()))
       return;
     Notify(event, value);
@@ -299,6 +311,9 @@ public:
     if (auto s = owner_.lock())
       s->Schedule();
   }
+  // Bind textwidth for the renderer's longest unwrapped line. -1 means
+  // no measurement is available for the current text/font yet.
+  int MeasureTextWidth() const { return measuredTextIntrinsicWidth_; }
   int MeasureText(int width) const {
     if (width == measuredTextWidth_) return measuredTextHeight_;
     // Conservative first-frame fallback; opt-in textmeasure then supplies the

@@ -1,63 +1,52 @@
 # libble
 
-Standalone BLE SDK with a versioned C ABI (`libble/ble.h`) and one private
-`libdevkit_ble` runtime. No Flutter, Sovkit identity, account, message store or
-product UUID is part of the public interface. Internal Apple code is Swift and
-CoreBluetooth, extracted from the previously exercised Sovkit Apple bridge.
-Consumers need only the installed C header, dynamic library and CMake package.
+Independent BLE byte transport with the stable C ABI in `libble/ble.h` and one
+private `libdevkit_ble` runtime. Service/RX/TX UUIDs belong to the caller. The SDK
+contains no Flutter, Sovkit identity, pairing protocol, message store or product
+service UUID. Authentication, encryption, application framing and delivery ACKs
+belong to the consumer.
 
-This is an **Apple backend development preview**, built and checked locally on
-macOS arm64, deployment target macOS 13.0. Windows, Android and Linux backends
-have not been migrated. iOS shares CoreBluetooth source but is not yet a
-validated SDK slice. Neither a successful build nor state fixtures certify
-real radio interoperability, background operation or App Store acceptance.
-The existing Sovkit product still uses its old bridges until joint integration
-with libice. No automatic dependency upgrade is performed by this package.
+Backends now exist for macOS/iOS (CoreBluetooth), Windows (WinRT), Android
+(JNI and SDK-owned Kotlin) and Linux (GIO/BlueZ). These remain development
+previews. Build results and synthetic radio evidence are distinct from product
+acceptance, background support and release signing. See
+[radio validation](docs/RADIO_VALIDATION_20261010.md) for the exact tested matrix
+and unresolved cases.
+
+| Platform | Producer requirements | Consumer requirements |
+| --- | --- | --- |
+| macOS arm64 / 13+ | Apple SDK and Swift | Public C header, dylib, privacy declarations and main loop |
+| iOS arm64 / 15+ | Apple SDK and Swift | Header, embedded/signed DevkitBle.framework and privacy declarations |
+| Windows x64 | MSVC and Windows SDK with C++/WinRT | Header/DLL, owner-thread dispatch and supported Bluetooth adapter |
+| Android arm64 / API 24+ build baseline | NDK and Kotlin Android build | Header/SO, installed SDK Kotlin sources, application Context and runtime permissions |
+| Linux x64 / Ubuntu 22.04 build baseline | C++20, GIO development package, BlueZ API | Header/SO, system GIO and a powered BlueZ adapter with required roles |
+
+The exercised Windows host is Windows 11, Android host is Android 17 and Linux
+host is Debian 12 with BlueZ 5.66. Other OS versions, architectures, hardware,
+background transitions and simulator/XCFramework distribution need separate
+validation. Debian binaries are built against the Ubuntu 22.04 baseline.
 
 ```sh
-cmake -S libble -B .build/ble-sdk -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+cmake -S libble -B .build/ble-sdk -DCMAKE_BUILD_TYPE=Release
 cmake --build .build/ble-sdk
 ctest --test-dir .build/ble-sdk --output-on-failure
-python3 libble/tools/package_sdk.py --build .build/ble-sdk --allow-dirty
+cmake --install .build/ble-sdk --prefix /path/to/ble-sdk
 ```
 
-The tests never start the radio, open a permission dialog, connect a device,
-or read a real identity store. Swift/system frameworks are operating-system
-runtime dependencies, not a Flutter SDK requirement for consumers.
-See [integration](docs/INTEGRATION.md) and [extraction evidence](docs/EXTRACTION.md).
+For Apple builds use Ninja, arm64 and the matching deployment target (macOS
+13.0 or iOS 15.0). Android uses the NDK toolchain and `BUILD_TESTING=OFF` for
+cross-compilation. Windows uses the Release configuration. Ordinary CTest
+never starts a radio, connects a device or reads a real identity.
 
-## Consume the binary SDK
+Consumers link CMake target `devkit::ble`; `devkit_ble_bundle(target)` deploys
+the private runtime beside a desktop consumer. The included pure-C desktop
+example checks installed files without starting Bluetooth. Android must first
+initialize `com.skstu.devkit.ble.BleRuntime` with application Context. Consumer
+signing, permissions and foreground/background policy remain host-owned.
 
-Unpack the matching platform SDK, then build the included pure-C example:
-
-```sh
-cmake -S "$SDK/share/libble/examples/consumer" -B consumer-build \
-  -DCMAKE_PREFIX_PATH="$SDK"
-cmake --build consumer-build
-./consumer-build/ble_consumer
-```
-
-Applications include `<libble/ble.h>`, link the runtime (CMake target
-`devkit::ble`), and deploy it alongside the application. The example accesses
-no Bluetooth radio; it is a packaging check, not a product demo. The SDK
-provides no product identity, credentials, protocol or UI.
-
-## Build and package in devkit
-
-Configure this component out of tree in Release with `BUILD_TESTING=ON`,
-`CMAKE_OSX_ARCHITECTURES=arm64` and `CMAKE_OSX_DEPLOYMENT_TARGET=13.0`.
-An Apple SDK and Swift compiler are required to build the SDK itself.
-Run `python3 tools/package_sdk.py --build <build-directory>` in this component.
-An uncommitted preview additionally requires `--allow-dirty`. Packaging runs
-component checks and verifies the C export allowlist, architecture, minimum OS,
-private runtime dependencies and input hashes. Output includes headers, runtime,
-CMake integration, documentation, example, licenses and `manifest.json`.
-These local previews are not release-signed or notarized.
-
-Apple packaging: macOS 13+ arm64 dylib; iOS 15+ arm64 `DevkitBle.framework`.
-Use the installed public header and binary; no Swift consumer project is required.
-iOS signing and Bluetooth privacy declarations belong to the application.
-`tools/package_ios_sdk.py libble --build <build> --output <output>` emits an
-integrity manifest and binary lock. This is a development preview; see integration
-documentation for platform and validation limits.
+macOS integrity packaging: `python3 libble/tools/package_sdk.py --build <build>`.
+Uncommitted development inputs require `--allow-dirty`. iOS packaging:
+`python3 tools/package_ios_sdk.py libble --build <build> --output <directory>`.
+Other platforms currently provide CMake installation; no verified release
+archive, notarization, Play/App Store or universal OS support is implied.
+See [integration](docs/INTEGRATION.md) and historical [extraction](docs/EXTRACTION.md).

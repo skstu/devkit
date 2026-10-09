@@ -45,7 +45,10 @@ identity storage or a native file picker. Zhiyu shows a sample attachment card.
 
 Use tools/build_host_preview.py with --platform android, ios, windows or linux,
 --flutter-sdk, --client, --work and --bundle-id. Android also requires
---android-ndk. The current harness builds the Zhiyu C++ sample and an SDK-owned
+--android-ndk. Consumers can pass `--display-name`, `--chinese-display-name`
+and `--logo-dir` for application names and existing Android/iOS/Windows icons;
+Linux desktop entry and icon installation remain consumer packaging metadata.
+The current harness builds the Zhiyu C++ sample and an SDK-owned
 host in the work directory. Consumer CMake receives a binary SDK prefix and an
 exact manifest lock; it does not compile Flutter.
 

@@ -52,14 +52,15 @@ Do not change IDs on every quote tick.
 | VerticalLayout / HorizontalLayout | Weighted children; `padding`, `childpadding`; children use `height`/`width` or `weight` |
 | Label / DecimalLabel | Exact `text`, `fontsize`, `bold`, `textcolor`, `align` (`left`, `center`, `right`), `wordwrap` |
 | Button / DecimalButton | Same text styling plus `enabled`; click emits an action |
-| Edit | `text`, `hint`, `maxchar`, `readonly`, `password`, `multiline`, `valign` (`top`, `center`, `bottom`; default center), `event_enter`, `event_step`, `event_navigate` |
+| Edit | `text`, `hint`, `maxchar`, `readonly`, `password`, `multiline`, `valign` (`top`, `center`, `bottom`; default center), `event_enter`, `event_step`, `event_navigate`, `submitkey` (`enter` or `ctrl-enter`, opt-in for multiline hardware submission) |
 | Combo | `items_json` (JSON string array encoded as a string), `selected` (zero-based index; -1 for none) |
 | Svg | Inline static `svg` string; optional `textcolor` tint; scales to its layout bounds |
 | TabLayout | `selectedid` chooses a child by name; `keepalive="true"` retains inactive pages while excluding their focus, semantics and animation tickers |
 | Option | Controlled checkbox with `text`, `selected`; application updates state after click |
 
 Common attributes include `visible`, `enabled`, `width`, `height`, `weight`,
-`bkcolor`, `bordercolor`, `bordersize`, `padding` and `tooltip`. Boolean strings are
+`bkcolor`, `hotbkcolor`, `focusbkcolor`, `bordercolor`, `bordersize`, `padding`
+and `tooltip`. Boolean strings are
 `"true"`/`"false"`. Dimensions are logical pixels; zero/omitted main-axis extent in
 a row/column fills the available space by weight. Padding accepts one value or
 `"left,top,right,bottom"`. Colors use `#RRGGBB` or `#AARRGGBB`, or a semantic theme
@@ -269,3 +270,29 @@ returns the cached exact height for that width; before the first matching
 measurement it returns a conservative estimate. Set the control height from
 this result to avoid clipping large emoji or multiline content. This is a UI
 measurement event, not a message send or persistence action.
+
+A wrapping Label can also opt into `event_textwidth="true"`. It emits `textwidth` with
+the rounded-up width of its longest unwrapped line, using the same font, text
+scale and complete emoji graphemes as the rendered label. This value is
+independent of the available control width. `Bind("textwidth", ...)` enables
+the event; `MeasureTextWidth()` returns the cached width or -1 before the
+first measurement for the current text/font. Consumers can use it to fit
+short content while capping long paragraphs at their chosen wrapping width.
+The existing `textmeasure` event payload and C ABI remain unchanged.
+
+For a multiline `Edit`, bind `enter` and set `submitkey="enter"` or
+`submitkey="ctrl-enter"` to select hardware submission. Control is literal on
+macOS too. The other combination and Shift+Enter insert a newline at the current
+selection, respecting `maxchar`; keypad Enter behaves the same. Active IME
+composition, Alt/Meta combinations, disabled/hidden/read-only controls and key
+repeats do not submit. The software keyboard retains its multiline newline
+action. Omitting `submitkey` preserves ordinary editing and single-line `enter`
+events; the consumer still owns admission, validation and message delivery.
+
+Clickable controls can opt into `hotbkcolor` for mouse hover and `focusbkcolor`
+for keyboard focus. The focus color takes precedence when both apply. State
+colors resolve through the current theme and cover the full decorated hit area,
+including inset and border; disabled, hidden or inactive-page controls do not
+highlight or activate. With neither attribute, the existing rendering is kept.
+Selection stays consumer-controlled: give selected rows the selected color for
+both attributes if hover/focus should preserve that selection.

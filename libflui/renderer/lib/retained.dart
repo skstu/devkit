@@ -75,6 +75,8 @@ const retainedAttributes = {
   'textcolor',
   'bkcolor',
   'bkcolor2',
+  'hotbkcolor',
+  'focusbkcolor',
   'defaultfontcolor',
   'disabledfontcolor',
   'disabledtextcolor',
@@ -100,6 +102,7 @@ const retainedAttributes = {
   'password',
   'readonly',
   'multiline',
+  'submitkey',
   'selectedid',
   'showheader',
   'vscrollbar',
@@ -182,6 +185,7 @@ const retainedEvents = {
   'resize',
   'resizeend',
   'textmeasure',
+  'textwidth',
   'largeitemselect',
 };
 
@@ -1079,6 +1083,7 @@ class _TreeViewState extends State<TreeView> {
   List<int> viewport = [];
   bool reportPending = false;
   String textMeasurement = '';
+  bool hovered = false, focused = false;
   @override
   void initState() {
     super.initState();
@@ -1284,7 +1289,7 @@ class _TreeViewState extends State<TreeView> {
             ? TextOverflow.ellipsis
             : TextOverflow.clip,
       );
-      result = n.flag('event_textmeasure')
+      result = (n.flag('event_textmeasure') || n.flag('event_textwidth'))
           ? LayoutBuilder(
               builder: (_, constraints) {
                 final painter = TextPainter(
@@ -1295,14 +1300,19 @@ class _TreeViewState extends State<TreeView> {
                 )..layout(maxWidth: constraints.maxWidth);
                 final measurement =
                     '${constraints.maxWidth.floor()},${painter.height.ceil()}';
+                final intrinsicWidth = painter.maxIntrinsicWidth.ceil();
                 painter.dispose();
                 final signature =
-                    '$text\u0000${style.fontFamily},${style.fontSize},${n.number('emojiscale', 1)},$measurement';
+                    '$text\u0000${style.fontFamily},${style.fontSize},${n.number('emojiscale', 1)},$measurement,$intrinsicWidth,${n.flag('event_textmeasure')},${n.flag('event_textwidth')}';
                 if (textMeasurement != signature) {
                   textMeasurement = signature;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && textMeasurement == signature)
-                      emit('textmeasure', measurement);
+                    if (mounted && textMeasurement == signature) {
+                      if (n.flag('event_textmeasure'))
+                        emit('textmeasure', measurement);
+                      if (n.flag('event_textwidth'))
+                        emit('textwidth', '$intrinsicWidth');
+                    }
                   });
                 }
                 return render();
@@ -1493,12 +1503,58 @@ class _TreeViewState extends State<TreeView> {
         counterText: '',
       ),
       onSubmitted: (_) {
-        if (n.flag('event_enter')) emit('enter');
+        // Configured multiline editors submit only through the hardware key
+        // handler. A software keyboard's newline/done must not send a draft.
+        if (n.flag('event_enter') &&
+            (!n.flag('multiline') ||
+                !{'enter', 'ctrl-enter'}.contains(n.text('submitkey'))))
+          emit('enter');
       },
       onChanged: (v) => emit('valuechanged', v),
     );
     return Focus(
       onKeyEvent: (_, event) {
+        final submitKey = n.text('submitkey');
+        if (n.flag('multiline') &&
+            (submitKey == 'enter' || submitKey == 'ctrl-enter') &&
+            n.flag('event_enter') &&
+            m.interactive(n) &&
+            !n.flag('readonly') &&
+            (event is KeyDownEvent || event is KeyRepeatEvent) &&
+            (event.logicalKey == LogicalKeyboardKey.enter ||
+                event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+          final value = editor!.value;
+          // Leave candidate confirmation to the IME; never submit composing
+          // text. Control is literal on every platform, including macOS.
+          if (value.composing.isValid && !value.composing.isCollapsed)
+            return KeyEventResult.ignored;
+          final keyboard = HardwareKeyboard.instance;
+          if (keyboard.isAltPressed || keyboard.isMetaPressed)
+            return KeyEventResult.ignored;
+          final submit =
+              !keyboard.isShiftPressed &&
+              keyboard.isControlPressed == (submitKey == 'ctrl-enter');
+          if (submit) {
+            // Consume repeats too, but admit at most one event per key press.
+            if (event is KeyDownEvent) emit('enter');
+          } else {
+            final selection = value.selection.isValid
+                ? value.selection
+                : TextSelection.collapsed(offset: value.text.length);
+            final start = selection.start.clamp(0, value.text.length);
+            final end = selection.end.clamp(start, value.text.length);
+            final text = value.text.replaceRange(start, end, '\n');
+            if (text.characters.length <= n.number('maxchar', 128).round()) {
+              editor!.value = TextEditingValue(
+                text: text,
+                selection: TextSelection.collapsed(offset: start + 1),
+              );
+              n.attrs['text'] = text;
+              emit('valuechanged', text);
+            }
+          }
+          return KeyEventResult.handled;
+        }
         if (event is! KeyDownEvent) return KeyEventResult.ignored;
         if (event.logicalKey == LogicalKeyboardKey.tab &&
             n.flag('event_navigate')) {
@@ -1604,6 +1660,7 @@ class _TreeViewState extends State<TreeView> {
       'lan': Icons.lan_outlined,
       'globe': Icons.public,
       'settings': Icons.settings_outlined,
+      'keyboard': Icons.keyboard_outlined,
       'search': Icons.search,
       'emoji': Icons.sentiment_satisfied_alt,
       'folder': Icons.folder_outlined,
@@ -1636,16 +1693,27 @@ class _TreeViewState extends State<TreeView> {
 
   Widget decorate(Widget result) {
     final themedButton = n.text('role') == 'button';
-    final top = color(
-          'bkcolor',
-          themedButton ? palette.color(r'$buttonTop') : Colors.transparent,
-        ),
-        bottom = color(
-          'bkcolor2',
-          themedButton && !n.attrs.containsKey('bkcolor')
-              ? palette.color(r'$buttonBottom')
-              : top,
-        );
+    final interactive = m.interactive(n) && n.flag('mouse', true);
+    final activeBackground =
+        interactive && focused && n.text('focusbkcolor').isNotEmpty
+        ? n.text('focusbkcolor')
+        : interactive && hovered && n.text('hotbkcolor').isNotEmpty
+        ? n.text('hotbkcolor')
+        : '';
+    final top = activeBackground.isNotEmpty
+        ? palette.color(activeBackground)
+        : color(
+            'bkcolor',
+            themedButton ? palette.color(r'$buttonTop') : Colors.transparent,
+          );
+    final bottom = activeBackground.isNotEmpty
+        ? top
+        : color(
+            'bkcolor2',
+            themedButton && !n.attrs.containsKey('bkcolor')
+                ? palette.color(r'$buttonBottom')
+                : top,
+          );
     final border = edges(n.text('bordersize', themedButton ? '1' : '0'));
     final borderColor = color(
       'bordercolor',
@@ -1727,6 +1795,10 @@ class _TreeViewState extends State<TreeView> {
 
   @override
   Widget build(BuildContext context) {
+    if (!m.interactive(n)) {
+      hovered = false;
+      focused = false;
+    }
     if (!n.flag('visible', true)) return const SizedBox.shrink();
     Widget result;
     switch (n.tag) {
@@ -1910,9 +1982,21 @@ class _TreeViewState extends State<TreeView> {
     }
     final clickable =
         n.flag('event_click') || {'Button', 'DecimalButton'}.contains(n.tag);
+    final stateBackground =
+        clickable &&
+        n.flag('mouse', true) &&
+        (n.text('hotbkcolor').isNotEmpty || n.text('focusbkcolor').isNotEmpty);
+    // Opt-in state backgrounds include the whole decorated row in its hit area,
+    // including inset and border. Existing controls keep their original wrappers.
+    if (stateBackground) result = decorate(result);
     if (clickable && n.flag('mouse', true))
       result = FocusableActionDetector(
         enabled: n.flag('enabled', true),
+        onFocusChange: (value) {
+          if (focused == value || !mounted) return;
+          focused = value;
+          if (n.text('focusbkcolor').isNotEmpty) setState(() {});
+        },
         mouseCursor: n.flag('enabled', true)
             ? SystemMouseCursors.click
             : SystemMouseCursors.basic,
@@ -1941,9 +2025,22 @@ class _TreeViewState extends State<TreeView> {
           ),
         ),
       );
+    if (stateBackground) {
+      void updateHover(bool value) {
+        if (hovered == value || !mounted) return;
+        hovered = value;
+        if (n.text('hotbkcolor').isNotEmpty) setState(() {});
+      }
+
+      result = MouseRegion(
+        onEnter: (_) => updateHover(true),
+        onExit: (_) => updateHover(false),
+        child: result,
+      );
+    }
     if (!n.flag('enabled', true))
       result = ExcludeFocus(child: IgnorePointer(child: result));
-    result = decorate(result);
+    if (!stateBackground) result = decorate(result);
     if ({
           'Window',
           'PaneCanvas',
