@@ -4,3 +4,7 @@ find_package(devkitNet CONFIG REQUIRED)
 add_executable(net_consumer main.c)
 target_link_libraries(net_consumer PRIVATE devkit::net)
 devkit_net_bundle(net_consumer)
+
+add_executable(net_lan_consumer lan.c)
+target_link_libraries(net_lan_consumer PRIVATE devkit::net)
+devkit_net_bundle(net_lan_consumer)

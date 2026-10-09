@@ -117,6 +117,95 @@ DKNET_API int32_t DKNET_CALL dknet_quic_close(dknet_context *, uint64_t, const c
  * Call after QUIC operations and QUIC_TICK/QUIC_EVENTS to bound event retention. */
 DKNET_API int32_t DKNET_CALL dknet_quic_dispatch(dknet_context *, dknet_quic_event_fn, void *);
 DKNET_API int32_t DKNET_CALL dknet_quic_statistics(dknet_context *, uint64_t, dknet_quic_stats *);
+/* Additive LAN API, version 1. Original ABI-1 structures/functions are unchanged.
+ * A LAN context owns its loop and requires no QUIC listener or ALPN. All calls
+ * except lan_wake are owner-thread only. Callbacks execute only during lan_run;
+ * data is borrowed until return. Do not block/throw, run or destroy in a callback.
+ * Stop/join wake producers before destroy. Shutdown silences callbacks, cancels
+ * sends and closes sockets; destroy drains closes. No callbacks after shutdown.
+ * Socket IDs are never reused in a context. Receive callbacks have no SDK queue;
+ * each socket has one fixed buffer. The host may pause receive for backpressure.
+ * Accepted sends are copied and bounded across the entire LAN context. SENT
+ * means OS completion, never delivery. Explicit socket close permits pending
+ * SENT completions/cancellations, then exactly one CLOSED; no datagrams afterward.
+ * Rebind keeps the bound port, options and memberships. It rejects sends until
+ * REBOUND and never reports partial restoration as success. */
+#define DKNET_LAN_VERSION 1u
+#define DKNET_BUFFER_TOO_SMALL -6
+#define DKNET_NOT_FOUND -7
+typedef struct dknet_lan_context dknet_lan_context;
+enum { DKNET_LAN_DATAGRAM=1, DKNET_LAN_SENT=2, DKNET_LAN_WRITABLE=3,
+       DKNET_LAN_ERROR=4, DKNET_LAN_CLOSED=5, DKNET_LAN_INTERFACES=6,
+       DKNET_LAN_WAKE=7, DKNET_LAN_TIMER=8, DKNET_LAN_REBOUND=9 };
+enum { DKNET_UDP_REUSE_ADDRESS=1u, DKNET_UDP_IPV6_ONLY=2u,
+       DKNET_UDP_BROADCAST=4u };
+enum { DKNET_INTERFACE_INTERNAL=1u, DKNET_INTERFACE_LINK_LOCAL=2u };
+typedef struct dknet_interface {
+  uint32_t struct_size, family, index, scope_id, flags, reserved;
+  char name[256], address[64], netmask[64], broadcast[64];
+} dknet_interface;
+typedef struct dknet_lan_event {
+  uint32_t struct_size, type;
+  uint64_t socket, request, generation;
+  int32_t status, native_status; /* native_status is the original libuv diagnostic. */
+  dknet_endpoint peer;
+  const uint8_t *data;
+  size_t size;
+} dknet_lan_event;
+typedef void (DKNET_CALL *dknet_lan_event_fn)(void *, const dknet_lan_event *);
+typedef struct dknet_lan_config {
+  uint32_t struct_size, version, maximum_sockets, maximum_memberships;
+  uint32_t maximum_pending_datagrams, reserved;
+  size_t maximum_pending_bytes;
+  dknet_lan_event_fn on_event;
+  void *user;
+} dknet_lan_config;
+typedef struct dknet_udp_config {
+  uint32_t struct_size, version, flags, maximum_receive_bytes;
+  uint32_t multicast_ttl, multicast_loop;
+  dknet_endpoint bind;
+} dknet_udp_config;
+typedef struct dknet_udp_stats {
+  uint32_t struct_size, reserved;
+  size_t pending_datagrams, pending_bytes;
+  uint64_t received_datagrams, dropped_datagrams, sent_datagrams, failed_sends;
+} dknet_udp_stats;
+DKNET_API uint32_t DKNET_CALL dknet_lan_version(void);
+DKNET_API int32_t DKNET_CALL dknet_lan_create(const dknet_lan_config *, dknet_lan_context **);
+DKNET_API int32_t DKNET_CALL dknet_lan_run(dknet_lan_context *);
+DKNET_API int32_t DKNET_CALL dknet_lan_shutdown(dknet_lan_context *);
+DKNET_API int32_t DKNET_CALL dknet_lan_destroy(dknet_lan_context *);
+DKNET_API int32_t DKNET_CALL dknet_lan_wake(dknet_lan_context *, uint32_t slot);
+DKNET_API int32_t DKNET_CALL dknet_lan_timer_start(dknet_lan_context *, uint32_t slot, uint64_t delay_ms, uint64_t repeat_ms);
+DKNET_API int32_t DKNET_CALL dknet_lan_timer_stop(dknet_lan_context *, uint32_t slot);
+/* Poll assigned IPv4/IPv6 addresses, not link/media/route reachability. No
+ * silent truncation: count is required capacity; an undersized output is left
+ * untouched. Null output/capacity=0 queries count. Output structs are SDK-filled.
+ * Hard cap 1024 address records; overflow fails rather than returning a subset. */
+DKNET_API int32_t DKNET_CALL dknet_interface_list(dknet_interface *, size_t capacity, size_t *count);
+/* Configurable portable polling (250..60000 ms), 0 stops automatic watching.
+ * Refresh coalesces on the loop. A successful initial/changed snapshot emits
+ * INTERFACES with a generation; unchanged polls emit nothing. Failed refresh
+ * emits ERROR and retains the last good snapshot. No routing/auto-rebind policy. */
+DKNET_API int32_t DKNET_CALL dknet_lan_watch_interfaces(dknet_lan_context *, uint32_t interval_ms);
+DKNET_API int32_t DKNET_CALL dknet_lan_refresh_interfaces(dknet_lan_context *);
+DKNET_API int32_t DKNET_CALL dknet_lan_interfaces(dknet_lan_context *, dknet_interface *, size_t capacity, size_t *count, uint64_t *generation);
+DKNET_API int32_t DKNET_CALL dknet_lan_last_native_error(dknet_lan_context *);
+DKNET_API int32_t DKNET_CALL dknet_udp_open(dknet_lan_context *, const dknet_udp_config *, uint64_t *socket);
+DKNET_API int32_t DKNET_CALL dknet_udp_local_endpoint(dknet_lan_context *, uint64_t socket, dknet_endpoint *);
+DKNET_API int32_t DKNET_CALL dknet_udp_receive_start(dknet_lan_context *, uint64_t socket);
+DKNET_API int32_t DKNET_CALL dknet_udp_receive_stop(dknet_lan_context *, uint64_t socket);
+DKNET_API int32_t DKNET_CALL dknet_udp_send(dknet_lan_context *, uint64_t socket, const dknet_endpoint *, const uint8_t *, size_t, uint64_t request);
+/* group is numeric multicast IPv4/IPv6, interface is a numeric same-family
+ * local address (IPv6 may include %scope), or null for OS selection. Repeated
+ * joins are idempotent; an unknown leave is NOT_FOUND. Memberships are bounded.
+ * IPv6 discovery should specify scope, e.g. interface "::%5". */
+DKNET_API int32_t DKNET_CALL dknet_udp_membership(dknet_lan_context *, uint64_t socket, const char *group, const char *interface_address, uint32_t join);
+DKNET_API int32_t DKNET_CALL dknet_udp_multicast_interface(dknet_lan_context *, uint64_t socket, const char *interface_address);
+DKNET_API int32_t DKNET_CALL dknet_udp_rebind(dknet_lan_context *, uint64_t socket);
+DKNET_API int32_t DKNET_CALL dknet_udp_close(dknet_lan_context *, uint64_t socket);
+DKNET_API int32_t DKNET_CALL dknet_udp_statistics(dknet_lan_context *, uint64_t socket, dknet_udp_stats *);
+
 #ifdef __cplusplus
 }
 #endif

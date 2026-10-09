@@ -1,11 +1,14 @@
-# libnet independent SDK (first migration slice)
+# libnet independent SDK
 
 The standalone build is `libnet/sdk`. Consumers include `libnet/net.h`, link
 `devkit::net`, and ship the private runtime using `devkit_net_bundle(target)`.
 No provider headers or development packages are needed in a consumer.
-This slice provides a dual-stack UDP listener, bounded UDP sends, wake slots,
-timers and framed QUIC records/streams. ICE, discovery, TCP and HTTP remain in
-the existing source targets pending their separate migrations. The old target
+The original context provides a dual-stack UDP listener, bounded UDP sends, wake
+slots, timers and framed QUIC records/streams. The additive LAN API provides
+independent UDP sockets, IPv4 broadcast, IPv4/IPv6 multicast, interface address
+snapshots and configurable change watching through the same public C header.
+Product discovery payloads, identities and trust stay in consumers. ICE, TCP
+and HTTP remain in source targets pending their separate migrations. The old target
 names and default legacy QUIC ALPN remain source-compatible.
 
 ABI 1 exposes only C types. Structures have explicit sizes. Handles are opaque;
@@ -33,7 +36,51 @@ without allocating an unbounded command queue. UDP returns BUSY at its configure
 limit and emits WRITABLE when a send completes after backpressure. Applications
 must handle IO errors and preserve their own reliable-message state.
 
-Only macOS arm64 / macOS 13+ is locally validated in this migration. Other
-platform binaries are not delivered or claimed. libuv, ngtcp2 and OpenSSL are
+Validated package scope remains separate from source portability: macOS arm64
+/macOS 13+ and iOS arm64/iOS 15+ builds exist; the LAN extension additionally
+passed isolated Windows full-SDK tests and Ubuntu 22.04 LAN-module tests. This
+does not assert five-platform product or background acceptance. See LAN.md. libuv, ngtcp2 and OpenSSL are
 statically linked and hidden; only dknet_* symbols are exported. Third-party
 licenses, exact source/provider hashes and the runtime accompany SDK packages.
+
+
+## LAN API v1
+
+Include only `libnet/net.h` and query `dknet_lan_version()`. The original ABI-1
+config/event layouts and all 28 original symbols remain unchanged; LAN adds
+23 symbols. `dknet_lan_create` has its own opaque owner-thread context and loop;
+it requires no QUIC listener, ALPN, product protocol or default service UUID.
+The pure-C installed example `net_lan_consumer` exercises actual loopback UDP.
+Full semantics and validation are in [LAN.md](LAN.md).
+
+A LAN context bounds all copied sends together by both datagram count and bytes,
+socket count (including draining failed/closed sockets), and per-socket group
+memberships. All limits are explicit caller inputs within hard caps. Each UDP
+socket has a fixed receive buffer; truncated packets are dropped with an error,
+never delivered as complete data. Receive start/stop supplies host backpressure.
+There is no retained receive/event queue. The caller copies callback data if needed.
+
+Socket close rejects new sends and suppresses datagrams. Existing sends finish
+or cancel with SENT, then CLOSED confirms native close. A new socket ID is never
+reused. Rebind rejects sends while replacing the descriptor, retains the port,
+receive state, multicast interface, TTL/loop/broadcast flags and group memberships,
+and emits REBOUND only with the actual restoration result. Failure closes the
+socket; it never silently selects a different interface or drops a membership.
+Context shutdown immediately suppresses user callbacks, cancels pending work
+and closes all owned handles. Destroy drains callbacks internally and frees the
+context; stop/join cross-thread wake producers before destruction.
+
+`dknet_interface_list` enumerates assigned address records (IPv4/IPv6, index,
+scope, netmask, derived IPv4 broadcast and internal/link-local flags). It is not
+an inventory of all down physical adapters or a reachability test. A too-small
+output is left untouched and reports required count, with a hard cap of 1024.
+`dknet_lan_watch_interfaces` polls at an explicit 250..60000 ms interval; 0 stops
+automatic polling. Refresh requests coalesce. A successful initial/changed
+snapshot emits one generation; unchanged results emit nothing. Poll failure
+retains the last good snapshot and emits ERROR. Hosts may request refresh after
+native network notifications. The SDK does not choose routes or auto-rebind.
+
+Windows consumers must ship the same SDK runtime and import library. Linux
+consumers retain their required runtime baseline; this extension was tested in
+an Ubuntu 22.04.5 rootfs, not built against Debian's newer userspace. Android
+permissions and mobile foreground/background policy remain host responsibilities.

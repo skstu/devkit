@@ -10,7 +10,9 @@ dynamic SDK is built from `libnet/sdk`; see [SDK scope and contract](docs/SDK.md
 - HTTP diagnostics including curl/OS status and connection-stage timings.
 - File downloads with retries, redirects, low-speed protection, cancellation,
   progress callbacks, range probing, parallel parts, and resume support.
-- Caller-owned libuv TCP, UDP, and pipe transports.
+- Independent C ABI LAN sockets: bounded UDP, IPv4 broadcast, IPv4/IPv6
+  multicast, interface address snapshots and configurable change watching.
+- Caller-owned legacy source-target libuv TCP, UDP, and pipe transports.
 - A libjuice-backed RFC ICE datagram provider for host/STUN-reflexive/TURN
   relay candidate checks, selected-path diagnostics and bounded event delivery.
 - A deterministic transport-provider capability catalog and route selector.
@@ -25,6 +27,8 @@ dynamic SDK is built from `libnet/sdk`; see [SDK scope and contract](docs/SDK.md
 HTTP TLS peer and hostname verification are enabled by default. QUIC here is
 an ephemeral, unauthenticated bearer: applications must authenticate their own
 protocol before granting access. Its READY event is not an identity assertion.
+
+LAN C ABI contract and validation: [LAN.md](docs/LAN.md).
 
 ## CMake
 
