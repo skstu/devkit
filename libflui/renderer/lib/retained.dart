@@ -1,6 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:xml/xml.dart';
+
 import 'localization.dart';
+import 'emoji_picker.dart';
+import 'emoji_text.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -25,6 +30,9 @@ const retainedTags = {
   'Label',
   'Button',
   'Icon',
+  'Svg',
+  'ResizeHandle',
+  'EmojiPicker',
   'DecimalLabel',
   'DecimalButton',
   'Edit',
@@ -75,6 +83,7 @@ const retainedAttributes = {
   'bordersize',
   'topbordersize',
   'borderround',
+  'clip',
   'cornerradius',
   'bevel',
   'gradientend',
@@ -104,7 +113,17 @@ const retainedAttributes = {
   'stripeheight',
   'stripecolor',
   'iconsize',
+  'strokewidth',
+  'emojiscale',
+  'largepage',
+  'normaltext',
+  'normaltextkey',
+  'largetext',
+  'largetextkey',
   'glyph',
+  'target',
+  'svg',
+  'keepalive',
   'dragable',
   'optionstyle',
   'cancelselected',
@@ -118,6 +137,7 @@ const retainedAttributes = {
   'header',
   'index',
   'scroll',
+  'scrollanchor',
   'bounds',
   'minimum',
   'drag_height',
@@ -158,13 +178,67 @@ const retainedEvents = {
   'navigate',
   'step',
   'pointchange',
+  'resizestart',
+  'resize',
+  'resizeend',
+  'textmeasure',
+  'largeitemselect',
 };
+
+// Deliberately local, static vector graphics only: no scripts, fonts, images,
+// network/file references, CSS or animation. Validation precedes atomic patches.
+void validateInlineSvg(String source) {
+  if (source.isEmpty) return;
+  if (source.length > 1024 * 1024) throw const FormatException('SVG too large');
+  final doc = XmlDocument.parse(source);
+  const tags = {
+    'svg',
+    'g',
+    'defs',
+    'path',
+    'rect',
+    'circle',
+    'ellipse',
+    'line',
+    'polyline',
+    'polygon',
+    'mask',
+    'clipPath',
+    'linearGradient',
+    'radialGradient',
+    'stop',
+    'use',
+    'title',
+    'desc',
+  };
+  if (doc.rootElement.name.local != 'svg' ||
+      doc.children.any((e) => e is XmlDoctype)) {
+    throw const FormatException('Expected inline SVG');
+  }
+  for (final e in doc.descendants.whereType<XmlElement>()) {
+    if (!tags.contains(e.name.local))
+      throw const FormatException('Unsupported SVG element');
+    for (final a in e.attributes) {
+      if (a.name.local == 'style' ||
+          a.name.local.startsWith('on') ||
+          (a.name.local == 'href' &&
+              !RegExp(r'^#[A-Za-z_][\w.-]*$').hasMatch(a.value)) ||
+          (a.value.contains('url(') &&
+              !RegExp(r'^url\(#[A-Za-z_][\w.-]*\)$').hasMatch(a.value))) {
+        throw const FormatException(
+          'SVG must contain only local static vectors',
+        );
+      }
+    }
+  }
+}
 
 class RNode extends ChangeNotifier {
   RNode(this.id, this.tag, this.attrs, this.children);
   final String id, tag;
   Map<String, String> attrs;
   List<RNode> children;
+  double scrollOffset = 0;
   String text(String k, [String fallback = '']) => attrs[k] ?? fallback;
   double number(String k, [double fallback = 0]) =>
       double.tryParse(text(k)) ?? fallback;
@@ -179,6 +253,79 @@ class RetainedModel {
   final root = ValueNotifier<RNode?>(null);
   Map<String, RNode> nodes = {};
   Map<String, String> parents = {};
+  final revision = ValueNotifier<int>(0);
+  final Map<String, _TreeViewState> editors = {};
+  final emojiRecent = <String>[];
+  final emojiLargeRecent = <String>[];
+
+  bool interactive(RNode node) {
+    var child = node;
+    while (true) {
+      if (!child.flag('visible', true) || !child.flag('enabled', true))
+        return false;
+      final parent = nodes[parents[child.id]];
+      if (parent == null) return nodes[node.id] == node;
+      if (parent.tag == 'TabLayout' &&
+          parent.text('selectedid') != child.text('name'))
+        return false;
+      child = parent;
+    }
+  }
+
+  _TreeViewState? emojiEditor(RNode picker) {
+    final target = picker.text('target');
+    final matches = nodes.values
+        .where(
+          (v) =>
+              v.tag == 'Edit' && (v.id == target || v.text('name') == target),
+        )
+        .toList();
+    if (target.isEmpty || matches.length != 1) return null;
+    final node = matches.single;
+    if (!interactive(picker) || !interactive(node) || node.flag('readonly'))
+      return null;
+    return editors[node.id];
+  }
+
+  bool insertEmoji(RNode picker, String emoji) {
+    final state = emojiEditor(picker);
+    if (state == null || !state.mounted) return false;
+    final editor = state.editor!;
+    final value = editor.value;
+    final selection = value.selection.isValid
+        ? value.selection
+        : TextSelection.collapsed(offset: value.text.length);
+    final start = selection.start.clamp(0, value.text.length);
+    final end = selection.end.clamp(start, value.text.length);
+    final text = value.text.replaceRange(start, end, emoji);
+    if (text.characters.length > state.n.number('maxchar', 128).round())
+      return false;
+    editor.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: start + emoji.length),
+    );
+    state.n.attrs['text'] = text;
+    state.focus!.requestFocus();
+    emit(state.n, 'valuechanged', text);
+    emojiRecent.remove(emoji);
+    emojiRecent.insert(0, emoji);
+    if (emojiRecent.length > 10) emojiRecent.removeLast();
+    emit(picker, 'itemselect', emoji);
+    return true;
+  }
+
+  bool selectLargeEmoji(RNode picker, String emoji) {
+    if (emojiEditor(picker) == null ||
+        emoji.characters.length != 1 ||
+        !isEmojiCluster(emoji))
+      return false;
+    emojiLargeRecent.remove(emoji);
+    emojiLargeRecent.insert(0, emoji);
+    if (emojiLargeRecent.length > 10) emojiLargeRecent.removeLast();
+    emit(picker, 'largeitemselect', emoji);
+    return true;
+  }
+
   Map<String, String> attributes(Object? raw) {
     if (raw is! Map<String, dynamic>)
       throw const FormatException('attrs must be an object');
@@ -246,6 +393,12 @@ class RetainedModel {
             (data is! Map || data.values.any((v) => v is! String)))
           throw const FormatException('Invalid theme tokens');
       }
+      if (e.key == 'emojiscale') {
+        final scale = double.tryParse(v);
+        if (scale == null || !scale.isFinite || scale < 1 || scale > 3)
+          throw const FormatException('Invalid emoji scale');
+      }
+      if (e.key == 'svg') validateInlineSvg(v);
       if (e.key == 'translations') UiStrings.validate(jsonDecode(v));
       if ({'textargs', 'hintargs', 'tooltipargs'}.contains(e.key)) {
         final data = jsonDecode(v);
@@ -318,6 +471,7 @@ class RetainedModel {
     for (final node in changed) {
       node.changed();
     }
+    revision.value++;
   }
 
   void patch(String json) {
@@ -347,6 +501,7 @@ class RetainedModel {
     for (final node in changed) {
       node.changed();
     }
+    revision.value++;
   }
 
   void emit(RNode node, String event, [String value = '']) =>
@@ -665,9 +820,10 @@ class PlainLabelRender extends RenderBox {
             node.text('disabledtextcolor'),
             palette.color(node.text('textcolor'), const Color(0xff888888)),
           );
-    painter.text = TextSpan(
-      text: palette.text(node, 'text'),
-      style: style.copyWith(color: color),
+    painter.text = emojiTextSpan(
+      palette.text(node, 'text'),
+      style.copyWith(color: color),
+      node.number('emojiscale', 1),
     );
     painter.textScaler = scaler;
     painter.ellipsis = node.flag('endellipsis') ? '…' : null;
@@ -726,6 +882,176 @@ class PlainLabelRender extends RenderBox {
   }
 }
 
+// Preserve the content at the visible bottom edge when a neighbouring pane
+// changes viewport height. The correction is applied during layout, before paint.
+// Content-only changes keep the usual scroll policy; this never forces a reader
+// of history to the end of the list.
+class VisibleEndScrollPhysics extends ScrollPhysics {
+  const VisibleEndScrollPhysics({super.parent});
+  @override
+  VisibleEndScrollPhysics applyTo(ScrollPhysics? ancestor) =>
+      VisibleEndScrollPhysics(parent: buildParent(ancestor));
+  @override
+  double adjustPositionForNewDimensions({
+    required ScrollMetrics oldPosition,
+    required ScrollMetrics newPosition,
+    required bool isScrolling,
+    required double velocity,
+  }) {
+    if (oldPosition.viewportDimension != newPosition.viewportDimension) {
+      return (oldPosition.pixels +
+              oldPosition.viewportDimension -
+              newPosition.viewportDimension)
+          .clamp(newPosition.minScrollExtent, newPosition.maxScrollExtent);
+    }
+    return super.adjustPositionForNewDimensions(
+      oldPosition: oldPosition,
+      newPosition: newPosition,
+      isScrolling: isScrolling,
+      velocity: velocity,
+    );
+  }
+}
+
+// Stroke icons opt in to an adjustable width in a 24-unit view box. Their hit
+// targets and focus/tooltip behaviour remain those of the ordinary Icon control.
+class OutlineIconPainter extends CustomPainter {
+  const OutlineIconPainter(this.glyph, this.color, this.width);
+  final String glyph;
+  final Color color;
+  final double width;
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / 24, size.height / 24);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width.clamp(.5, 3)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    if (glyph == 'chat') {
+      canvas.drawPath(
+        Path()
+          ..moveTo(5, 3.5)
+          ..lineTo(19, 3.5)
+          ..quadraticBezierTo(21, 3.5, 21, 5.5)
+          ..lineTo(21, 16)
+          ..quadraticBezierTo(21, 18, 19, 18)
+          ..lineTo(8, 18)
+          ..lineTo(3, 21)
+          ..lineTo(3, 5.5)
+          ..quadraticBezierTo(3, 3.5, 5, 3.5)
+          ..close(),
+        paint,
+      );
+    } else if (glyph == 'discover') {
+      canvas.drawCircle(const Offset(12, 12), 9.5, paint);
+      canvas.drawPath(
+        Path()
+          ..moveTo(16.5, 7.5)
+          ..lineTo(13.7, 13.7)
+          ..lineTo(7.5, 16.5)
+          ..lineTo(10.3, 10.3)
+          ..close(),
+        paint,
+      );
+    } else if (glyph == 'bluetooth') {
+      canvas.drawPath(
+        Path()
+          ..moveTo(6, 7)
+          ..lineTo(17, 17)
+          ..lineTo(11, 22)
+          ..lineTo(11, 2)
+          ..lineTo(17, 7)
+          ..lineTo(6, 17),
+        paint,
+      );
+    } else if (glyph == 'lan') {
+      canvas.drawRect(const Rect.fromLTWH(9, 2, 6, 5), paint);
+      canvas.drawPath(
+        Path()
+          ..moveTo(12, 7)
+          ..lineTo(12, 11)
+          ..moveTo(5, 16)
+          ..lineTo(5, 11)
+          ..lineTo(19, 11)
+          ..lineTo(19, 16)
+          ..moveTo(12, 11)
+          ..lineTo(12, 16),
+        paint,
+      );
+      for (final x in [2.0, 9.0, 16.0]) {
+        canvas.drawRect(Rect.fromLTWH(x, 16, 6, 5), paint);
+      }
+    } else if (glyph == 'globe') {
+      canvas.drawCircle(const Offset(12, 12), 9, paint);
+      canvas.drawOval(const Rect.fromLTWH(8, 3, 8, 18), paint);
+      canvas.drawLine(const Offset(3, 12), const Offset(21, 12), paint);
+      canvas.drawPath(
+        Path()
+          ..moveTo(5, 6.5)
+          ..quadraticBezierTo(12, 9, 19, 6.5)
+          ..moveTo(5, 17.5)
+          ..quadraticBezierTo(12, 15, 19, 17.5),
+        paint,
+      );
+    } else if (glyph == 'emoji') {
+      canvas.drawCircle(const Offset(12, 12), 9, paint);
+      final fill = Paint()..color = color;
+      canvas.drawCircle(const Offset(8.5, 9), 1, fill);
+      canvas.drawCircle(const Offset(15.5, 9), 1, fill);
+      canvas.drawPath(
+        Path()
+          ..moveTo(7.5, 13.5)
+          ..quadraticBezierTo(12, 19, 16.5, 13.5)
+          ..close(),
+        paint,
+      );
+    } else if (glyph == 'folder') {
+      canvas.drawPath(
+        Path()
+          ..moveTo(3, 6)
+          ..quadraticBezierTo(3, 4, 5, 4)
+          ..lineTo(9, 4)
+          ..lineTo(11, 7)
+          ..lineTo(19, 7)
+          ..quadraticBezierTo(21, 7, 21, 9)
+          ..lineTo(21, 19)
+          ..lineTo(3, 19)
+          ..close(),
+        paint,
+      );
+      canvas.drawLine(const Offset(3, 10), const Offset(21, 10), paint);
+    } else {
+      final path = Path();
+      for (var tooth = 0; tooth < 8; tooth++) {
+        for (var corner = 0; corner < 4; corner++) {
+          final angle =
+              (tooth * 45 + [-22.5, -10, 10, 22.5][corner]) * math.pi / 180;
+          final radius = corner == 0 || corner == 3 ? 8.0 : 10.0;
+          final point = Offset(
+            12 + math.cos(angle) * radius,
+            12 + math.sin(angle) * radius,
+          );
+          if (tooth == 0 && corner == 0) {
+            path.moveTo(point.dx, point.dy);
+          } else {
+            path.lineTo(point.dx, point.dy);
+          }
+        }
+      }
+      canvas.drawPath(path..close(), paint);
+      canvas.drawCircle(const Offset(12, 12), 3.4, paint);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant OutlineIconPainter old) =>
+      old.glyph != glyph || old.color != color || old.width != width;
+}
+
 class TreeView extends StatefulWidget {
   const TreeView({
     super.key,
@@ -752,19 +1078,25 @@ class _TreeViewState extends State<TreeView> {
   Map<String, String> previous = {};
   List<int> viewport = [];
   bool reportPending = false;
+  String textMeasurement = '';
   @override
   void initState() {
     super.initState();
     n.addListener(updated);
     previous = Map.of(n.attrs);
     if (n.tag == 'Edit') {
-      editor = TextEditingController(text: n.text('text'));
+      editor = EmojiEditingController(
+        text: n.text('text'),
+        emojiScale: n.number('emojiscale', 1),
+      );
       focus = FocusNode();
       focus!.addListener(focusChanged);
+      m.editors[n.id] = this;
     }
     if (n.tag == 'Combo') focus = FocusNode();
     if (n.tag == 'List') {
-      scroll = ScrollController();
+      scroll = ScrollController(initialScrollOffset: n.scrollOffset);
+      scroll!.addListener(() => n.scrollOffset = scroll!.offset);
       scroll!.addListener(reportViewport);
     }
   }
@@ -843,6 +1175,7 @@ class _TreeViewState extends State<TreeView> {
   @override
   void dispose() {
     n.removeListener(updated);
+    if (m.editors[n.id] == this) m.editors.remove(n.id);
     focus?.removeListener(focusChanged);
     focus?.dispose();
     editor?.dispose();
@@ -859,6 +1192,7 @@ class _TreeViewState extends State<TreeView> {
       if (!mounted || !scroll!.hasClients) return;
       final row = n.number('row_height', 24).clamp(1, 8192);
       final offset = scroll!.offset;
+      n.scrollOffset = offset;
       final v = [
         math.max(0, (offset / row).floor() - 1),
         (scroll!.position.viewportDimension / row).ceil() + 3,
@@ -940,16 +1274,42 @@ class _TreeViewState extends State<TreeView> {
         maxLines: 1,
         overflow: TextOverflow.clip,
       );
-    } else
-      result = Text(
-        text,
-        style: style,
+    } else {
+      final span = emojiTextSpan(text, style, n.number('emojiscale', 1));
+      Widget render() => Text.rich(
+        span,
         textAlign: align,
         maxLines: n.flag('wordwrap') ? null : 1,
         overflow: n.flag('endellipsis')
             ? TextOverflow.ellipsis
             : TextOverflow.clip,
       );
+      result = n.flag('event_textmeasure')
+          ? LayoutBuilder(
+              builder: (_, constraints) {
+                final painter = TextPainter(
+                  text: span,
+                  textDirection: TextDirection.ltr,
+                  textScaler: MediaQuery.textScalerOf(context),
+                  maxLines: n.flag('wordwrap') ? null : 1,
+                )..layout(maxWidth: constraints.maxWidth);
+                final measurement =
+                    '${constraints.maxWidth.floor()},${painter.height.ceil()}';
+                painter.dispose();
+                final signature =
+                    '$text\u0000${style.fontFamily},${style.fontSize},${n.number('emojiscale', 1)},$measurement';
+                if (textMeasurement != signature) {
+                  textMeasurement = signature;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted && textMeasurement == signature)
+                      emit('textmeasure', measurement);
+                  });
+                }
+                return render();
+              },
+            )
+          : render();
+    }
     final horizontal = n.text('align') == 'center'
         ? 0.0
         : n.text('align') == 'right'
@@ -1062,6 +1422,9 @@ class _TreeViewState extends State<TreeView> {
         });
         return ListView.builder(
           controller: scroll,
+          physics: n.text('scrollanchor') == 'bottom'
+              ? const VisibleEndScrollPhysics()
+              : null,
           itemExtent: virtual ? n.number('row_height', 24) : null,
           itemCount: virtual ? count : rows.length,
           scrollCacheExtent: const ScrollCacheExtent.pixels(0),
@@ -1095,6 +1458,7 @@ class _TreeViewState extends State<TreeView> {
   }
 
   Widget input() {
+    (editor as EmojiEditingController).emojiScale = n.number('emojiscale', 1);
     Widget field = TextField(
       controller: editor,
       focusNode: focus,
@@ -1113,7 +1477,11 @@ class _TreeViewState extends State<TreeView> {
           DefaultTextStyle.of(context).style.color ?? Colors.black,
         ),
       ),
-      textAlignVertical: TextAlignVertical.center,
+      textAlignVertical: switch (n.text('valign')) {
+        'top' => TextAlignVertical.top,
+        'bottom' => TextAlignVertical.bottom,
+        _ => TextAlignVertical.center,
+      },
       decoration: InputDecoration(
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
@@ -1205,9 +1573,36 @@ class _TreeViewState extends State<TreeView> {
   }
 
   Widget icon() {
+    if (n.number('strokewidth') > 0 &&
+        {
+          'chat',
+          'discover',
+          'settings',
+          'emoji',
+          'folder',
+          'bluetooth',
+          'lan',
+          'globe',
+        }.contains(n.text('glyph'))) {
+      final size = n.number('iconsize', 16);
+      return Center(
+        child: CustomPaint(
+          size: Size.square(size),
+          painter: OutlineIconPainter(
+            n.text('glyph'),
+            color('textcolor', const Color(0xff666666)),
+            n.number('strokewidth'),
+          ),
+        ),
+      );
+    }
     const icons = {
       'chat': Icons.chat_bubble_outline,
       'devices': Icons.devices_outlined,
+      'discover': Icons.explore_outlined,
+      'bluetooth': Icons.bluetooth,
+      'lan': Icons.lan_outlined,
+      'globe': Icons.public,
       'settings': Icons.settings_outlined,
       'search': Icons.search,
       'emoji': Icons.sentiment_satisfied_alt,
@@ -1307,6 +1702,11 @@ class _TreeViewState extends State<TreeView> {
         ),
         child: result,
       );
+    if (n.flag('clip'))
+      result = ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: result,
+      );
     if (palette.text(n, 'tooltip').isNotEmpty &&
         m.root.value?.flag('tooltips', true) != false)
       result = Tooltip(
@@ -1374,7 +1774,22 @@ class _TreeViewState extends State<TreeView> {
         final c = n.children
             .where((c) => c.text('name') == selected)
             .firstOrNull;
-        result = c == null ? const SizedBox.shrink() : child(c);
+        result = n.flag('keepalive')
+            ? IndexedStack(
+                index: c == null ? null : n.children.indexOf(c),
+                sizing: StackFit.expand,
+                children: [
+                  for (final page in n.children)
+                    ExcludeFocus(
+                      key: ValueKey(page.id),
+                      excluding: page != c,
+                      child: TickerMode(enabled: page == c, child: child(page)),
+                    ),
+                ],
+              )
+            : c == null
+            ? const SizedBox.shrink()
+            : child(c);
       case 'Control':
         result = const SizedBox.expand();
       case 'Label':
@@ -1384,6 +1799,64 @@ class _TreeViewState extends State<TreeView> {
         result = textContent(context, decimal: n.tag.startsWith('Decimal'));
       case 'Icon':
         result = icon();
+      case 'EmojiPicker':
+        result = EmojiPickerSurface(
+          revision: m.revision,
+          valid: () => m.emojiEditor(n) != null,
+          editorRevision: () => m.emojiEditor(n)?.n.text('edit_revision') ?? '',
+          recent: m.emojiRecent,
+          largePage: n.flag('largepage'),
+          normalLabel: palette.text(n, 'normaltext').isEmpty
+              ? 'Normal'
+              : palette.text(n, 'normaltext'),
+          largeLabel: palette.text(n, 'largetext').isEmpty
+              ? 'Large'
+              : palette.text(n, 'largetext'),
+          largeRecent: m.emojiLargeRecent,
+          onLargeSelect: (emoji) => m.selectLargeEmoji(n, emoji),
+          items: (jsonDecode(n.text('items_json', '[]')) as List)
+              .cast<String>(),
+          label: palette.text(n, 'tooltip'),
+          recentLabel: palette.text(n, 'hint'),
+          allLabel: palette.text(n, 'text'),
+          background: palette.color(r'$panel'),
+          foreground: palette.color(r'$text'),
+          muted: palette.color(r'$muted'),
+          border: palette.color(r'$border'),
+          accent: palette.color(r'$accent'),
+          radius:
+              double.tryParse(
+                palette.tokens[n
+                        .text('borderround', r'$radius')
+                        .replaceFirst(r'$', '')] ??
+                    n.text('borderround', '8'),
+              ) ??
+              8,
+          onSelect: (emoji) => m.insertEmoji(n, emoji),
+          restoreFocus: () => m.emojiEditor(n)?.focus?.requestFocus(),
+          child: icon(),
+        );
+      case 'ResizeHandle':
+        result = TextFieldTapRegion(
+          child: ResizeHandleSurface(
+            horizontal: n.text('direction') == 'horizontal',
+            enabled: n.flag('enabled', true),
+            label: palette.text(n, 'tooltip'),
+            color: color('textcolor', palette.color(r'$accent')),
+            emit: emit,
+          ),
+        );
+      case 'Svg':
+        result = n.text('svg').isEmpty
+            ? const SizedBox.shrink()
+            : SvgPicture.string(
+                n.text('svg'),
+                fit: BoxFit.contain,
+                colorFilter: n.text('textcolor').isEmpty
+                    ? null
+                    : ColorFilter.mode(color('textcolor'), BlendMode.srcIn),
+                excludeFromSemantics: true,
+              );
       case 'Edit':
         result = input();
       case 'Combo':
@@ -1501,6 +1974,121 @@ class _TreeViewState extends State<TreeView> {
       result = RepaintBoundary(child: result);
     return result;
   }
+}
+
+// Reports cumulative window-space displacement, so consumer-driven layout
+// changes cannot move the origin or double-count a drag. No sizing policy lives
+// here: the consumer owns the adjacent panes and their limits.
+class ResizeHandleSurface extends StatefulWidget {
+  const ResizeHandleSurface({
+    super.key,
+    required this.horizontal,
+    required this.enabled,
+    required this.label,
+    required this.color,
+    required this.emit,
+  });
+  final bool horizontal, enabled;
+  final String label;
+  final Color color;
+  final void Function(String, String) emit;
+  @override
+  State<ResizeHandleSurface> createState() => _ResizeHandleSurfaceState();
+}
+
+class _ResizeHandleSurfaceState extends State<ResizeHandleSurface> {
+  Offset? origin;
+  int displacement = 0;
+  bool highlighted = false;
+  void start(DragStartDetails d) {
+    origin = d.globalPosition;
+    displacement = 0;
+    widget.emit('resizestart', '0');
+  }
+
+  void move(DragUpdateDetails d) {
+    if (origin == null) return;
+    final delta = d.globalPosition - origin!;
+    displacement = (widget.horizontal ? delta.dx : delta.dy).round();
+    widget.emit('resize', '$displacement');
+  }
+
+  void end() {
+    if (origin == null) return;
+    origin = null;
+    widget.emit('resizeend', '$displacement');
+  }
+
+  void step(int delta) {
+    if (!widget.enabled || origin != null) return;
+    widget.emit('resizestart', '0');
+    widget.emit('resize', '$delta');
+    widget.emit('resizeend', '$delta');
+  }
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: widget.horizontal
+        ? SystemMouseCursors.resizeLeftRight
+        : SystemMouseCursors.resizeUpDown,
+    child: Focus(
+      canRequestFocus: widget.enabled,
+      onFocusChange: (value) => setState(() => highlighted = value),
+      onKeyEvent: (_, event) {
+        if (!widget.enabled || event is! KeyDownEvent)
+          return KeyEventResult.ignored;
+        final key = event.logicalKey;
+        final negative = widget.horizontal
+            ? LogicalKeyboardKey.arrowLeft
+            : LogicalKeyboardKey.arrowUp;
+        final positive = widget.horizontal
+            ? LogicalKeyboardKey.arrowRight
+            : LogicalKeyboardKey.arrowDown;
+        if (key != negative && key != positive) return KeyEventResult.ignored;
+        step(key == negative ? -8 : 8);
+        return KeyEventResult.handled;
+      },
+      child: Semantics(
+        label: widget.label,
+        enabled: widget.enabled,
+        onIncrease: widget.enabled ? () => step(8) : null,
+        onDecrease: widget.enabled ? () => step(-8) : null,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragStart: widget.enabled && !widget.horizontal
+              ? start
+              : null,
+          onVerticalDragUpdate: widget.enabled && !widget.horizontal
+              ? move
+              : null,
+          onVerticalDragEnd: widget.enabled && !widget.horizontal
+              ? (_) => end()
+              : null,
+          onVerticalDragCancel: widget.enabled && !widget.horizontal
+              ? end
+              : null,
+          onHorizontalDragStart: widget.enabled && widget.horizontal
+              ? start
+              : null,
+          onHorizontalDragUpdate: widget.enabled && widget.horizontal
+              ? move
+              : null,
+          onHorizontalDragEnd: widget.enabled && widget.horizontal
+              ? (_) => end()
+              : null,
+          onHorizontalDragCancel: widget.enabled && widget.horizontal
+              ? end
+              : null,
+          child: ColoredBox(
+            color: highlighted
+                ? widget.color.withValues(alpha: .35)
+                : Colors.transparent,
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class Measure extends SingleChildRenderObjectWidget {

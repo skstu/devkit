@@ -148,6 +148,7 @@ protected:
   std::map<std::string, std::vector<std::function<void(const NotifyEvent &)>>>
       listeners_;
   Rect rect_{};
+  int measuredTextWidth_ = -1, measuredTextHeight_ = 0;
   void Changed(bool structure = false) {
     if (auto s = owner_.lock()) {
       if (structure)
@@ -167,6 +168,8 @@ public:
     if (attributes_.contains(key) && attributes_[key] == value)
       return;
     attributes_[key] = value;
+    if (key == "text" || key == "fontsize" || key == "font" || key == "emojiscale" || key == "wordwrap")
+      measuredTextWidth_ = -1;
     Changed();
   }
   std::string Attribute(const std::string &key,
@@ -274,6 +277,15 @@ public:
       }
       return;
     }
+    if (event == "textmeasure") {
+      const auto v = detail::integers(value);
+      if (v.size() == 2 && v[0] >= 0 && v[1] >= 0) {
+        measuredTextWidth_ = static_cast<int>(v[0]);
+        measuredTextHeight_ = static_cast<int>(v[1]);
+        Notify(event, value, v[0], v[1]);
+      }
+      return;
+    }
     if (event == "click" && (!IsEnabled() || !IsVisible()))
       return;
     Notify(event, value);
@@ -288,7 +300,11 @@ public:
       s->Schedule();
   }
   int MeasureText(int width) const {
-    const double font = std::atof(Attribute("fontsize", "13").c_str());
+    if (width == measuredTextWidth_) return measuredTextHeight_;
+    // Conservative first-frame fallback; opt-in textmeasure then supplies the
+    // renderer's actual wrapped height, including enlarged emoji and fonts.
+    const double font = std::atof(Attribute("fontsize", "13").c_str()) *
+      std::clamp(std::atof(Attribute("emojiscale", "1").c_str()), 1.0, 3.0);
     int lines = 1, units = 0;
     for (unsigned char c : GetText()) {
       if (c == '\n') {
@@ -350,6 +366,24 @@ class Icon : public Button {
 public:
   Icon() : Button("Icon") {}
 };
+class ResizeHandle : public Control {
+public:
+  ResizeHandle() : Control("ResizeHandle") {}
+  void Receive(const std::string &event, const std::string &value) override {
+    if (event == "resizestart" || event == "resize" || event == "resizeend") {
+      if (!IsEnabled() || !IsVisible()) return;
+      const auto values = detail::integers(value);
+      if (values.size() == 1) Notify(event, value, values[0]);
+      return;
+    }
+    Control::Receive(event, value);
+  }
+};
+class Svg : public Control {
+public:
+  Svg() : Control("Svg") {}
+  void SetSource(std::string_view source) { SetAttribute("svg", std::string(source)); }
+};
 class StackIconButton : public Icon {
 public:
   StackIconButton() { SetAttribute("glyph", "ticket"); }
@@ -406,6 +440,12 @@ public:
   }
 };
 class FormEdit : public Edit {};
+// SDK-owned popover and caret insertion; consumers keep draft/send policy.
+class EmojiPicker : public Control {
+public:
+  EmojiPicker() : Control("EmojiPicker") { SetAttribute("glyph", "emoji"); }
+  void SetTarget(const Edit& edit) { SetAttribute("target", std::to_string(edit.id)); }
+};
 class Combo : public Control {
   std::vector<std::string> items_;
   int selected_ = -1;
@@ -849,7 +889,7 @@ public:
   FLUI_CREATE(WrapLayout)
   FLUI_CREATE(VerticalLayout)
     FLUI_CREATE(HorizontalLayout) FLUI_CREATE(Label) FLUI_CREATE(Button)
-        FLUI_CREATE(Icon) FLUI_CREATE(DecimalLabel) FLUI_CREATE(DecimalButton)
+        FLUI_CREATE(Icon) FLUI_CREATE(EmojiPicker) FLUI_CREATE(ResizeHandle) FLUI_CREATE(Svg) FLUI_CREATE(DecimalLabel) FLUI_CREATE(DecimalButton)
             FLUI_CREATE(Edit) FLUI_CREATE(Combo) FLUI_CREATE(Option)
                 FLUI_CREATE(TabLayout) FLUI_CREATE(List) FLUI_CREATE(PricePlot)
 #undef FLUI_CREATE
