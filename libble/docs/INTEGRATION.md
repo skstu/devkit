@@ -23,7 +23,9 @@ location and set their loader search path. Release signing belongs to the host.
 The query functions `dkble_version` and `dkble_abi_version` are thread-independent.
 No permanent background thread or idle polling timer is created by this SDK.
 Active connection/send deadlines and explicitly requested reconnects use the
-Apple main queue. Background discovery/recovery remains subject to OS policy.
+Apple main queue. Explicit `recover` refreshes scanning so duplicate suppression cannot leave
+the consumer with only stale candidates; it preserves existing GATT links and
+probe authentication requirements. Background discovery/recovery remains subject to OS policy.
 
 ## Byte transport and identity
 
@@ -58,9 +60,14 @@ ERROR/OVERFLOW. Explicitly start again after invalidating consumer routes.
 
 ## Current platform scope
 
-Only the macOS arm64 package is validated in this extraction. Apple source is
-shared with iOS, but an iOS framework/XCFramework, signing, privacy declarations
-and device validation are a subsequent slice. Android/Windows/Linux remain
+macOS arm64 / macOS 13+ uses a dylib. iOS arm64 / iOS 15+ now builds an
+unsigned `DevkitBle.framework`, packaged by `tools/package_ios_sdk.py libble`.
+Embed it as a sibling in the application's Frameworks directory and sign it
+with the host team. The consumer needs only the C header and this framework;
+Swift/CoreBluetooth implementation and build tools remain producer-owned.
+Supply `NSBluetoothAlwaysUsageDescription`; add Bluetooth background modes only
+if the product explicitly uses those roles. Simulator/XCFramework distribution
+has not been validated. See consumer evidence for actual device test coverage. Android/Windows/Linux remain
 unimplemented SDK backends; unsupported targets fail configuration explicitly.
 Do not replace the user's previously working cross-platform release with this
-single-platform development preview.
+Apple development preview.

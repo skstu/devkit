@@ -105,6 +105,11 @@ final class BleEngine: NSObject,
     var rejected = false
     bridge.handle(BleCommand(method: "adoptProbe", arguments: ["token":"once", "oldPeer":old.peer.uuidString])) { rejected = $0 != nil }
     checks["probe cannot replace a ready old link"] = rejected && probe.probe == "once" && bridge.links.count == 2
+    bridge.mode = "scan"; bridge.wanted.insert(old.peer)
+    bridge.handle(BleCommand(method: "recover", arguments: [:])) { _ in }
+    checks["scan refresh preserves ready links and unverified probe intent"] =
+      bridge.links[old.id] === old && bridge.links[probe.id] === probe &&
+      bridge.wanted.contains(old.peer) && !bridge.wanted.contains(probe.peer) && probe.probe == "once"
     var completed = 0
     old.completion = { _ in completed += 1 }; old.pending = Data([9])
     var busy = false
@@ -186,7 +191,11 @@ final class BleEngine: NSObject,
         disconnectLink(link, retry: call.method == "resetLink")
       }
       result(nil)
-    case "recover": updateMode(); result(nil)
+    case "recover":
+      // CoreBluetooth suppresses duplicate advertisements by default. An
+      // explicit refresh must produce fresh observations without dropping GATT.
+      if mode == "scan" { manager?.stopScan() }
+      updateMode(); result(nil)
     case "send":
       guard let id = args["link"] as? String, let link = links[id], link.ready,
             let bytes = args["data"] as? BleBytes,

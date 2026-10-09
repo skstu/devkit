@@ -1175,6 +1175,8 @@ class _TreeViewState extends State<TreeView> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
           focusNode: focus,
+          dropdownColor: palette.color(r'$panel'),
+          iconEnabledColor: palette.color(r'$text'),
           isExpanded: true,
           isDense: true,
           value: selected >= 0 && selected < items.length ? selected : null,
@@ -1185,7 +1187,10 @@ class _TreeViewState extends State<TreeView> {
                 child: Text(
                   items[i],
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color('textcolor', palette.color(r'$text')),
+                  ),
                 ),
               ),
           ],
@@ -1201,6 +1206,15 @@ class _TreeViewState extends State<TreeView> {
 
   Widget icon() {
     const icons = {
+      'chat': Icons.chat_bubble_outline,
+      'devices': Icons.devices_outlined,
+      'settings': Icons.settings_outlined,
+      'search': Icons.search,
+      'emoji': Icons.sentiment_satisfied_alt,
+      'folder': Icons.folder_outlined,
+      'back': Icons.chevron_left,
+      'more': Icons.more_horiz,
+      'person': Icons.person_outline,
       'info': Icons.info_outline,
       'chart': Icons.bar_chart,
       'launch': Icons.open_in_new,
@@ -1443,7 +1457,9 @@ class _TreeViewState extends State<TreeView> {
         },
         child: Semantics(
           button: true,
-          label: n.text('tooltip', n.text('text')),
+          label: palette.text(n, 'tooltip').isNotEmpty
+              ? palette.text(n, 'tooltip')
+              : palette.text(n, 'text'),
           enabled: n.flag('enabled', true),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,

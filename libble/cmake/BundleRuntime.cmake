@@ -1,5 +1,10 @@
 # Deploy the exact private runtime next to an application or shared consumer.
 function(devkit_ble_bundle target)
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "@executable_path/Frameworks")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "@executable_path/Frameworks")
+    return()
+  endif()
   if(WIN32)
     set(runtime_name "$<TARGET_FILE_NAME:devkit::ble>")
   else()

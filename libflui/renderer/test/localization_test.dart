@@ -115,4 +115,61 @@ void main() {
       expect(model.root.value!.text('locale'), 'en');
     },
   );
+  testWidgets(
+    'dark popup stays readable and icon actions expose localized names',
+    (t) async {
+      final model = RetainedModel((_, __) {});
+      model.setTree(
+        jsonEncode({
+          'id': '1',
+          'tag': 'Window',
+          'attrs': {...attrs('zh-Hans'), 'theme': 'dark'},
+          'children': [
+            {
+              'id': '2',
+              'tag': 'VerticalLayout',
+              'attrs': {},
+              'children': [
+                {
+                  'id': '3',
+                  'tag': 'Icon',
+                  'attrs': {
+                    'glyph': 'chat',
+                    'tooltipkey': 'send',
+                    'event_click': 'true',
+                    'height': '40',
+                  },
+                  'children': [],
+                },
+                {
+                  'id': '4',
+                  'tag': 'Combo',
+                  'attrs': {
+                    'items_json': '["简体中文","English"]',
+                    'selected': '0',
+                    'height': '40',
+                  },
+                  'children': [],
+                },
+                {'id': '5', 'tag': 'Control', 'attrs': {}, 'children': []},
+              ],
+            },
+          ],
+        }),
+      );
+      final semantics = t.ensureSemantics();
+      await t.pumpWidget(RetainedApp(model: model));
+      await t.pumpAndSettle();
+      expect(find.bySemanticsLabel('发送'), findsWidgets);
+      await t.tap(find.byType(DropdownButton<int>));
+      await t.pumpAndSettle();
+      final menuText = t.widgetList<Text>(find.text('English'));
+      expect(menuText, isNotEmpty);
+      for (final text in menuText) {
+        expect(text.style!.color, const Color(0xffeeeeee));
+      }
+      expect(t.takeException(), isNull);
+      semantics.dispose();
+    },
+  );
 }

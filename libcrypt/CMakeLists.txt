@@ -56,6 +56,13 @@ crypt_core_settings(devkit_crypt)
 target_compile_definitions(devkit_crypt PRIVATE DEVKIT_CRYPT_BUILD=1)
 target_include_directories(devkit_crypt PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 set_target_properties(devkit_crypt PROPERTIES EXPORT_NAME crypt OUTPUT_NAME devkit_crypt VERSION ${NATIVE_LIBS_VERSION} SOVERSION 1)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set_target_properties(devkit_crypt PROPERTIES FRAMEWORK TRUE OUTPUT_NAME DevkitCrypt
+    MACOSX_FRAMEWORK_IDENTIFIER com.skstu.devkit.libcrypt
+    MACOSX_FRAMEWORK_BUNDLE_VERSION "${NATIVE_LIBS_VERSION}"
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${NATIVE_LIBS_VERSION}"
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
 if(APPLE)
   set_target_properties(devkit_crypt PROPERTIES INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR ON)
   set_property(TARGET devkit_crypt APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/exports.txt")
@@ -64,7 +71,7 @@ elseif(UNIX)
   set_property(TARGET devkit_crypt APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/exports.map")
   target_link_options(devkit_crypt PRIVATE "LINKER:--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exports.map" "LINKER:--exclude-libs,ALL" -static-libstdc++ -static-libgcc)
 endif()
-install(TARGETS devkit_crypt EXPORT devkitCryptTargets LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib)
+install(TARGETS devkit_crypt EXPORT devkitCryptTargets LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib FRAMEWORK DESTINATION lib)
 install(FILES include/libcrypt/crypt.h include/libcrypt/crypt.hpp DESTINATION include/libcrypt)
 install(FILES LICENSE README.md docs/ABI.md docs/ALGORITHMS.md DESTINATION share/libcrypt)
 install(DIRECTORY examples/consumer DESTINATION share/libcrypt/examples)

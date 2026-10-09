@@ -17,6 +17,13 @@ target_include_directories(devkit_net PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_L
 target_link_libraries(devkit_net PRIVATE libuv::uv_a ngtcp2::ngtcp2_static ngtcp2::ngtcp2_crypto_ossl_static OpenSSL::SSL OpenSSL::Crypto)
 set_target_properties(devkit_net PROPERTIES EXPORT_NAME net OUTPUT_NAME devkit_net VERSION ${NATIVE_LIBS_VERSION} SOVERSION 1 CXX_VISIBILITY_PRESET hidden C_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
 native_libs_set_warnings(devkit_net)
+if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set_target_properties(devkit_net PROPERTIES FRAMEWORK TRUE OUTPUT_NAME DevkitNet
+    MACOSX_FRAMEWORK_IDENTIFIER com.skstu.devkit.libnet
+    MACOSX_FRAMEWORK_BUNDLE_VERSION "${NATIVE_LIBS_VERSION}"
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${NATIVE_LIBS_VERSION}"
+    XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED NO)
+endif()
 if(APPLE)
   set_target_properties(devkit_net PROPERTIES INSTALL_NAME_DIR "@rpath" BUILD_WITH_INSTALL_NAME_DIR ON)
   target_link_options(devkit_net PRIVATE "LINKER:-exported_symbols_list,${CMAKE_CURRENT_LIST_DIR}/exports.txt")
@@ -25,7 +32,7 @@ elseif(UNIX)
   target_link_options(devkit_net PRIVATE "LINKER:--version-script=${CMAKE_CURRENT_LIST_DIR}/exports.map" "LINKER:--exclude-libs,ALL" -static-libstdc++ -static-libgcc)
   set_property(TARGET devkit_net APPEND PROPERTY LINK_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/exports.map")
 endif()
-install(TARGETS devkit_net EXPORT devkitNetTargets LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib)
+install(TARGETS devkit_net EXPORT devkitNetTargets LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib FRAMEWORK DESTINATION lib)
 install(FILES ../include/libnet/net.h DESTINATION include/libnet)
 install(FILES ../LICENSE ../docs/SDK.md DESTINATION share/libnet)
 install(DIRECTORY ../examples/consumer DESTINATION share/libnet/examples)

@@ -394,6 +394,11 @@ public:
   void Receive(const std::string &event, const std::string &value) override {
     if (event == "valuechanged") {
       attributes_["text"] = value;
+      // A renderer-owned edit must also reach the retained node. Otherwise
+      // its stale text can restore an old value when the field loses focus.
+      // Echo text without a forced revision so active IME/caret state stays owned
+      // by the renderer until an explicit SetValueUtf8 from the consumer.
+      Changed();
       Notify(event, value);
       return;
     }

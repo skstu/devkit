@@ -54,3 +54,10 @@ component checks and verifies the C export allowlist, architecture, minimum OS,
 private runtime dependencies and input hashes. Output includes headers, runtime,
 CMake integration, documentation, example, licenses and `manifest.json`.
 These local previews are not release-signed or notarized.
+
+Apple packaging: macOS 13+ arm64 dylib; iOS 15+ arm64 `DevkitBle.framework`.
+Use the installed public header and binary; no Swift consumer project is required.
+iOS signing and Bluetooth privacy declarations belong to the application.
+`tools/package_ios_sdk.py libble --build <build> --output <output>` emits an
+integrity manifest and binary lock. This is a development preview; see integration
+documentation for platform and validation limits.

@@ -11,6 +11,10 @@ p.add_argument('--client',type=Path,required=True)
 p.add_argument('--work',type=Path,required=True)
 p.add_argument('--android-ndk',type=Path)
 p.add_argument('--bundle-id',required=True)
+p.add_argument('--display-name', default='Libflui Preview')
+p.add_argument('--client-cmake-arg', action='append', default=[])
+p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background declarations, merged into SDK-owned host')
+p.add_argument('--embed-framework', action='append', type=Path, default=[])
 a=p.parse_args()
 component=Path(__file__).resolve().parents[1]
 repo=component.parent
@@ -68,7 +72,7 @@ sdklock=work/'native.lock.json'
 sdklock.write_text(json.dumps({'source_commit':commit,'component_dirty':True,'manifest_sha256':sha(prefix/'sdk-manifest.json')},indent=2)+'\n')
 clientbuild=work/'client'
 run(['cmake','-S',a.client.resolve(),'-B',clientbuild,'-DZHIYU_PORTABLE_HOST=ON',
-     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),*flags])
+     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),*flags,*a.client_cmake_arg])
 run(['cmake','--build',clientbuild,'--config','Release','--parallel','4'])
 if a.platform=='android':
     jni=host/'android/app/src/main/jniLibs/arm64-v8a';jni.mkdir(parents=True,exist_ok=True)
@@ -119,10 +123,16 @@ else:
     s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = [^;]+;', 'PRODUCT_BUNDLE_IDENTIFIER = '+a.bundle_id+';',s)
     s=re.sub(r'IPHONEOS_DEPLOYMENT_TARGET = [^;]+;', 'IPHONEOS_DEPLOYMENT_TARGET = 15.0;',s)
     project.write_text(s)
-    plist=host/'ios/Runner/Info.plist';data=plistlib.loads(plist.read_bytes());data['CFBundleDisplayName']='直予 UI Preview';plist.write_bytes(plistlib.dumps(data))
+    plist=host/'ios/Runner/Info.plist';data=plistlib.loads(plist.read_bytes());data['CFBundleDisplayName']=a.display_name;data['CFBundleName']=a.display_name;data['CFBundleLocalizations']=['en','zh-Hans','zh-Hant'];
+    if a.ios_info_plist:
+        overlay=plistlib.loads(a.ios_info_plist.read_bytes())
+        allowed={'NSBluetoothAlwaysUsageDescription','NSBluetoothPeripheralUsageDescription','UIBackgroundModes'}
+        if not set(overlay).issubset(allowed):p.error('Only declared Bluetooth privacy/background keys are accepted')
+        data.update(overlay)
+    plist.write_bytes(plistlib.dumps(data))
     run([flutter,'--suppress-analytics','--no-version-check','build','ios','--release','--no-codesign','--no-pub'],host)
     app=host/'build/ios/iphoneos/Runner.app'
-    for source in [prefix/'lib/flui.framework',clientbuild/'FluiClient.framework']:
+    for source in [prefix/'lib/flui.framework',clientbuild/'FluiClient.framework',*a.embed_framework]:
         target=app/'Frameworks'/source.name
         if target.exists():shutil.rmtree(target)
         shutil.copytree(source,target,symlinks=True)

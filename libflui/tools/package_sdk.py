@@ -52,7 +52,9 @@ def main():
         parser.error('--build-dir must be configured from this checkout\'s standalone libflui directory')
     if cache.get('CMAKE_BUILD_TYPE') != 'Release' or cache.get('LIBFLUI_ARCHS') != 'arm64':
         parser.error('Only the validated Release / arm64 package is supported')
-    sources = [p for p in component.rglob('*') if p.is_file() and '__pycache__' not in p.parts]
+    generated = {'__pycache__', '.dart_tool', 'build'}
+    sources = [p for p in component.rglob('*')
+               if p.is_file() and not generated.intersection(p.relative_to(component).parts)]
     sources += [repository / name for name in scope[1:]]
     source_hashes = {str(p.relative_to(repository)): sha256(p) for p in sorted(sources)}
     version = (repository / 'VERSION').read_text().strip()

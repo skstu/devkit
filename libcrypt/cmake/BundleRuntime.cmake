@@ -1,5 +1,11 @@
 # Deploy the exact private runtime next to an application or shared consumer.
 function(devkit_crypt_bundle target)
+  if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+    # The application embeds each signed framework as a sibling; never nest frameworks.
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "@executable_path/Frameworks")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "@executable_path/Frameworks")
+    return()
+  endif()
   if(WIN32)
     set(runtime_name "$<TARGET_FILE_NAME:devkit::crypt>")
   else()

@@ -44,8 +44,20 @@ int main() {
     if (list->GetHeader() || list->GetItemCount())
       throw std::runtime_error("removed list retains header or virtual count");
     list->ClearItems();
-    std::cout << "PASS retained virtual header, disabled ancestors and retired "
-                 "action admission\n";
+    auto edit = std::make_shared<flui::Edit>();
+    window->root = edit;
+    window->Attach(edit);
+    edit->SetValueUtf8("old");
+    const auto revision = edit->Attribute("edit_revision");
+    window->dirty.clear();
+    window->Event(FLUI_EVENT_ACTION, FLUI_OK,
+                  std::to_string(edit->id) + ":valuechanged", "new draft");
+    if (!window->dirty.contains(edit->id) ||
+        edit->GetValueUtf8() != "new draft" ||
+        edit->Attribute("edit_revision") != revision)
+      throw std::runtime_error("user edit lost retained echo or forced the caret");
+    std::cout << "PASS retained virtual header, disabled ancestors, retired "
+                 "actions and user edit echo without forced revision\n";
     return 0;
   } catch (const std::exception &e) {
     std::cerr << e.what() << '\n';
