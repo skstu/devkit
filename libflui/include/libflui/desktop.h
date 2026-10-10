@@ -41,6 +41,16 @@ FLUI_API flui_status FLUI_CALL flui_file_dialog(uint32_t kind,
                                                 flui_string initial_name,
                                                 flui_string extensions,
                                                 flui_text_callback, void *user);
+/* Additive asynchronous picker. UI thread; accepts OPEN or DIRECTORY.
+ * FLUI_OK transfers callback ownership until exactly one completion on the UI
+ * thread. A successful cancellation returns FLUI_OK with an empty path.
+ * Nonzero immediate status means no callback. Result bytes are borrowed only
+ * during the callback; callers must retain a weak owner if their window closes.
+ * Mobile providers may return an app-cache copy; paths are not durable grants.
+ * Only one picker may be outstanding. Existing synchronous ABI is unchanged. */
+typedef void(FLUI_CALL *flui_file_callback)(flui_status, flui_string path, void *user);
+FLUI_API flui_status FLUI_CALL flui_file_dialog_async(uint32_t kind,
+    flui_string title, flui_file_callback, void *user);
 FLUI_API flui_status FLUI_CALL flui_executable_path(flui_text_callback,
                                                     void *user);
 /* Atomic binary data write, at most 64 MiB; path is UTF-8. */

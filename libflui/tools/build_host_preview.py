@@ -11,12 +11,18 @@ p.add_argument('--client',type=Path,required=True)
 p.add_argument('--work',type=Path,required=True)
 p.add_argument('--android-ndk',type=Path)
 p.add_argument('--bundle-id',required=True)
+p.add_argument('--development-host', action='store_true', help='Debuggable owned-device test host; never a normal distribution build')
+p.add_argument('--build-number', type=int, default=1, help='Monotonically increasing consumer package build number')
 p.add_argument('--display-name', default='Libflui Preview')
 p.add_argument('--chinese-display-name', help='Optional consumer name for Chinese system languages')
 p.add_argument('--logo-dir', type=Path, help='Consumer-generated platform icon directory')
 p.add_argument('--client-cmake-arg', action='append', default=[])
 p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background declarations, merged into SDK-owned host')
 p.add_argument('--embed-framework', action='append', type=Path, default=[])
+p.add_argument('--runtime-dir', action='append', type=Path, default=[], help='Consumer SDK runtime directories; copied into the host bundle')
+p.add_argument('--android-sources', action='append', type=Path, default=[], help='Consumer/platform Kotlin or Java source root')
+p.add_argument('--android-manifest', type=Path, help='Consumer uses-permission and application privacy declarations')
+p.add_argument('--android-initializer', help='Consumer platform initialization class with initialize(Context)')
 a=p.parse_args()
 component=Path(__file__).resolve().parents[1]
 repo=component.parent
@@ -35,6 +41,13 @@ for key in ['frameworkRevision','engineRevision','dartSdkVersion']:
 env=dict(os.environ,CI='true',FLUTTER_SUPPRESS_ANALYTICS='true')
 def run(args,cwd=None):
     subprocess.run([str(x) for x in args],cwd=cwd,env=env,check=True)
+def copy_runtimes(destination):
+    destination.mkdir(parents=True, exist_ok=True)
+    for directory in a.runtime_dir:
+        if not directory.is_dir():p.error('Runtime directory does not exist: '+str(directory))
+        for source in directory.iterdir():
+            if source.is_file() and (source.name.endswith('.dll') or '.so' in source.name):
+                shutil.copy2(source, destination/source.name)
 host=work/'host'
 if not (host/'pubspec.yaml').exists():
     run([flutter,'--suppress-analytics','--no-version-check','create','--no-pub','--platforms='+a.platform,
@@ -67,7 +80,7 @@ else:
     commit=subprocess.check_output(['git','-C',repo,'rev-parse','HEAD'],text=True).strip()
 manifest={'schema_version':1,'sdk':'libflui','channel':'unreleased-device-preview','source_commit':commit,
     'component_dirty':True,'platform':a.platform,'architecture':('x86_64' if a.platform in ('windows','linux') else 'arm64'),'runtime':lock,
-    'source_files':{str(p.relative_to(repo)):sha(p) for p in component.rglob('*') if p.is_file() and '__pycache__' not in p.parts},
+    'source_files':{str(p.relative_to(repo)):sha(p) for p in component.rglob('*') if p.is_file() and not {'__pycache__','.dart_tool','build'}.intersection(p.parts)},
     'files':{str(p.relative_to(prefix)):sha(p) for p in prefix.rglob('*') if p.is_file() and p.name!='sdk-manifest.json'}}
 (prefix/'sdk-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 sdklock=work/'native.lock.json'
@@ -80,12 +93,46 @@ if a.platform=='android':
     jni=host/'android/app/src/main/jniLibs/arm64-v8a';jni.mkdir(parents=True,exist_ok=True)
     shutil.copy2(prefix/'lib/libflui.so',jni/'libflui.so')
     shutil.copy2(clientbuild/'libflui_client.so',jni/'libflui_client.so')
+    copy_runtimes(jni)
+    for directory in a.android_sources:
+        shutil.copytree(directory,host/'android/app/src/main/java',dirs_exist_ok=True)
+    if a.android_initializer:
+        import re
+        if not re.fullmatch(r'[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+',a.android_initializer):p.error('Invalid Android initializer class')
+        activities=list((host/'android/app/src/main/kotlin').rglob('MainActivity.kt'))
+        if len(activities)!=1:p.error('Expected one SDK-owned Android activity')
+        activity=activities[0]
+        package=re.search(r'^package ([\w.]+)',activity.read_text(),re.M).group(1)
+        activity.write_text('package '+package+'\nimport android.os.Bundle\nimport io.flutter.embedding.android.FlutterActivity\n'
+            'class MainActivity: FlutterActivity() {\n override fun onCreate(savedInstanceState: Bundle?) {\n  '
+            +a.android_initializer+'.initialize(this)\n  super.onCreate(savedInstanceState)\n }\n'
+            +' override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {\n  super.onRequestPermissionsResult(code, permissions, results)\n  '
+            +a.android_initializer+'.permissionResult(code, permissions, results)\n }\n}\n')
     gradle=host/'android/app/build.gradle.kts';s=gradle.read_text()
     import re
     s=re.sub(r'applicationId = "[^"]+"','applicationId = "'+a.bundle_id+'"',s)
     s=s.replace('minSdk = flutter.minSdkVersion','minSdk = 24')
+    if a.development_host and not a.bundle_id.endswith('.test'):
+        p.error('Debuggable host requires a test application identity')
+    s=s.replace('            isDebuggable = true\n','')
     gradle.write_text(s)
     manifestxml=host/'android/app/src/main/AndroidManifest.xml'
+    if a.android_manifest:
+        import xml.etree.ElementTree as ET
+        ET.register_namespace('android','http://schemas.android.com/apk/res/android')
+        tree=ET.parse(manifestxml); consumer=ET.parse(a.android_manifest).getroot(); node=tree.getroot()
+        android='{http://schemas.android.com/apk/res/android}'
+        for permission in consumer:
+            if permission.tag=='uses-permission':
+                for old in list(node.findall('uses-permission')):
+                    if old.get(android+'name')==permission.get(android+'name'):node.remove(old)
+                node.insert(0,permission)
+            elif permission.tag=='application':
+                allowed={android+'allowBackup',android+'usesCleartextTraffic'}
+                if not set(permission.attrib)<=allowed or len(permission):p.error('Unsupported Android application overlay')
+                node.find('application').attrib.update(permission.attrib)
+            else:p.error('Only permissions and application privacy flags are accepted')
+        tree.write(manifestxml,encoding='unicode')
     from xml.sax.saxutils import escape
     manifestxml.write_text(manifestxml.read_text().replace('android:label="libflui_host"','android:label="@string/app_name"'),encoding='utf-8')
     names={'values':a.display_name}
@@ -96,8 +143,8 @@ if a.platform=='android':
     if a.logo_dir:
         for folder in (a.logo_dir/'android').iterdir():
             if folder.is_dir():shutil.copytree(folder,host/'android/app/src/main/res'/folder.name,dirs_exist_ok=True)
-    run([flutter,'--suppress-analytics','--no-version-check','build','apk','--release','--target-platform','android-arm64','--no-pub'],host)
-    print('APK:',host/'build/app/outputs/flutter-apk/app-release.apk')
+    run([flutter,'--suppress-analytics','--no-version-check','build','apk','--debug' if a.development_host else '--release','--build-number',str(a.build_number),'--target-platform','android-arm64','--no-pub'],host)
+    print('APK:',host/'build/app/outputs/flutter-apk'/('app-debug.apk' if a.development_host else 'app-release.apk'))
 elif a.platform=='linux':
     runner=host/'linux/CMakeLists.txt'
     text=runner.read_text()
@@ -116,6 +163,7 @@ elif a.platform=='linux':
     output=host/'build/linux/x64/release/bundle'
     shutil.copy2(prefix/'lib/libflui.so',output/'lib/libflui.so')
     shutil.copy2(clientbuild/'libflui_client.so',output/'lib/libflui_client.so')
+    copy_runtimes(output/'lib')
     print('Linux bundle:',output)
 elif a.platform=='windows':
     runner=host/'windows/CMakeLists.txt'
@@ -134,6 +182,7 @@ elif a.platform=='windows':
     output=host/'build/windows/x64/runner/Release'
     shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
     shutil.copy2(clientbuild/'Release/flui_client.dll',output/'flui_client.dll')
+    copy_runtimes(output)
     print('Windows app:',output/'libflui_host.exe')
 else:
     import re,plistlib
@@ -145,12 +194,12 @@ else:
     plist=host/'ios/Runner/Info.plist';data=plistlib.loads(plist.read_bytes());data['CFBundleDisplayName']=a.display_name;data['CFBundleName']=a.display_name;data['CFBundleLocalizations']=['en','zh-Hans','zh-Hant'];
     if a.ios_info_plist:
         overlay=plistlib.loads(a.ios_info_plist.read_bytes())
-        allowed={'NSBluetoothAlwaysUsageDescription','NSBluetoothPeripheralUsageDescription','UIBackgroundModes'}
-        if not set(overlay).issubset(allowed):p.error('Only declared Bluetooth privacy/background keys are accepted')
+        allowed={'NSBluetoothAlwaysUsageDescription','NSBluetoothPeripheralUsageDescription','UIBackgroundModes','NSLocalNetworkUsageDescription','NSBonjourServices'}
+        if not set(overlay).issubset(allowed):p.error('Only declared network/Bluetooth privacy and background keys are accepted')
         data.update(overlay)
     plist.write_bytes(plistlib.dumps(data))
     if a.logo_dir:shutil.copytree(a.logo_dir/'apple/ios/AppIcon.appiconset',host/'ios/Runner/Assets.xcassets/AppIcon.appiconset',dirs_exist_ok=True)
-    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--release','--no-codesign','--no-pub'],host)
+    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--release','--build-number',str(a.build_number),'--no-codesign','--no-pub'],host)
     app=host/'build/ios/iphoneos/Runner.app'
     if a.chinese_display_name:
         for locale,name in [('en',a.display_name),('zh-Hans',a.chinese_display_name),('zh-Hant',a.chinese_display_name)]:

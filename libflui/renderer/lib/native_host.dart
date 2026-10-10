@@ -4,6 +4,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 
@@ -36,6 +37,7 @@ typedef Event = Void Function(
   Pointer<Utf8>,
 );
 typedef Invoke = Void Function(Uint64, Uint32);
+typedef FileResult = Void Function(Uint64, Int32, Pointer<Utf8>);
 
 class NativeHost {
   late final DynamicLibrary library;
@@ -53,6 +55,7 @@ class NativeHost {
   event;
   late final void Function(int, int) invoke;
   late final Pointer<Utf8> Function() take;
+  late final void Function(int, int, Pointer<Utf8>) fileResult;
   late final RetainedModel model;
   final timers = <int, Timer>{};
   int window = 0;
@@ -74,6 +77,7 @@ class NativeHost {
     invoke = library.lookupFunction<Invoke, void Function(int, int)>(
       'flui_host_invoke',
     );
+    fileResult = library.lookupFunction<FileResult, void Function(int, int, Pointer<Utf8>)>('flui_host_file_result');
     take = library
         .lookupFunction<Pointer<Utf8> Function(), Pointer<Utf8> Function()>(
           'flui_host_take',
@@ -175,6 +179,26 @@ class NativeHost {
     drain();
   }
 
+  Future<void> pickFile(Map<String, dynamic> command) async {
+    var status = 0;
+    String path = '';
+    try {
+      final kind = command['kind'] as int;
+      if (kind == 3 && (Platform.isAndroid || Platform.isIOS)) {
+        status = 10; // FLUI_UNSUPPORTED: directory grants need a separate adapter.
+      } else if (kind == 3) {
+        path = await getDirectoryPath(confirmButtonText: command['title'] as String) ?? '';
+      } else {
+        path = (await openFile(confirmButtonText: command['title'] as String))?.path ?? '';
+      }
+    } catch (_) {
+      status = 7; // FLUI_RUNTIME_ERROR; never expose private provider details.
+    }
+    final encoded = path.toNativeUtf8();
+    try { fileResult(command['id'] as int, status, encoded); }
+    finally { calloc.free(encoded); }
+  }
+
   void drain() {
     if (draining) return;
     draining = true;
@@ -188,6 +212,8 @@ class NativeHost {
         if (op == 'create') {
           window = cmd['window'] as int;
           emit(1);
+        } else if (op == 'file') {
+          unawaited(pickFile(cmd));
         } else if (op == 'dispatch') {
           invoke(cmd['id'] as int, 1);
         } else if (op == 'timer') {

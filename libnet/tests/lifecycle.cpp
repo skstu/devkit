@@ -79,7 +79,51 @@ template<class F> void await(F predicate) {
   while(!predicate() && std::chrono::steady_clock::now()<deadline) std::this_thread::sleep_for(2ms);
   CHECK(predicate());
 }
-int main() {
+static void ReceiveBurst() {
+  for (unsigned family : {4u, 6u}) {
+    struct State { dknet_context *receiver = nullptr; unsigned received = 0; bool seen[256]{}; } state;
+    dknet_config c{}; c.struct_size = sizeof(c); c.abi_version = DKNET_ABI_VERSION;
+    c.maximum_connections = 1; c.maximum_pending_datagrams = 256;
+    c.maximum_pending_bytes = 1024 * 1024; c.quic_tick_ms = 10; c.alpn = "burst/1"; c.user = &state;
+    c.on_event = [](void *user, const dknet_event *event) {
+      auto &s = *static_cast<State *>(user);
+      if (event->type == DKNET_DATAGRAM) {
+        CHECK(event->size == 1200 && !s.seen[event->data[0]]);
+        s.seen[event->data[0]] = true; ++s.received;
+      } else if (event->type == DKNET_TIMER) CHECK(dknet_shutdown(s.receiver) == DKNET_OK);
+      else CHECK(event->type != DKNET_ERROR);
+    };
+    CHECK(dknet_create(&c, &state.receiver) == DKNET_OK);
+    dknet_context *sender = nullptr;
+    c.user = &sender;
+    c.on_event = [](void *user, const dknet_event *event) {
+      if (event->type == DKNET_TIMER)
+        CHECK(dknet_shutdown(*static_cast<dknet_context **>(user)) == DKNET_OK);
+      else CHECK(event->type != DKNET_ERROR);
+    };
+    CHECK(dknet_create(&c, &sender) == DKNET_OK);
+    dknet_endpoint target{};
+    CHECK(dknet_local_endpoint(state.receiver, family, &target) == DKNET_OK);
+    CHECK(dknet_endpoint_parse(family == 4 ? "127.0.0.1" : "::1", target.port, &target) == DKNET_OK);
+    // Hold the reader while a bounded burst reaches its socket, then drain it.
+    uint8_t packet[1200]{};
+    for (unsigned i = 0; i < 256; ++i) {
+      packet[0] = static_cast<uint8_t>(i);
+      CHECK(dknet_send_datagram(sender, &target, packet, sizeof(packet)) == DKNET_OK);
+    }
+    CHECK(dknet_timer_start(sender, 0, 20, 0) == DKNET_OK);
+    CHECK(dknet_run(sender) == DKNET_OK);
+    CHECK(dknet_timer_start(state.receiver, 0, 100, 0) == DKNET_OK);
+    CHECK(dknet_run(state.receiver) == DKNET_OK);
+    std::fprintf(stderr, "IPv%u receive burst: %u/256\n", family, state.received);
+    CHECK(dknet_destroy(state.receiver) == DKNET_OK);
+    CHECK(dknet_shutdown(sender) == DKNET_OK && dknet_destroy(sender) == DKNET_OK);
+    CHECK(state.received == 256);
+  }
+}
+int main(int argc, char** argv) {
+  if (argc == 2 && std::strcmp(argv[1], "ReceiveBurst") == 0) { ReceiveBurst(); return 0; }
+
   // Every lifecycle remains on its creating worker, with a caller-owned join gate.
   struct Idle {
     std::promise<dknet_context *> ready;

@@ -21,3 +21,4 @@ _flui_executable_path
 _flui_write_file_atomic
 _flui_bell
 _flui_xml_visit
+_flui_file_dialog_async

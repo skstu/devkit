@@ -22,8 +22,12 @@ static addr_record_t sovkit_pcp_address(uint32_t ip, uint16_t port) {
 	memset(&out, 0, sizeof(out));
 	out.len = sizeof(struct sockaddr_in);
 	out.socktype = SOCK_DGRAM;
-	struct sockaddr_in *v = (struct sockaddr_in *)&out.addr;
-	v->sin_family = AF_INET; v->sin_addr.s_addr = ip; v->sin_port = htons(port);
+	// Construct the concrete sockaddr before copying to storage. Type-punning
+	// writes into sockaddr_storage can be miscompiled under strict aliasing.
+	struct sockaddr_in v;
+	memset(&v, 0, sizeof(v));
+	v.sin_family = AF_INET; v.sin_addr.s_addr = ip; v.sin_port = htons(port);
+	memcpy(&out.addr, &v, sizeof(v));
 	return out;
 }
 static void sovkit_pcp_send(juice_agent_t *agent, bool remove) {

@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
+# CMake reads the deployment target while enabling the compiler. A target
+# property named OSX_DEPLOYMENT_TARGET does not set the compiler minimum.
+if(CMAKE_HOST_APPLE AND NOT CMAKE_SYSTEM_NAME STREQUAL "iOS" AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+endif()
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(libflui LANGUAGES C CXX)
   include(CTest)
@@ -75,7 +80,7 @@ set_target_properties(libflui PROPERTIES OUTPUT_NAME flui VERSION "${NATIVE_LIBS
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
   OBJCXX_STANDARD 17 CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON
   BUILD_WITH_INSTALL_RPATH ON INSTALL_RPATH "@loader_path/libflui_runtime.bundle/Contents/Frameworks"
-  OSX_ARCHITECTURES "${LIBFLUI_ARCHS}" OSX_DEPLOYMENT_TARGET 12.0)
+  OSX_ARCHITECTURES "${LIBFLUI_ARCHS}")
 # Export only the C ABI. No Objective-C/Flutter/C++ implementation symbols.
 target_link_options(libflui PRIVATE "LINKER:-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/src/exports.txt")
 install(TARGETS libflui EXPORT libfluiTargets LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})

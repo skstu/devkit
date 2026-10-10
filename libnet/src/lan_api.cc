@@ -5,6 +5,7 @@
 #include <array>
 #include <charconv>
 #include <cstring>
+#include <deque>
 #include <limits>
 #include <map>
 #include <memory>
@@ -145,6 +146,16 @@ struct dknet_lan_context {
   dknet_lan_config config{};
   std::thread::id owner=std::this_thread::get_id();
   uv_loop_t loop{}; uv_async_t async{}; uv_timer_t watch{};
+#if defined(__APPLE__)
+  uv_timer_t send_timer{}; bool send_timer_initialized=false;
+  uint64_t send_cursor=0;
+  void drain_sends() noexcept;
+  int schedule_sends(uint64_t delay) {
+    return uv_timer_start(&send_timer,[](uv_timer_t* h) {
+      static_cast<dknet_lan_context*>(h->data)->drain_sends();
+    },delay,0);
+  }
+#endif
   std::array<uv_timer_t,8> timers{};
   bool loop_initialized=false, async_initialized=false, watch_initialized=false;
   size_t timers_initialized=0;
@@ -191,6 +202,11 @@ struct dknet_lan_context {
         if(bits&(uint32_t{1}<<slot)) p->emit(DKNET_LAN_WAKE,0,slot);
     }))) return false;
     async_initialized=true;
+#if defined(__APPLE__)
+    send_timer.data=this;
+    if(io(uv_timer_init(&loop,&send_timer))) return false;
+    send_timer_initialized=true;
+#endif
     watch.data=this;
     if (io(uv_timer_init(&loop,&watch))) return false;
     watch_initialized=true;
@@ -216,7 +232,8 @@ struct dknet_lan_context::Udp {
   std::string outgoing_interface;
   std::vector<std::pair<std::string,std::string>> memberships;
   dknet_udp_stats stats{sizeof(stats),0,0,0,0,0,0,0};
-  struct Send { uv_udp_send_t request{}; Udp* udp; uint64_t token; std::vector<char> bytes; };
+  struct Send { uv_udp_send_t request{}; Udp* udp; uint64_t token; std::vector<char> bytes; sockaddr_storage peer{}; };
+  std::deque<std::unique_ptr<Send>> queued_sends;
   Udp(dknet_lan_context* c,uint64_t key,const dknet_udp_config& value):context(c),id(key),config(value),bound(value.bind),receive_buffer(value.maximum_receive_bytes) {}
   bool live() const { return context->live() && initialized && !closing && !rebind; }
   void emit(uint32_t type,uint64_t request=0,int status=DKNET_OK,int native=0,
@@ -281,6 +298,12 @@ struct dknet_lan_context::Udp {
   static void closed(uv_handle_t* h) noexcept {
     auto* p=static_cast<Udp*>(h->data); auto* c=p->context; const auto id=p->id;
     p->initialized=false;
+    // Accepted copies must complete before CLOSED, including sends which have
+    // not entered libuv yet. Rebind cancels them just like native pending sends.
+    while(!p->queued_sends.empty()) {
+      auto* send=p->queued_sends.front().release(); p->queued_sends.pop_front();
+      p->complete(send,UV_ECANCELED);
+    }
     if(p->rebind && !p->closing && !c->closing) {
       p->rebind=false;
       int status=UV_ENOMEM;
@@ -293,8 +316,8 @@ struct dknet_lan_context::Udp {
     p->emit(DKNET_LAN_CLOSED);
     c->sockets.erase(id);
   }
-  static void sent(uv_udp_send_t* req,int status) noexcept {
-    std::unique_ptr<Send> send(static_cast<Send*>(req->data));
+  void complete(Send* raw,int status) noexcept {
+    std::unique_ptr<Send> send(raw);
     auto* p=send->udp; auto* c=p->context; const auto n=send->bytes.size();
     --c->pending_datagrams; c->pending_bytes-=n;
     --p->stats.pending_datagrams; p->stats.pending_bytes-=n;
@@ -308,7 +331,43 @@ struct dknet_lan_context::Udp {
       if(socket->live() && socket->blocked) { socket->blocked=false; socket->emit(DKNET_LAN_WRITABLE); }
     }
   }
+  static void sent(uv_udp_send_t* req,int status) noexcept {
+    auto* send=static_cast<Send*>(req->data); auto* p=send->udp;
+    p->complete(send,status);
+  }
 };
+
+#if defined(__APPLE__)
+void dknet_lan_context::drain_sends() noexcept {
+  // Darwin can report a UDP socket writable while sendmsg still returns
+  // EAGAIN on an unusable interface. A libuv writable watcher then busy-spins.
+  // Try bounded work on our own timer instead; never queue a native write.
+  unsigned budget=64;
+  size_t idle=0;
+  while(budget && !closing && !sockets.empty() && idle<sockets.size()) {
+    // Completion callbacks may refill a socket or open/close others. Select by
+    // its never-reused ID each time and retain the cursor across timer turns,
+    // so a busy early socket cannot consume every later socket's opportunity.
+    auto next=sockets.upper_bound(send_cursor);
+    if(next==sockets.end()) next=sockets.begin();
+    send_cursor=next->first;
+    auto* p=next->second.get();
+    ++idle;
+    if(!p->live() || p->queued_sends.empty()) continue;
+    --budget;
+    auto* send=p->queued_sends.front().get();
+    auto buffer=uv_buf_init(send->bytes.data(),static_cast<unsigned int>(send->bytes.size()));
+    const int result=uv_udp_try_send(&p->handle,&buffer,1,reinterpret_cast<sockaddr*>(&send->peer));
+    if(result==UV_EAGAIN) continue;
+    p->queued_sends.front().release(); p->queued_sends.pop_front();
+    p->complete(send,result<0?result:0);
+    idle=0;
+  }
+  if(!closing && std::any_of(sockets.begin(),sockets.end(),[](const auto& entry) {
+       return entry.second->live() && !entry.second->queued_sends.empty();
+     })) schedule_sends(10);
+}
+#endif
 
 void dknet_lan_context::shutdown() noexcept {
   if(closing) return;
@@ -317,6 +376,9 @@ void dknet_lan_context::shutdown() noexcept {
   for(auto& [id,socket]:sockets) { (void)id; socket->close(); }
   for(size_t i=0;i<timers_initialized;++i) { uv_timer_stop(&timers[i]); uv_close(reinterpret_cast<uv_handle_t*>(&timers[i]),nullptr); }
   if(watch_initialized) { uv_timer_stop(&watch); uv_close(reinterpret_cast<uv_handle_t*>(&watch),nullptr); }
+#if defined(__APPLE__)
+  if(send_timer_initialized) { uv_timer_stop(&send_timer); uv_close(reinterpret_cast<uv_handle_t*>(&send_timer),nullptr); }
+#endif
   if(async_initialized) uv_close(reinterpret_cast<uv_handle_t*>(&async),nullptr);
 }
 dknet_lan_context::~dknet_lan_context() {
@@ -426,11 +488,20 @@ int32_t DKNET_CALL dknet_udp_send(dknet_lan_context* c,uint64_t id,const dknet_e
     auto send=std::make_unique<dknet_lan_context::Udp::Send>(); send->udp=p; send->token=request;
     if(n) send->bytes.assign(reinterpret_cast<const char*>(data),reinterpret_cast<const char*>(data)+n);
     send->request.data=send.get();
+#if defined(__APPLE__)
+    // Deferral preserves asynchronous completion and the existing copy/credit
+    // contract. EAGAIN is retried by a timer, never an always-writable watcher.
+    if(const int status=c->schedule_sends(0)) return c->io(status);
+    send->peer=address;
+    p->queued_sends.push_back(std::move(send));
+#else
     uv_buf_t buffer=uv_buf_init(send->bytes.data(),static_cast<unsigned int>(n));
     int status=uv_udp_send(&send->request,&p->handle,&buffer,1,reinterpret_cast<sockaddr*>(&address),dknet_lan_context::Udp::sent);
     if(status) return c->io(status);
+    send.release();
+#endif
     ++c->pending_datagrams; c->pending_bytes+=n; ++p->stats.pending_datagrams; p->stats.pending_bytes+=n;
-    send.release(); return DKNET_OK;
+    return DKNET_OK;
   });
 }
 int32_t DKNET_CALL dknet_udp_membership(dknet_lan_context* c,uint64_t id,const char* group,const char* interface_address,uint32_t join) {

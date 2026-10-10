@@ -12,6 +12,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <set>
+#include <span>
 #include <stdexcept>
 #include <thread>
 #ifndef _WIN32

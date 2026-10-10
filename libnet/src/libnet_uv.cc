@@ -573,6 +573,12 @@ bool UdpSocket::Bind(uv_loop_t *loop, const Endpoint &endpoint,
     Close();
     return false;
   }
+  // QUIC ACK/data bursts can exceed the small OS default before the next
+  // loop turn. Reserve bounded headroom per socket; the kernel may clamp it.
+  // This changes no system-wide limits and never grows with file size.
+  int receive_bytes = 2 * 1024 * 1024;
+  (void)uv_recv_buffer_size(reinterpret_cast<uv_handle_t *>(&state_->handle),
+                           &receive_bytes);
   state_->bound_endpoint = local_endpoint().value_or(endpoint);
   state_->bind_flags = flags;
   return true;

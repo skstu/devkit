@@ -24,6 +24,8 @@ struct Window { flui_window_options options{}; bool ready=false, closed=false, m
 std::map<uint64_t,Window> windows;
 std::map<uint64_t,std::pair<flui_callback,void*>> callbacks;
 uint64_t nextWindow=1,nextCallback=1;
+struct Picker { uint64_t id=0; flui_file_callback callback=nullptr; void* user=nullptr; };
+Picker picker;
 unsigned callbackDepth=0;
 bool ui() { return owner==std::this_thread::get_id(); }
 std::string str(flui_string s) { return s.data ? std::string(s.data,size_t(s.size)) : ""; }
@@ -154,6 +156,25 @@ flui_status flui_timer_destroy(flui_timer id) {
 }
 flui_status flui_window_set_tick(flui_window,uint32_t){return FLUI_UNSUPPORTED;}
 flui_status flui_file_dialog(uint32_t,flui_string,flui_string,flui_string,flui_text_callback,void*) {return FLUI_UNSUPPORTED;}
+flui_status flui_file_dialog_async(uint32_t kind,flui_string title,flui_file_callback cb,void* user) {
+ if(!ui())return FLUI_WRONG_THREAD;
+ if(!cb||!valid(title)||(kind!=FLUI_FILE_OPEN && kind!=FLUI_FILE_DIRECTORY))return FLUI_INVALID_ARGUMENT;
+ if(picker.id)return FLUI_BUSY;
+ uint64_t id;
+ {std::lock_guard<std::mutex> lock(mutex);id=nextCallback++;}
+ picker={id,cb,user};
+ try {queue("{\"op\":\"file\",\"id\":"+std::to_string(id)+",\"kind\":"+std::to_string(kind)+",\"title\":"+json(str(title))+"}");}
+ catch(...) {picker={};return FLUI_RUNTIME_ERROR;}
+ return FLUI_OK;
+}
+FLUI_API void FLUI_CALL flui_host_file_result(uint64_t id,int32_t status,const char* path) {
+ if(!ui()||!picker.id||picker.id!=id)return;
+ const auto pending=picker;picker={};
+ const std::string value=path?path:"";
+ ++callbackDepth;
+ try {pending.callback(status,{value.data(),value.size()},pending.user);}catch(...){}
+ --callbackDepth;
+}
 flui_status flui_executable_path(flui_text_callback,void*) {return FLUI_UNSUPPORTED;}
 flui_status flui_write_file_atomic(flui_string,flui_string) {return FLUI_UNSUPPORTED;}
 flui_status flui_bell(){return FLUI_UNSUPPORTED;}

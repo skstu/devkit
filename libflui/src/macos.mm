@@ -589,6 +589,29 @@ flui_status flui_file_dialog(uint32_t kind, flui_string title,
     return FLUI_INVALID_ARGUMENT;
   return FLUI_OK;
 }
+flui_status flui_file_dialog_async(uint32_t kind, flui_string title,
+                                  flui_file_callback callback, void *user) {
+  if (![NSThread isMainThread]) return FLUI_WRONG_THREAD;
+  NSString *t = string(title);
+  if (!callback || !t || (kind != FLUI_FILE_OPEN && kind != FLUI_FILE_DIRECTORY))
+    return FLUI_INVALID_ARGUMENT;
+  static bool pending = false;
+  if (pending) return FLUI_BUSY;
+  pending = true;
+  NSOpenPanel *panel = [NSOpenPanel openPanel];
+  panel.title = t;
+  panel.allowsMultipleSelection = NO;
+  panel.canChooseFiles = kind == FLUI_FILE_OPEN;
+  panel.canChooseDirectories = kind == FLUI_FILE_DIRECTORY;
+  [panel beginWithCompletionHandler:^(NSModalResponse response) {
+    pending = false;
+    NSData *bytes = [(response == NSModalResponseOK ? panel.URL.path : @"") dataUsingEncoding:NSUTF8StringEncoding];
+    ++callbackDepth;
+    try { callback(FLUI_OK, {(const char*)bytes.bytes, bytes.length}, user); } catch (...) {}
+    --callbackDepth;
+  }];
+  return FLUI_OK;
+}
 flui_status flui_executable_path(flui_text_callback callback, void *user) {
   if (!callback)
     return FLUI_INVALID_ARGUMENT;

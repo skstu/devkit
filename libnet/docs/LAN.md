@@ -139,7 +139,26 @@ nothing. `dknet_lan_interfaces` copies the latest successful snapshot. A failed
 poll keeps that snapshot and emits ERROR. Watching does not rebind sockets,
 choose routes or decide whether a discovered peer is trusted.
 
-## Validation evidence and limits
+## 2026-10-10 integration closeout addendum
+
+SovKit now consumes this LAN/UDP/QUIC ABI in all five native clients. Its final
+same-source run passed all ten device pairs, with durable messages and
+independently hashed files in both directions. All recorded sessions used
+`ngtcp2-quic`; routes included private IPv4 and link-local IPv6, and the
+Mac/iPhone pair used IPv4 link-local while USB was attached. This is not proof
+of an exclusively Wi-Fi path or all connection-role combinations.
+
+Complete Android and Linux provider packages were subsequently built and
+consumed, beyond the isolated LAN-module scope below. Linux used Ubuntu
+22.04.5 userspace on the Debian host. Corresponding platform dependency locks,
+runtime copies, source inputs and notice inventories were audited in the
+private handoff. The component package remains a development preview. Prior
+packet loss and BLE failures remain historical evidence; this LAN result does
+not close them or establish background, permission-revocation or WAN behavior.
+Recovery and remaining gates are recorded in SovKit's
+`docs/sovkit.zhiyu/LAN_FIVE_DEVICE_ACCEPTANCE_20261010.md`.
+
+## Initial LAN API validation evidence and limits
 
 Tests use isolated native contexts, temporary ports and fixed test bytes. They
 do not access product identities, keys, contacts or databases. The broadcast
@@ -170,7 +189,7 @@ background/permissions, packet-loss pressure, or full Android/Linux SDK
 provider packages. Passing a transport fixture does not establish product
 delivery, authentication, persistence or restart recovery.
 
-## Consumer and next integration boundary
+## Consumer and integration boundary
 
 The installed pure-C `net_lan_consumer` example links only `devkit::net` and uses
 `devkit_net_bundle` to ship the runtime. Provider headers remain private. SDK
@@ -178,8 +197,53 @@ packaging verifies exact exports and runtime dependencies and records source
 and provider hashes. A dirty-source package is a development preview, never
 relabelled as a clean release.
 
-The next SovKit integration should consume a verified pinned SDK package, move
-its discovery sockets/interface lifecycle onto this ABI, keep existing QUIC and
-business authentication/receipts, and then remove replaced legacy discovery
-code. This stage does not claim that migration is complete or that a second
-product discovery implementation has been introduced in devkit.
+SovKit has migrated its discovery sockets/interface lifecycle onto the public
+ABI and removed the replaced consumer engine and build wiring. Product
+authentication, discovery rules, receipts and file tasks remain in SovKit.
+The boundary check rejects reintroduction of the old engine; devkit does not
+implement a second product discovery protocol.
+
+## UDP QUIC receive burst follow-up
+
+The original UDP/QUIC context now requests 2 MiB of kernel receive capacity per
+socket in `UdpSocket::Bind`, including rebind. This is bounded per socket, does
+not grow with file size, and changes no public ABI or system-wide setting. The
+OS may clamp or reject the request; the separate LAN socket API and its limits
+are unchanged.
+
+On the Debian test host, the old UDP/QUIC business socket reported a 212,992-byte
+receive buffer and kernel receive drops. The updated socket reported 4,194,304
+bytes (Linux socket accounting includes the kernel multiplier). The targeted
+`libnet.receive_burst` test holds its loopback reader while 256 unique 1,200-byte
+datagrams arrive. With the old runtime it received 92/256 IPv4 datagrams; with
+the fix it received 256/256 on IPv4 and IPv6. The test is registered for Linux;
+this result does not promise identical kernel capacity on other platforms.
+
+The complete Linux development package passes the five existing/targeted ABI,
+lifecycle and LAN tests and keeps the same 51 public exports. Product recovery
+performance still needs its own endpoint and SHA-256 evidence in SovKit; a
+burst fixture alone is not a file-transfer acceptance result.
+
+## Apple queued send follow-up
+
+A macOS discovery probe reproduced sustained CPU use inside libuv's UDP native
+send path on unusable interfaces, even after the consumer reduced discovery
+response fan-out. Serializing native requests still reproduced the busy loop.
+The Apple LAN backend now uses `uv_udp_try_send` from an owned timer: at most
+64 attempts per turn, with a 10 ms retry when work remains. Attempts rotate
+between sockets, retaining the last socket ID across turns; completion callbacks
+which keep refilling an early socket cannot starve later accepted sends. A turn
+stops if a full scan makes no progress, including when all sends return EAGAIN.
+It never registers
+a native writable watcher for queued sends. Accepted copies still consume the
+existing context byte/datagram credits; native errors remain visible, and close
+and rebind drain accepted copies before their completion events. The public
+C ABI and non-Apple native submission path are unchanged.
+
+The macOS-only `libnet.lan_send_apple` fixture verifies eight copied loopback
+datagrams, queue capacity and completion of all accepted copies before close
+or rebind, including close/rebind initiated by a send callback. A three-socket
+case continuously refills the earliest socket while requiring both later sends
+to complete. Existing LAN lifecycle cases also cover callback failure and shutdown
+suppression. The consumer records separate real-interface CPU evidence; this
+loopback fixture alone is not proof of the original busy-loop reproduction.
