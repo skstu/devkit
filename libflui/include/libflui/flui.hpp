@@ -1201,7 +1201,21 @@ public:
     presented_ = true;
   }
   void Raise() { Present(); }
+  // Native macOS transient popup; anchor is in the parent's top-left logical
+  // content coordinates. No window buttons; closes on focus loss. Other hosts
+  // report UNSUPPORTED. Placement prefers the right, then fits the display.
+  void PresentBeside(DesktopWindow& parent, Rect anchor, int gap = 8) {
+    Property("popup", "{\"parent\":\"" + std::to_string(parent.state_->handle) +
+      "\",\"anchor\":[" + std::to_string(anchor.x) + "," + std::to_string(anchor.y) +
+      "," + std::to_string(anchor.width) + "," + std::to_string(anchor.height) +
+      "],\"gap\":" + std::to_string(gap) + "}");
+    Present();
+  }
   void SetTitle(const std::string &s) { Property("title", s); }
+  // Native macOS; reserve a top strip for native window controls when enabled.
+  void SetTitlebarOverlay(bool enabled) {
+    Property("titlebar", enabled ? "overlay" : "standard");
+  }
   void SetClientExtent(Extent s) {
     size_ = s;
     Property("size", std::to_string(s.width) + "," + std::to_string(s.height));

@@ -48,6 +48,12 @@ Use tools/build_host_preview.py with --platform android, ios, windows or linux,
 --android-ndk. Consumers can pass `--display-name`, `--chinese-display-name`
 and `--logo-dir` for application names and existing Android/iOS/Windows icons;
 Linux desktop entry and icon installation remain consumer packaging metadata.
+Android JNI dependencies also supply their own keep rules: pass each installed
+file with `--android-proguard /path/to/consumer-rules.pro`. The builder merges
+these files into the release ProGuard configuration while retaining R8
+optimization. `--android-sources` alone does not protect Java/Kotlin methods
+looked up only by native code. libble supplies these rules alongside its Kotlin
+sources; use both from the same verified dependency package.
 The current harness builds the Zhiyu C++ sample and an SDK-owned
 host in the work directory. Consumer CMake receives a binary SDK prefix and an
 exact manifest lock; it does not compile Flutter.

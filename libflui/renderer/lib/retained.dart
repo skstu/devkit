@@ -77,6 +77,7 @@ const retainedAttributes = {
   'bkcolor2',
   'hotbkcolor',
   'focusbkcolor',
+  'copytext',
   'defaultfontcolor',
   'disabledfontcolor',
   'disabledtextcolor',
@@ -172,6 +173,7 @@ const retainedAttributes = {
 };
 const retainedEvents = {
   'click',
+  'copyresult',
   'enter',
   'valuechanged',
   'selchanged',
@@ -1189,6 +1191,24 @@ class _TreeViewState extends State<TreeView> {
   }
 
   void emit(String event, [String value = '']) => m.emit(n, event, value);
+  Future<void> performAction() async {
+    if (!m.interactive(n)) return;
+    final text = n.text('copytext');
+    if (text.isNotEmpty) {
+      final node = n;
+      String result;
+      try {
+        await Clipboard.setData(ClipboardData(text: text));
+        result = 'ok';
+      } catch (_) {
+        result = 'failed';
+      }
+      if (mounted && m.nodes[node.id] == node) emit('copyresult', result);
+    } else {
+      emit('click');
+    }
+  }
+
   void reportViewport() {
     if (reportPending) return;
     reportPending = true;
@@ -1629,6 +1649,21 @@ class _TreeViewState extends State<TreeView> {
   }
 
   Widget icon() {
+    final tint = m.interactive(n)
+        ? color('textcolor', palette.color(r'$text'))
+        : color('disabledtextcolor', palette.color(r'$muted'));
+    if (n.text('svg').isNotEmpty) {
+      return Center(
+        child: SizedBox.square(
+          dimension: n.number('iconsize', 20),
+          child: SvgPicture.string(
+            n.text('svg'),
+            colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
+            excludeFromSemantics: true,
+          ),
+        ),
+      );
+    }
     if (n.number('strokewidth') > 0 &&
         {
           'chat',
@@ -1761,6 +1796,16 @@ class _TreeViewState extends State<TreeView> {
       decoration: decoration,
       child: Padding(padding: edges(n.text('inset', '0')), child: result),
     );
+    if (interactive && focused && n.text('focusbordercolor').isNotEmpty) {
+      result = DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(
+          border: Border.all(color: color('focusbordercolor'), width: 2),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: result,
+      );
+    }
     final classic = palette.tokens['classic'] == 'true';
     if (n.flag('bevel') ||
         (classic && (themedButton || n.text('role') == 'inset')))
@@ -1981,11 +2026,15 @@ class _TreeViewState extends State<TreeView> {
         throw StateError('Unvalidated retained tag');
     }
     final clickable =
-        n.flag('event_click') || {'Button', 'DecimalButton'}.contains(n.tag);
+        n.flag('event_click') ||
+        n.text('copytext').isNotEmpty ||
+        {'Button', 'DecimalButton'}.contains(n.tag);
     final stateBackground =
         clickable &&
         n.flag('mouse', true) &&
-        (n.text('hotbkcolor').isNotEmpty || n.text('focusbkcolor').isNotEmpty);
+        (n.text('hotbkcolor').isNotEmpty ||
+            n.text('focusbkcolor').isNotEmpty ||
+            n.text('focusbordercolor').isNotEmpty);
     // Opt-in state backgrounds include the whole decorated row in its hit area,
     // including inset and border. Existing controls keep their original wrappers.
     if (stateBackground) result = decorate(result);
@@ -1995,7 +2044,9 @@ class _TreeViewState extends State<TreeView> {
         onFocusChange: (value) {
           if (focused == value || !mounted) return;
           focused = value;
-          if (n.text('focusbkcolor').isNotEmpty) setState(() {});
+          if (n.text('focusbkcolor').isNotEmpty ||
+              n.text('focusbordercolor').isNotEmpty)
+            setState(() {});
         },
         mouseCursor: n.flag('enabled', true)
             ? SystemMouseCursors.click
@@ -2007,20 +2058,24 @@ class _TreeViewState extends State<TreeView> {
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(
             onInvoke: (_) {
-              if (n.flag('enabled', true)) emit('click');
+              if (n.flag('enabled', true)) performAction();
               return null;
             },
           ),
         },
         child: Semantics(
           button: true,
+          excludeSemantics:
+              palette.text(n, 'tooltip').isNotEmpty ||
+              palette.text(n, 'text').isNotEmpty,
+          selected: n.attrs.containsKey('selected') ? n.flag('selected') : null,
           label: palette.text(n, 'tooltip').isNotEmpty
               ? palette.text(n, 'tooltip')
               : palette.text(n, 'text'),
           enabled: n.flag('enabled', true),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: n.flag('enabled', true) ? () => emit('click') : null,
+            onTap: n.flag('enabled', true) ? performAction : null,
             child: result,
           ),
         ),

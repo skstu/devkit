@@ -43,6 +43,18 @@ struct State {
 };
 std::map<jlong, std::weak_ptr<State>> states;
 std::atomic<jlong> next{1};
+jmethodID requiredMethod(JNIEnv *env, jclass cls, const char *name,
+                         const char *signature) {
+  auto method = env->GetMethodID(cls, name, signature);
+  // A failed lookup leaves NoSuchMethodError pending. Another lookup with that
+  // exception pending aborts ART instead of returning through the public ABI.
+  const bool failed = env->ExceptionCheck();
+  if (failed)
+    env->ExceptionClear();
+  if (!method || failed)
+    throw std::runtime_error("JNI contract mismatch");
+  return method;
+}
 std::string text(JNIEnv *e, jstring s) {
   if (!s)
     return {};
@@ -140,17 +152,14 @@ public:
     if (!cls || !context)
       throw std::runtime_error("BleRuntime.initialize required");
     auto constructor =
-        e.env->GetMethodID(cls, "<init>",
+        requiredMethod(e.env, cls, "<init>",
                            "(Landroid/content/Context;JLjava/lang/String;Ljava/"
                            "lang/String;Ljava/lang/String;Z)V");
-    commandMethod = e.env->GetMethodID(
+    commandMethod = requiredMethod(e.env,
         cls, "command", "(IJLjava/lang/String;Ljava/lang/String;[BJ)I");
-    closeMethod = e.env->GetMethodID(cls, "close", "()I");
-    optionsMethod = e.env->GetMethodID(cls, "setOptions", "([I)I");
-    readMethod = e.env->GetMethodID(cls, "setReadInterval", "(I)I");
-    if (!constructor || !commandMethod || !closeMethod || !optionsMethod ||
-        !readMethod || !e.valid())
-      throw std::runtime_error("JNI contract mismatch");
+    closeMethod = requiredMethod(e.env, cls, "close", "()I");
+    optionsMethod = requiredMethod(e.env, cls, "setOptions", "([I)I");
+    readMethod = requiredMethod(e.env, cls, "setReadInterval", "(I)I");
     auto service = e.env->NewStringUTF(c.service.c_str()),
          rx = e.env->NewStringUTF(c.receive.c_str()),
          tx = e.env->NewStringUTF(c.notify.c_str());
@@ -159,7 +168,7 @@ public:
     e.env->DeleteLocalRef(service);
     e.env->DeleteLocalRef(rx);
     e.env->DeleteLocalRef(tx);
-    if (!local || !e.valid())
+    if (!e.valid() || !local)
       throw std::runtime_error("JNI engine failed");
     engine = e.env->NewGlobalRef(local);
     e.env->DeleteLocalRef(local);

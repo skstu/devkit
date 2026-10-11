@@ -106,6 +106,17 @@ revalidate raw-document consumers when upgrading a 0.x minor version.
 
 ## Adaptive appearance (unreleased)
 
+Native macOS `DesktopWindow::PresentBeside(parent, anchor, gap=8)` displays a
+transient child popup without system window buttons. The anchor uses the parent's
+top-left logical content coordinates (`Control::GetRect()`). The matching C ABI
+uses `flui_window_property(popup, "popup", ...)` with JSON
+`{"parent":"<window handle>","anchor":[x,y,w,h],"gap":8}`, then `flui_window_show`.
+Placement prefers the right edge, uses the left when needed, and fits the parent's
+display. Moving/resizing the parent updates placement. Focus loss uses the normal
+managed close request; closing/destroying the parent closes child popups. The
+popup retains keyboard focus for copying and Esc. Other hosts return UNSUPPORTED;
+the single-surface preview host does not acquire additional windows.
+
 `theme="system"` observes the engine platform appearance without polling. Supply
 light/base colors in `theme_tokens` and dark overrides in `theme_dark_tokens`.
 `theme="light"` / `"dark"` select a fixed appearance; dark overrides apply only
@@ -115,7 +126,18 @@ editor text, focus and composing state. Explicit color literals remain fixed.
 
 `classic-2000` provides square, gray controls, a navy accent and Tahoma fallback.
 `role="button"` receives raised edges, `role="inset"` sunken edges. This is a
-client-area theme; the native OS window title bar is retained.
+client-area theme; the native OS window title bar is retained by default.
+
+Native macOS consumers may call `flui_window_property` with `titlebar=overlay`
+before showing a window, or `DesktopWindow::SetTitlebarOverlay(true)`. Content
+then extends to the top of the window, with a transparent native titlebar and
+no drawn title or separator. The native close/minimize/fullscreen buttons,
+top-strip dragging and OS window title remain available. Reserve space in the
+client layout for these controls; `titlebar=standard` restores the default.
+Other host previews return `FLUI_UNSUPPORTED`. This uses the existing C ABI;
+the default appearance of other consumers is unchanged. AppKit's
+[fullSizeContentView](https://developer.apple.com/documentation/appkit/nswindow/stylemask-swift.struct/fullsizecontentview)
+documents the content and titlebar layout distinction.
 
 ## Localization and narrow layouts (unreleased)
 
@@ -296,3 +318,12 @@ including inset and border; disabled, hidden or inactive-page controls do not
 highlight or activate. With neither attribute, the existing rendering is kept.
 Selection stays consumer-controlled: give selected rows the selected color for
 both attributes if hover/focus should preserve that selection.
+
+
+Action controls may use validated inline `svg` on `Icon` and `EmojiPicker`;
+`iconsize` sizes only the drawing, while the control bounds retain the hit area.
+Clickable controls support an optional `focusbordercolor` foreground outline
+without changing geometry. `selected` is exposed as an optional semantic state.
+An explicit user activation on a control with `copytext` copies that text through
+the host clipboard and emits `copyresult` (`ok` or `failed`). Rendering, focusing
+and disabled controls do not write the clipboard. No URI launch is implied.

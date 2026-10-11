@@ -21,6 +21,7 @@ p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background 
 p.add_argument('--embed-framework', action='append', type=Path, default=[])
 p.add_argument('--runtime-dir', action='append', type=Path, default=[], help='Consumer SDK runtime directories; copied into the host bundle')
 p.add_argument('--android-sources', action='append', type=Path, default=[], help='Consumer/platform Kotlin or Java source root')
+p.add_argument('--android-proguard', action='append', type=Path, default=[], help='Dependency-owned JNI/R8 keep rules, included in optimized release builds')
 p.add_argument('--android-manifest', type=Path, help='Consumer uses-permission and application privacy declarations')
 p.add_argument('--android-initializer', help='Consumer platform initialization class with initialize(Context)')
 a=p.parse_args()
@@ -115,6 +116,17 @@ if a.platform=='android':
     if a.development_host and not a.bundle_id.endswith('.test'):
         p.error('Debuggable host requires a test application identity')
     s=s.replace('            isDebuggable = true\n','')
+    marker='            // libflui dependency JNI keep rules\n'
+    rules_line='            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "libflui-consumer-rules.pro")\n'
+    s=s.replace(marker+rules_line,'')
+    if a.android_proguard:
+        rules=[]
+        for file in a.android_proguard:
+            if not file.is_file():p.error('Android keep rules do not exist: '+str(file))
+            rules.append(file.read_text())
+        (host/'android/app/libflui-consumer-rules.pro').write_text('\n'.join(rules)+'\n')
+        if len(re.findall(r'\brelease\s*\{',s))!=1:p.error('Expected one Android release build type')
+        s=re.sub(r'(\brelease\s*\{\n)',lambda m:m.group(1)+marker+rules_line,s,count=1)
     gradle.write_text(s)
     manifestxml=host/'android/app/src/main/AndroidManifest.xml'
     if a.android_manifest:

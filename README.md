@@ -1,5 +1,8 @@
 # devkit
 
+Current development handoff (2026-10-11): [source checkpoint, exact packages,
+validation and consumer boundaries](docs/HANDOFF_20261011.md).
+
 SKSTU shared C++20 native libraries, extracted from SovKit. Authoritative source:
 https://github.com/skstu/devkit . Business projects consume pinned commits.
 

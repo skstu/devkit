@@ -117,7 +117,7 @@ flui_status flui_window_property(flui_window h,flui_string k,flui_string v) {
  if(!valid(k)||!valid(v))return FLUI_INVALID_ARGUMENT;
  const auto key=str(k);
  if(key=="managed_close")windows[h].managed=str(v)=="true";
- else if(key=="title" || key=="size" || key=="minimum")return FLUI_UNSUPPORTED;
+ else if(key=="title" || key=="size" || key=="minimum" || key=="titlebar" || key=="popup")return FLUI_UNSUPPORTED;
  else return FLUI_INVALID_ARGUMENT;
  return FLUI_OK;
 }

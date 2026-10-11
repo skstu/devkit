@@ -75,7 +75,7 @@ target_include_directories(libflui PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOUR
 target_compile_definitions(libflui PRIVATE LIBFLUI_BUILD=1)
 target_compile_options(libflui PRIVATE -fobjc-arc -Wall -Wextra -Wpedantic)
 target_compile_features(libflui PRIVATE cxx_std_17)
-target_link_libraries(libflui PRIVATE "${engine}" "-framework Cocoa" "-framework UniformTypeIdentifiers")
+target_link_libraries(libflui PRIVATE "${engine}" "-framework Cocoa" "-framework UniformTypeIdentifiers" "-framework QuartzCore")
 set_target_properties(libflui PROPERTIES OUTPUT_NAME flui VERSION "${NATIVE_LIBS_VERSION}" SOVERSION 1
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
   OBJCXX_STANDARD 17 CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON
@@ -115,6 +115,12 @@ if(BUILD_TESTING)
   libflui_bundle_runtime(flui_abi_test)
   add_test(NAME libflui.abi COMMAND flui_abi_test)
   set_tests_properties(libflui.abi PROPERTIES TIMEOUT 30)
+  add_executable(flui_popup_test MACOSX_BUNDLE tests/popup.mm)
+  target_compile_options(flui_popup_test PRIVATE -fobjc-arc)
+  target_link_libraries(flui_popup_test PRIVATE devkit::libflui "-framework Cocoa")
+  libflui_bundle_runtime(flui_popup_test)
+  add_test(NAME libflui.popup COMMAND flui_popup_test)
+  set_tests_properties(libflui.popup PROPERTIES TIMEOUT 20)
   add_test(NAME libflui.renderer COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/build_renderer.py"
     --sdk "${LIBFLUI_FLUTTER_SDK}" --source "${CMAKE_CURRENT_SOURCE_DIR}/renderer"
     --work "${CMAKE_CURRENT_BINARY_DIR}/renderer-test" --output "${runtime}" --test)

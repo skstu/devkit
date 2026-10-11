@@ -21,6 +21,11 @@ function(libsys_configure_target target)
   endif()
 endfunction()
 
+# Device presentation facts have a standalone, dependency-free C ABI package.
+if(NOT TARGET devkit::device_info)
+  add_subdirectory(device-info)
+endif()
+
 # The SDK needs only system-directory resolution; do not pull GPU, proxy or
 # process-enumeration dependencies into every mobile build.
 add_library(libsys_directories STATIC src/directories.cc)

@@ -1,12 +1,24 @@
 #import <Cocoa/Cocoa.h>
 #import <FlutterMacOS/FlutterMacOS.h>
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
+#import <QuartzCore/QuartzCore.h>
 #include <dlfcn.h>
+#include <algorithm>
+#include <charconv>
+#include <cmath>
 #include <libflui/desktop.h>
 #include <libflui/flui.h>
 
+@interface FLUINativeWindow : NSWindow
+@property(nonatomic) BOOL popup;
+@end
+@implementation FLUINativeWindow
+- (BOOL)canBecomeKeyWindow { return self.popup || [super canBecomeKeyWindow]; }
+- (BOOL)canBecomeMainWindow { return !self.popup && [super canBecomeMainWindow]; }
+@end
+
 @interface FLUIWindow : NSObject <NSWindowDelegate>
-@property(nonatomic, strong) NSWindow *window;
+@property(nonatomic, strong) FLUINativeWindow *window;
 @property(nonatomic, strong) FlutterEngine *engine;
 @property(nonatomic, strong) FlutterMethodChannel *channel;
 @property(nonatomic) flui_window handle;
@@ -19,6 +31,9 @@
 @property(nonatomic) BOOL modal;
 @property(nonatomic) NSUInteger pending;
 @property(nonatomic) NSUInteger pendingBytes;
+@property(nonatomic, weak) FLUIWindow *popupParent;
+@property(nonatomic) NSRect popupAnchor;
+@property(nonatomic) CGFloat popupGap;
 - (void)emit:(uint32_t)kind
      request:(uint64_t)request
       status:(flui_status)status
@@ -90,6 +105,28 @@ static NSString *string(flui_string s) {
                                 encoding:NSUTF8StringEncoding];
 }
 static FLUIWindow *lookup(flui_window h) { return windows[@(h)]; }
+static void placePopup(FLUIWindow *w) {
+  FLUIWindow *parent = w.popupParent;
+  if (!parent || parent.closed || w.closed) return;
+  NSView *view = parent.window.contentView;
+  NSRect anchor = w.popupAnchor;
+  if (!view.isFlipped)
+    anchor.origin.y = NSHeight(view.bounds) - NSMaxY(anchor);
+  const NSRect screenAnchor = [parent.window convertRectToScreen:[view convertRect:anchor toView:nil]];
+  NSScreen *screen = parent.window.screen ? parent.window.screen : NSScreen.mainScreen;
+  const NSRect visible = screen.visibleFrame;
+  NSRect frame = w.window.frame;
+  frame.origin.x = NSMaxX(screenAnchor) + w.popupGap;
+  if (NSMaxX(frame) > NSMaxX(visible))
+    frame.origin.x = NSMinX(screenAnchor) - w.popupGap - NSWidth(frame);
+  frame.origin.x = std::max(NSMinX(visible), std::min(frame.origin.x, NSMaxX(visible) - NSWidth(frame)));
+  frame.origin.y = std::max(NSMinY(visible), std::min(NSMaxY(screenAnchor) - NSHeight(frame), NSMaxY(visible) - NSHeight(frame)));
+  [w.window setFrame:frame display:NO];
+}
+static void closePopupChildren(FLUIWindow *parent) {
+  for (FLUIWindow *child in windows.allValues)
+    if (child.popupParent == parent && !child.closed) [child.window close];
+}
 @implementation FLUIWindow
 - (void)emit:(uint32_t)kind
      request:(uint64_t)request
@@ -129,11 +166,24 @@ static FLUIWindow *lookup(flui_window h) { return windows[@(h)]; }
 - (void)windowWillClose:(NSNotification *)note {
   (void)note;
   self.closed = YES;
+  closePopupChildren(self);
+  [self.window.parentWindow removeChildWindow:self.window];
+  self.popupParent = nil;
   if (self.modal)
     [NSApp stopModal];
   [self.timer invalidate];
   [self emit:FLUI_EVENT_CLOSED request:0 status:FLUI_OK name:@"" value:@""];
 }
+- (void)windowDidResignKey:(NSNotification *)note {
+  (void)note;
+  if (self.popupParent && !self.closed) flui_window_request_close(self.handle);
+}
+- (void)windowDidMove:(NSNotification *)note {
+  (void)note;
+  for (FLUIWindow *child in windows.allValues)
+    if (child.popupParent == self) placePopup(child);
+}
+- (void)windowDidResize:(NSNotification *)note { [self windowDidMove:note]; }
 @end
 
 uint32_t flui_abi_version(void) { return FLUI_ABI_VERSION; }
@@ -238,7 +288,7 @@ flui_status flui_window_create(const flui_window_options *o, flui_window *out) {
         [[FlutterViewController alloc] initWithEngine:w.engine
                                               nibName:nil
                                                bundle:nil];
-    w.window = [[NSWindow alloc]
+    w.window = [[FLUINativeWindow alloc]
         initWithContentRect:NSMakeRect(0, 0, o->width, o->height)
                   styleMask:NSWindowStyleMaskTitled |
                             NSWindowStyleMaskClosable |
@@ -368,6 +418,9 @@ flui_status flui_window_destroy(flui_window handle) {
     [NSApp stopModal];
   [w.timer invalidate];
   w.closed = YES;
+  closePopupChildren(w);
+  [w.window.parentWindow removeChildWindow:w.window];
+  w.popupParent = nil;
   [w.channel setMethodCallHandler:nil];
   w.window.delegate = nil;
   [w.window close];
@@ -439,6 +492,77 @@ flui_status flui_window_property(flui_window h, flui_string key,
     return FLUI_INVALID_ARGUMENT;
   if ([k isEqualToString:@"title"])
     w.window.title = v;
+  else if ([k isEqualToString:@"popup"]) {
+    id json = [NSJSONSerialization JSONObjectWithData:[v dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
+    if (![json isKindOfClass:[NSDictionary class]] || [json count] != 3)
+      return FLUI_INVALID_ARGUMENT;
+    id parentId = json[@"parent"], anchor = json[@"anchor"], gap = json[@"gap"];
+    if (![parentId isKindOfClass:[NSString class]] ||
+        ![anchor isKindOfClass:[NSArray class]] || [anchor count] != 4)
+      return FLUI_INVALID_ARGUMENT;
+    const char *idBytes = [parentId UTF8String];
+    const size_t idSize = [parentId lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    if (!idBytes || !idSize || idSize > 20) return FLUI_INVALID_ARGUMENT;
+    uint64_t parentHandle = 0;
+    const auto parsed = std::from_chars(idBytes, idBytes + idSize, parentHandle);
+    if (parsed.ec != std::errc() || parsed.ptr != idBytes + idSize || !parentHandle)
+      return FLUI_INVALID_ARGUMENT;
+    FLUIWindow *parent = lookup(parentHandle);
+    if (!parent || parent.closed) return FLUI_INVALID_HANDLE;
+    for (NSWindow *p = parent.window; p; p = p.parentWindow)
+      if (p == w.window) return FLUI_INVALID_ARGUMENT;
+    double numbers[5];
+    for (NSUInteger i = 0; i < 5; ++i) {
+      id number = i < 4 ? anchor[i] : gap;
+      if (![number isKindOfClass:[NSNumber class]] || CFGetTypeID((__bridge CFTypeRef)number) == CFBooleanGetTypeID())
+        return FLUI_INVALID_ARGUMENT;
+      numbers[i] = [number doubleValue];
+      if (!std::isfinite(numbers[i])) return FLUI_INVALID_ARGUMENT;
+    }
+    const NSRect bounds = parent.window.contentView.bounds;
+    if (numbers[0] < 0 || numbers[1] < 0 || numbers[2] <= 0 || numbers[3] <= 0 ||
+        numbers[0] + numbers[2] > NSWidth(bounds) + 1 || numbers[1] + numbers[3] > NSHeight(bounds) + 1 ||
+        numbers[4] < 0 || numbers[4] > 64)
+      return FLUI_INVALID_ARGUMENT;
+    const NSSize size = w.window.contentView.bounds.size;
+    if (w.window.parentWindow != parent.window)
+      [w.window.parentWindow removeChildWindow:w.window];
+    w.window.popup = YES;
+    w.window.styleMask = NSWindowStyleMaskBorderless;
+    [w.window setContentSize:size];
+    w.window.opaque = NO;
+    w.window.backgroundColor = NSColor.clearColor;
+    w.window.hasShadow = YES;
+    w.window.movable = NO;
+    w.window.contentView.wantsLayer = YES;
+    w.window.contentView.layer.cornerRadius = 12;
+    w.window.contentView.layer.masksToBounds = YES;
+    w.popupParent = parent;
+    w.popupAnchor = NSMakeRect(numbers[0], numbers[1], numbers[2], numbers[3]);
+    w.popupGap = numbers[4];
+    if (w.window.parentWindow != parent.window)
+      [parent.window addChildWindow:w.window ordered:NSWindowAbove];
+    placePopup(w);
+  }
+  else if ([k isEqualToString:@"titlebar"]) {
+    if (w.popupParent) return FLUI_INVALID_ARGUMENT;
+    if (![v isEqualToString:@"overlay"] && ![v isEqualToString:@"standard"])
+      return FLUI_INVALID_ARGUMENT;
+    const BOOL overlay = [v isEqualToString:@"overlay"];
+    const NSRect frame = w.window.frame;
+    if (overlay)
+      w.window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+    else
+      w.window.styleMask &= ~NSWindowStyleMaskFullSizeContentView;
+    w.window.titleVisibility = overlay ? NSWindowTitleHidden : NSWindowTitleVisible;
+    w.window.titlebarAppearsTransparent = overlay;
+    if (@available(macOS 11.0, *))
+      w.window.titlebarSeparatorStyle = overlay ? NSTitlebarSeparatorStyleNone
+                                               : NSTitlebarSeparatorStyleAutomatic;
+    // Preserve the outer window geometry when changing the content area.
+    // The native titlebar retains its buttons and drag handling.
+    [w.window setFrame:frame display:NO];
+  }
   else if ([k isEqualToString:@"managed_close"])
     w.managedClose = [v isEqualToString:@"true"];
   else if ([k isEqualToString:@"size"] || [k isEqualToString:@"minimum"]) {

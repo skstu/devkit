@@ -51,6 +51,8 @@ int main(){
  flui_host_invoke(timer,0);
  assert(dispatch_count==1000);
  assert(flui_window_run_modal(h)==FLUI_UNSUPPORTED);
+ const flui_string popup_key{"popup",5},popup_value{"{}",2};
+ assert(flui_window_property(h,popup_key,popup_value)==FLUI_UNSUPPORTED);
  while(flui_host_take()){}
  const flui_string title{"Select",6};
  assert(flui_file_dialog_async(FLUI_FILE_SAVE,title,file_result,nullptr)==FLUI_INVALID_ARGUMENT);

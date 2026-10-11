@@ -44,6 +44,15 @@ sources and initialize `BleRuntime.initialize(applicationContext)` before native
 context creation. The application requests appropriate scan/connect/advertise
 permissions (and location on older Android), owns foreground policy and loads
 the SO. libble never silently grants permissions or starts a background service.
+Optimized Android builds must also include the installed
+`share/libble/android/consumer-rules.pro` in their release `proguardFiles`.
+These rules preserve the constructor and methods called by native JNI; copying
+Kotlin source alone is insufficient. The libflui preview builder accepts this
+file through `--android-proguard`. Keep R8 enabled: startup-only checks do not
+exercise engine creation, so verify an explicit scan/start and stop in the
+optimized APK. A missing JNI method now returns a creation error through the
+C ABI after clearing the lookup exception, instead of continuing another
+lookup with an exception pending.
 Windows: adapter central/peripheral support and radio availability are checked
 at explicit start. Linux: system GIO/BlueZ, D-Bus permissions, powered adapter
 and GattManager/LEAdvertisingManager roles are needed. Building a preview in a

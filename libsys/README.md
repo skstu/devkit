@@ -219,3 +219,25 @@ requires no GPU/process/network probing or nlohmann JSON. The optional full
 `sovrankit::libsys` target also links it. This keeps the same directory contract
 in both builds. Android host plumbing and application migration must complete
 before the product switches its existing runtime roots.
+
+## Device presentation information
+
+`include/libsys/device_info.h` exposes the standalone C ABI `dksys_device_detect`.
+Set `struct_size` and `version=1`. It returns bounded UTF-8 system, device form,
+model and detection-source strings; an unknown form is a valid result. It never
+reads serials, hardware UUIDs, MACs, hostname, GPU, proxy or identity information.
+No network, permission prompt or application context is needed. Detection is
+conservative: firmware/chassis, an internal Mac battery, iPhone/iPad families,
+and available Android form properties/known Pixel families. Unrecognized
+Android models with no form property remain unknown rather than being guessed
+from their operating system. These facts are presentation hints, not hardware
+attestation or a platform compatibility claim.
+
+Build just this component with `cmake -S libsys/device-info -B build/device-info`,
+then build and run CTest. The full libsys build also exposes `devkit::device_info`.
+`tools/package_device_info_sdk.py` packages a completed target build with exact
+payload/source hashes and producer license; remote staging validates source
+provenance. A product consumes this independent locked static package without
+pulling in the legacy system/proxy/fingerprint facade. Linux builds use the
+Ubuntu 22.04 baseline; run hardware-detection tests on the actual host since an
+isolated build environment may hide its sysfs hardware information.

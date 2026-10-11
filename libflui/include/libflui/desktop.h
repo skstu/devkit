@@ -13,7 +13,19 @@ FLUI_API flui_status FLUI_CALL flui_window_set_tree(flui_window,
 FLUI_API flui_status FLUI_CALL flui_window_patch(flui_window, flui_string json,
                                                  uint64_t request);
 #define FLUI_EVENT_CLOSE_REQUEST 7u
-/* title, size (w,h), minimum (w,h), managed_close (true/false). */
+/* title, size (w,h), minimum (w,h), managed_close (true/false).
+ * Native macOS: titlebar (standard/overlay), available before READY. Overlay
+ * hides the drawn title and extends content behind the native titlebar while
+ * retaining window buttons and dragging. The caller reserves space for them.
+ * The title itself remains available to the OS. Other hosts return UNSUPPORTED.
+ * Native macOS: popup={"parent":"<window handle>","anchor":[x,y,w,h],"gap":8}.
+ * The anchor uses the parent's top-left logical content coordinates and must be
+ * inside it. gap is 0..64. Turns this window into a non-resizable borderless
+ * child popup, prefers the anchor's right edge, falls back to the left and fits
+ * the parent's display. Follows parent moves/resizes; focus loss requests close
+ * through the normal managed-close contract. Parent close closes the popup.
+ * Available before READY; other hosts return UNSUPPORTED. Call show afterward.
+ */
 FLUI_API flui_status FLUI_CALL flui_window_property(flui_window,
                                                     flui_string key,
                                                     flui_string value);
