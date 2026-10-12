@@ -1,13 +1,22 @@
 #include "libnet_network_path.h"
 #include "libnet_uv.h"
+#include "libnet_dns_resolver.h"
 
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <set>
 #include <tuple>
 
 #ifdef __ANDROID__
 #include <android/multinetwork.h>
+#elif defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
+#include <SystemConfiguration/SystemConfiguration.h>
+#endif
+#include <net/if.h>
+#include <ifaddrs.h>
 #elif !defined(_WIN32)
 #include <net/if.h>
 #else
@@ -15,6 +24,43 @@
 #endif
 
 namespace libnet {
+
+bool DefaultDirectNetworkPaths(std::vector<NetworkPath>& output) {
+  output.clear();
+#if defined(__APPLE__) && TARGET_OS_OSX
+  std::set<std::string> names;
+  for(auto key:{CFSTR("State:/Network/Global/IPv4"),CFSTR("State:/Network/Global/IPv6")}) {
+    auto value=SCDynamicStoreCopyValue(nullptr,key);
+    if(value && CFGetTypeID(value)==CFDictionaryGetTypeID()) {
+      auto name=CFDictionaryGetValue(static_cast<CFDictionaryRef>(value),CFSTR("PrimaryInterface"));
+      char buffer[256]{};
+      if(name && CFGetTypeID(name)==CFStringGetTypeID() &&
+         CFStringGetCString(static_cast<CFStringRef>(name),buffer,sizeof(buffer),kCFStringEncodingUTF8))names.insert(buffer);
+    }
+    if(value)CFRelease(value);
+  }
+  ifaddrs* interfaces=nullptr;
+  if(getifaddrs(&interfaces))return false;
+  std::set<std::string> physical;
+  for(auto* i=interfaces;i;i=i->ifa_next)if(i->ifa_name && (i->ifa_flags&IFF_UP) &&
+      !(i->ifa_flags&(IFF_LOOPBACK|IFF_POINTOPOINT)))physical.insert(i->ifa_name);
+  freeifaddrs(interfaces);
+  std::vector<NetworkPathAddress> addresses;
+  if(!ListNetworkPathAddresses(addresses))return false;
+  std::set<std::string> families;
+  for(const auto& address:addresses) {
+    const auto endpoint=Endpoint::Parse(address.local_address,0);
+    if(!names.contains(address.interface_name) || !physical.contains(address.interface_name) ||
+       address.internal || !endpoint || IsSyntheticDnsAddress(address.local_address) ||
+       (endpoint->family()==AddressFamily::ipv6 && !endpoint->IsGlobal()) ||
+       !families.insert(address.family).second)continue;
+    output.push_back({address.interface_name,address.local_address,0});
+  }
+  return !output.empty();
+#else
+  return false;
+#endif
+}
 
 bool ListNetworkPathAddresses(std::vector<NetworkPathAddress> &output) {
   output.clear();

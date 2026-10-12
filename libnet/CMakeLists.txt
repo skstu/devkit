@@ -55,6 +55,8 @@ add_library(libnet_transport STATIC
   src/libnet_ice_transport.cc
   include/libnet_network_path.h
   src/libnet_network_path.cc
+  include/libnet_dns_resolver.h
+  src/libnet_dns_resolver.cc
   include/libnet_quic.h
   src/libnet_quic.cc
   include/libnet_transport_provider.h
@@ -85,6 +87,8 @@ target_link_libraries(
   PRIVATE ngtcp2::ngtcp2_static ngtcp2::ngtcp2_crypto_ossl_static nlohmann_json::nlohmann_json)
 if(ANDROID)
   target_link_libraries(libnet_transport PRIVATE android)
+elseif(APPLE)
+  target_link_libraries(libnet_transport PUBLIC "-framework SystemConfiguration" "-framework CoreFoundation")
 elseif(WIN32)
   target_link_libraries(libnet_transport PRIVATE iphlpapi)
 endif()
@@ -106,6 +110,20 @@ else()
   target_link_libraries(libnet INTERFACE libnet_transport)
 endif()
 add_library(sovrankit::libnet ALIAS libnet)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  include(CTest)
+  if(BUILD_TESTING)
+    add_executable(libnet_stun_pool_test tests/stun_pool.cpp)
+    target_link_libraries(libnet_stun_pool_test PRIVATE libnet_transport)
+    add_test(NAME libnet.stun_pool COMMAND libnet_stun_pool_test)
+    set_tests_properties(libnet.stun_pool PROPERTIES TIMEOUT 20)
+    add_executable(libnet_dns_resolver_test tests/dns_resolver.cpp)
+    target_link_libraries(libnet_dns_resolver_test PRIVATE libnet_transport)
+    add_test(NAME libnet.dns_resolver COMMAND libnet_dns_resolver_test)
+    set_tests_properties(libnet.dns_resolver PROPERTIES TIMEOUT 15)
+  endif()
+endif()
 
 if(LIBNET_ENABLE_WEBSOCKETS)
   if(NOT LIBNET_ENABLE_HTTP)
@@ -157,6 +175,7 @@ endif()
 install(
   FILES include/libnet_ice.h include/libnet_ice_transport.h include/libnet_tcp_direct.h include/libnet_quic.h include/libnet_transport_provider.h
         include/libnet_uv.h include/libnet_stun_server.h include/libnet_network_path.h include/libnet_assistance_node.h
+        include/libnet_dns_resolver.h include/libnet_dns.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 if(LIBNET_ENABLE_HTTP)
   install(

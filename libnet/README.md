@@ -3,6 +3,26 @@
 libnet provides portable native networking primitives. The independent C ABI
 dynamic SDK is built from `libnet/sdk`; see [SDK scope and contract](docs/SDK.md).
 
+The 2026-10-11 WAN development slice also offers an `IceTransport` STUN pool
+with at most four retained data sockets, shared ICE credentials and a bounded
+gather budget. Silent providers do not discard usable host candidates. Pools
+on an explicitly selected physical network resolve A/AAAA with bounded UDP DNS
+on that same network. The OS DNS list is used first; optional numeric resolvers
+are caller configuration. Benchmark/fake-IP ranges are rejected. DNS does not
+block start or offer acceptance; stop cancels and joins lookup workers before
+destroying agents. macOS can obtain default physical IPv4/IPv6 paths without
+changing VPN/proxy/system settings. This path selector is not yet implemented
+on the other platforms. Pool checks and endpoint counters aggregate all agents.
+Pools accept up to two snapshot paths within four total data sockets and still
+reject TCP, TURN/relay, PCP and managed-path combinations; `IceAgent` rejects
+pool configuration instead of silently ignoring it. The pool does not claim
+automatic network migration. The caller authenticates the peer, exchanges
+offers/answers and decides whether QUIC is required for business records.
+`tools/package_wan_net_sdk.py` builds/tests and hashes an exact macOS/Android
+arm64 static C++ slice. This internal preview is separate from the stable LAN
+C ABI package; its headers/libraries must be consumed together, with matching
+compiler and third-party dependencies.
+
 ## Capabilities
 
 - Synchronous HTTP `HEAD`, `GET`, parameterized `GET`, `POST`, and `PUT`.
@@ -114,5 +134,6 @@ standard C++ and libcurl APIs. See `LICENSE` for the upstream license.
 The ICE implementation links libjuice 1.7.2 through vcpkg. libjuice is licensed
 under MPL-2.0; distributed SDK artifacts must retain its license notice and
 make any modifications to MPL-covered libjuice source files available under
-that license. SovKit currently consumes the unmodified upstream package and
-keeps its wrapper in separate SovKit-owned files.
+that license. The WAN slice consumes the caller's matching libjuice dependency,
+including its diagnostic extensions; the consumer must retain the corresponding
+licenses and any dependency overlay patches. Wrappers remain separate files.

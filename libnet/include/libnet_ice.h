@@ -31,6 +31,11 @@ struct TurnServer {
   std::string password;
 };
 
+struct StunEndpoint {
+  std::string host;
+  std::uint16_t port = 3478;
+};
+
 enum class IceAddressPolicy : std::uint8_t { automatic, ipv4, ipv6 };
 
 // Numeric IPv4, bound local interface, gateway on that interface's subnet.
@@ -47,6 +52,15 @@ struct IceConfig {
   IceAddressPolicy address_policy = IceAddressPolicy::automatic;
   std::string stun_host;
   std::uint16_t stun_port = 3478;
+  // Optional bounded pool. Each agent keeps its actual data socket alive;
+  // shared ICE credentials allow their candidates to be signaled together.
+  // Mutually exclusive with stun_host, TCP, relay and managed network paths.
+  std::vector<StunEndpoint> stun_servers;
+  std::uint32_t stun_gather_budget_ms = 6000;
+  // Bound pool DNS uses local OS resolvers plus explicitly configured numeric
+  // fallbacks. One asynchronous budget for the whole pool, cancelled by Stop.
+  std::vector<std::string> stun_dns_fallback_servers;
+  std::uint32_t stun_dns_budget_ms = 1500;
   std::vector<TurnServer> turn_servers;
   std::string bind_address;
   // Opt-in source + interface/network binding for the actual ICE socket.

@@ -337,7 +337,7 @@ bool IsOnLinkGateway(std::string_view local_address, std::string_view gateway) {
 }
 
 bool IceAgent::Start(const IceConfig &config) {
-  if (config.tcp_direct) return false; // Never silently reinterpret TCP as UDP.
+  if (config.tcp_direct || !config.stun_servers.empty()) return false; // Pools belong to IceTransport.
   Stop();
   if (config.mapping_second_port && config.filtering_second_port) return false;
   if (config.filtering_second_port && (config.port_range_begin || config.port_range_end)) return false;

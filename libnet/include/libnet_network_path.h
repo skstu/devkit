@@ -29,6 +29,10 @@ struct NetworkPathStatus {
 
 // Local inspection only; callers must not put addresses in redacted reports.
 bool ListNetworkPathAddresses(std::vector<NetworkPathAddress> &output);
+// macOS primary physical service (one IPv4 and one global IPv6 source). TUN,
+// loopback and benchmark addresses are excluded. Unsupported OS returns false;
+// never silently substitutes a process-wide VPN/proxy path.
+bool DefaultDirectNetworkPaths(std::vector<NetworkPath> &output);
 bool ValidateNetworkPath(const NetworkPath &path);
 // Runs before bind/connect/send on an owned socket. Failure forbids fallback.
 bool PrepareNetworkPathSocket(const NetworkPath &path, std::uintptr_t socket, int family);

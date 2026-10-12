@@ -104,8 +104,18 @@ if a.platform=='android':
         if len(activities)!=1:p.error('Expected one SDK-owned Android activity')
         activity=activities[0]
         package=re.search(r'^package ([\w.]+)',activity.read_text(),re.M).group(1)
-        activity.write_text('package '+package+'\nimport android.os.Bundle\nimport io.flutter.embedding.android.FlutterActivity\n'
-            'class MainActivity: FlutterActivity() {\n override fun onCreate(savedInstanceState: Bundle?) {\n  '
+        activity.write_text('package '+package+'\nimport android.os.Bundle\nimport android.content.Context\nimport io.flutter.embedding.android.FlutterActivity\nimport io.flutter.embedding.engine.FlutterEngine\nimport io.flutter.embedding.engine.dart.DartExecutor\n'
+            'class MainActivity: FlutterActivity() {\n'
+            ' companion object { private var retainedEngine: FlutterEngine? = null }\n'
+            ' // Native callbacks and consumer workers live for the process lifetime.\n'
+            ' // Retain their Dart isolate when Android recreates an Activity.\n'
+            ' override fun provideFlutterEngine(context: Context): FlutterEngine {\n'
+            '  return retainedEngine ?: FlutterEngine(context.applicationContext).also {\n'
+            '   retainedEngine = it\n'
+            '   it.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())\n'
+            '  }\n }\n'
+            ' override fun shouldDestroyEngineWithHost(): Boolean = false\n'
+            ' override fun onCreate(savedInstanceState: Bundle?) {\n  '
             +a.android_initializer+'.initialize(this)\n  super.onCreate(savedInstanceState)\n }\n'
             +' override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {\n  super.onRequestPermissionsResult(code, permissions, results)\n  '
             +a.android_initializer+'.permissionResult(code, permissions, results)\n }\n}\n')

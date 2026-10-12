@@ -1146,14 +1146,16 @@ class _TreeViewState extends State<TreeView> {
         baseOffset: 0,
         extentOffset: editor!.text.length,
       );
-    if (n.attrs['traverse'] != null &&
+    if (focus != null &&
+        n.attrs['traverse'] != null &&
         previous['traverse'] != n.attrs['traverse'])
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          // Traverse from this editor, not the surrounding form scope.
           if (n.text('traverse').startsWith('backward'))
-            FocusScope.of(context).previousFocus();
+            focus!.previousFocus();
           else
-            FocusScope.of(context).nextFocus();
+            focus!.nextFocus();
         }
       });
     if (scroll != null && previous['scroll'] != n.attrs['scroll'])
@@ -1427,19 +1429,41 @@ class _TreeViewState extends State<TreeView> {
       for (final r in rows) int.tryParse(r.text('index')) ?? -1: r,
     };
     Widget row(RNode r, int index) {
+      void activate() => emit('itemclick', '$index,0');
+      final actionable = m.interactive(n) && n.flag('event_itemclick');
       final background = n.number('selected', -1).round() == index
           ? color('itemselbkcolor', const Color(0xffd8e8ef))
           : index.isEven
           ? color('stripecolor', color('itembkcolor'))
           : color('itembkcolor');
-      return RepaintBoundary(
-        child: ColoredBox(
-          color: background,
-          child: child(
-            r,
-            rowClick: (column) {
-              emit('itemclick', '$index,$column');
+      return FocusableActionDetector(
+        enabled: actionable,
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              if (actionable) activate();
+              return null;
             },
+          ),
+        },
+        child: Semantics(
+          button: actionable,
+          selected: n.number('selected', -1).round() == index,
+          onTap: actionable ? activate : null,
+          child: RepaintBoundary(
+            child: ColoredBox(
+              color: background,
+              child: child(
+                r,
+                rowClick: (column) {
+                  emit('itemclick', '$index,$column');
+                },
+              ),
+            ),
           ),
         ),
       );
@@ -1533,6 +1557,7 @@ class _TreeViewState extends State<TreeView> {
       onChanged: (v) => emit('valuechanged', v),
     );
     return Focus(
+      skipTraversal: true,
       onKeyEvent: (_, event) {
         final submitKey = n.text('submitkey');
         if (n.flag('multiline') &&
@@ -1604,6 +1629,7 @@ class _TreeViewState extends State<TreeView> {
         .cast<String>();
     final selected = n.number('selected', -1).round();
     return Focus(
+      skipTraversal: true,
       onKeyEvent: (_, event) {
         if (event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.tab &&
