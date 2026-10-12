@@ -650,6 +650,12 @@ class _RetainedAppState extends State<RetainedApp> with WidgetsBindingObserver {
                     .platformDispatcher
                     .platformBrightness,
               );
+              final background = palette.color(
+                root.text('bkcolor', palette.tokens['surface']!),
+              );
+              final darkBackground =
+                  ThemeData.estimateBrightnessForColor(background) ==
+                  Brightness.dark;
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 locale: palette.strings!.flutterLocale,
@@ -673,39 +679,57 @@ class _RetainedAppState extends State<RetainedApp> with WidgetsBindingObserver {
                     seedColor: palette.color(palette.tokens['accent']!),
                   ),
                 ),
-                home: Scaffold(
-                  backgroundColor: palette.color(
-                    root.text('bkcolor', palette.tokens['surface']!),
+                home: AnnotatedRegion<SystemUiOverlayStyle>(
+                  // Edge-to-edge system bars use the window's actual surface,
+                  // including explicit palette overrides and theme changes.
+                  value: SystemUiOverlayStyle(
+                    statusBarColor: Colors.transparent,
+                    statusBarIconBrightness: darkBackground
+                        ? Brightness.light
+                        : Brightness.dark,
+                    statusBarBrightness: darkBackground
+                        ? Brightness.dark
+                        : Brightness.light,
+                    systemNavigationBarColor: background,
+                    systemNavigationBarIconBrightness: darkBackground
+                        ? Brightness.light
+                        : Brightness.dark,
                   ),
-                  body: SafeArea(
-                    top: root.flag("safe_area"),
-                    bottom: root.flag("safe_area"),
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontFamily: root.text('font', palette.tokens['font']!),
-                        fontSize: root.number('fontsize', 13),
-                        color: palette.color(
-                          root.text(
-                            'defaultfontcolor',
-                            palette.tokens['text']!,
+                  child: Scaffold(
+                    backgroundColor: background,
+                    body: SafeArea(
+                      top: root.flag("safe_area"),
+                      bottom: root.flag("safe_area"),
+                      child: DefaultTextStyle(
+                        style: TextStyle(
+                          fontFamily: root.text(
+                            'font',
+                            palette.tokens['font']!,
                           ),
+                          fontSize: root.number('fontsize', 13),
+                          color: palette.color(
+                            root.text(
+                              'defaultfontcolor',
+                              palette.tokens['text']!,
+                            ),
+                          ),
+                          height: 1.1,
                         ),
-                        height: 1.1,
-                      ),
-                      child: CallbackShortcuts(
-                        bindings: {
-                          if (root.flag('dialog'))
-                            const SingleActivator(
-                              LogicalKeyboardKey.escape,
-                            ): () =>
-                                model.action('0:close', ''),
-                        },
-                        child: Focus(
-                          autofocus: true,
-                          child: TreeView(
-                            node: root,
-                            model: model,
-                            palette: palette,
+                        child: CallbackShortcuts(
+                          bindings: {
+                            if (root.flag('dialog'))
+                              const SingleActivator(
+                                LogicalKeyboardKey.escape,
+                              ): () =>
+                                  model.action('0:close', ''),
+                          },
+                          child: Focus(
+                            autofocus: true,
+                            child: TreeView(
+                              node: root,
+                              model: model,
+                              palette: palette,
+                            ),
                           ),
                         ),
                       ),
