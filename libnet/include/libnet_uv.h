@@ -141,6 +141,9 @@ public:
   bool Bind(uv_loop_t *loop, const Endpoint &endpoint, unsigned flags = 0);
   bool Bind(uv_loop_t *loop, const std::string &address, std::uint16_t port,
             unsigned flags = 0);
+  // Descriptor preparation before bind; retained and reapplied on rebind.
+  bool BindPrepared(uv_loop_t *, const Endpoint &, unsigned flags,
+                    std::function<bool(std::uintptr_t)> prepare);
   bool StartReceive(DatagramHandler data, StatusHandler error = {});
   bool StartReceive(DataHandler data, StatusHandler error = {});
   bool StopReceive();

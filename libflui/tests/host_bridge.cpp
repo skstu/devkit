@@ -55,7 +55,8 @@ int main(){
  assert(flui_window_property(h,popup_key,popup_value)==FLUI_UNSUPPORTED);
  while(flui_host_take()){}
  const flui_string title{"Select",6};
- assert(flui_file_dialog_async(FLUI_FILE_SAVE,title,file_result,nullptr)==FLUI_INVALID_ARGUMENT);
+ assert(flui_file_dialog_async(99,title,file_result,nullptr)==FLUI_INVALID_ARGUMENT);
+ assert(flui_file_save_async(title,{"../bad",6},file_result,nullptr)==FLUI_INVALID_ARGUMENT);
  std::thread wrong([&]{assert(flui_file_dialog_async(FLUI_FILE_OPEN,title,file_result,nullptr)==FLUI_WRONG_THREAD);});wrong.join();
  assert(flui_file_dialog_async(FLUI_FILE_OPEN,title,file_result,nullptr)==FLUI_OK);
  assert(files==0);
@@ -71,7 +72,30 @@ int main(){
  const auto cancel_id=std::stoull(cancelled.substr(cancelled.find("\"id\":")+5));
  flui_host_file_result(cancel_id,FLUI_OK,"");assert(files==2&&selected.empty());
 
+ assert(flui_file_save_async(title,{"received.txt",12},file_result,nullptr)==FLUI_OK);
+ assert(flui_file_dialog_async(FLUI_FILE_SAVE,title,file_result,nullptr)==FLUI_BUSY);
+ const std::string saved=flui_host_take();
+ assert(saved.find("\"kind\":2")!=saved.npos && saved.find("received.txt")!=saved.npos);
+ const auto save_id=std::stoull(saved.substr(saved.find("\"id\":")+5));
  assert(flui_window_close(h)==FLUI_OK);
+ const std::string closed=flui_host_take();
+ assert(closed.find("\"op\":\"close\"")!=closed.npos && closed.find("\"id\":")==closed.npos);
+ flui_host_file_result(save_id,FLUI_OK,"/tmp/export.txt");assert(files==3&&selected=="/tmp/export.txt");
+ flui_host_file_result(save_id,FLUI_OK,"late");assert(files==3);
+ assert(flui_file_dialog_async(FLUI_FILE_SAVE,title,file_result,nullptr)==FLUI_OK);
+ const std::string save_cancel=flui_host_take();
+ assert(save_cancel.find("\"op\":\"file\"")!=save_cancel.npos && save_cancel.find("\"id\":")!=save_cancel.npos);
+ flui_host_file_result(std::stoull(save_cancel.substr(save_cancel.find("\"id\":")+5)),FLUI_OK,"");
+ assert(files==4 && selected.empty());
+ const flui_string source{"/tmp/source.txt",15},name{"source.txt",10};
+ assert(flui_file_action_async(99,source,title,name,file_result,nullptr)==FLUI_INVALID_ARGUMENT);
+ assert(flui_file_action_async(FLUI_FILE_EXPORT,source,title,name,file_result,nullptr)==FLUI_OK);
+ assert(flui_file_dialog_async(FLUI_FILE_OPEN,title,file_result,nullptr)==FLUI_BUSY);
+ const std::string action=flui_host_take();
+ assert(action.find("\"op\":\"file_action\"")!=action.npos && action.find("/tmp/source.txt")!=action.npos);
+ const auto action_id=std::stoull(action.substr(action.find("\"id\":")+5));
+ flui_host_file_result(action_id,FLUI_OK,"content://export/result");assert(files==5&&selected=="content://export/result");
+ flui_host_file_result(action_id,FLUI_OK,"late");assert(files==5);
  assert(flui_window_patch(h,input,18)==FLUI_INVALID_HANDLE);
  assert(flui_window_destroy(h)==FLUI_OK);
  assert(flui_window_destroy(h)==FLUI_INVALID_HANDLE);

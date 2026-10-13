@@ -1,5 +1,6 @@
 #include "libnet/net.h"
 #include "lan_interfaces.h"
+#include "lan_paths.h"
 #include <uv.h>
 #include <algorithm>
 #include <array>
@@ -10,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <utility>
@@ -107,7 +109,7 @@ int enumerate(std::vector<dknet_interface>& result) {
     if (family!=AF_INET && family!=AF_INET6) continue;
     dknet_interface row{}; row.struct_size=sizeof(row);
     row.family=family==AF_INET?4:6; row.index=index(e.name);
-    row.flags=e.is_internal?DKNET_INTERFACE_INTERNAL:0;
+    row.flags=(e.is_internal?DKNET_INTERFACE_INTERNAL:0u)|libnet::detail::InterfaceFlags(e.name);
     std::memcpy(row.name,e.name,std::strlen(e.name)+1);
     if (family==AF_INET) {
       if (uv_ip4_name(&e.address.address4,row.address,sizeof(row.address)) ||
@@ -230,6 +232,28 @@ struct dknet_lan_context::Udp {
   uint32_t family=0;
   std::vector<char> receive_buffer;
   std::string outgoing_interface;
+  std::optional<libnet::detail::LanPath> direct_path;
+  int prepare_path() {
+    if(!(config.flags&DKNET_UDP_DIRECT_PATH))return 0;
+#ifdef __ANDROID__
+    if(!direct_path) {
+      std::vector<libnet::detail::LanPath> paths;
+      const std::string requested=(std::string(bound.address)=="0.0.0.0" || std::string(bound.address)=="::")?"":bound.address;
+      if(libnet::detail::ListLanPaths(requested.c_str(),32,paths)!=DKNET_OK)return UV_ENODEV;
+      for(const auto& path:paths)if(path.row.family==family && (!direct_path || path.preferred))direct_path=path;
+      if(!direct_path)return UV_ENODEV;
+    }
+#endif
+    if(!direct_path)return 0;
+    uv_os_fd_t descriptor;
+    if(uv_fileno(reinterpret_cast<uv_handle_t*>(&handle),&descriptor))return UV_EBADF;
+#ifdef _WIN32
+    const auto socket=reinterpret_cast<uintptr_t>(descriptor);
+#else
+    const auto socket=static_cast<uintptr_t>(descriptor);
+#endif
+    return libnet::detail::PrepareLanSocket(*direct_path,socket)?0:UV_EACCES;
+  }
   std::vector<std::pair<std::string,std::string>> memberships;
   dknet_udp_stats stats{sizeof(stats),0,0,0,0,0,0,0};
   struct Send { uv_udp_send_t request{}; Udp* udp; uint64_t token; std::vector<char> bytes; sockaddr_storage peer{}; };
@@ -274,8 +298,9 @@ struct dknet_lan_context::Udp {
     if(status) return status;
     family=address.ss_family==AF_INET?4:6;
     handle={}; handle.data=this;
-    if((status=uv_udp_init(&context->loop,&handle))) return status;
+    if((status=uv_udp_init_ex(&context->loop,&handle,address.ss_family))) return status;
     initialized=true;
+    if((status=prepare_path()))return status;
     unsigned flags=0;
     if(config.flags&DKNET_UDP_REUSE_ADDRESS) flags|=UV_UDP_REUSEADDR;
     if(config.flags&DKNET_UDP_IPV6_ONLY) flags|=UV_UDP_IPV6ONLY;
@@ -448,7 +473,7 @@ int32_t DKNET_CALL dknet_lan_last_native_error(dknet_lan_context* c) {
 int32_t DKNET_CALL dknet_udp_open(dknet_lan_context* c,const dknet_udp_config* config,uint64_t* out) {
   if(!out) return DKNET_INVALID; *out=0;
   return protect([&]()->int32_t {
-    if(!c || !config || config->struct_size!=sizeof(*config) || config->version!=1 || config->flags&~7u ||
+    if(!c || !config || config->struct_size!=sizeof(*config) || config->version!=1 || config->flags&~15u ||
        !config->maximum_receive_bytes || config->maximum_receive_bytes>65536 || !config->multicast_ttl || config->multicast_ttl>255 || config->multicast_loop>1) return DKNET_INVALID;
     if(!c->live()) return DKNET_STATE;
     sockaddr_storage address{}; if(parse(config->bind,address)) return DKNET_INVALID;
@@ -535,6 +560,16 @@ int32_t DKNET_CALL dknet_udp_multicast_interface(dknet_lan_context* c,uint64_t i
     if(!value.empty()) { dknet_endpoint input{}; sockaddr_storage address{}; std::memcpy(input.address,value.c_str(),value.size()+1); if(parse(input,address) || (address.ss_family==AF_INET?4u:6u)!=p->family) return DKNET_INVALID; }
     std::string native; const int resolved=native_interface(value.c_str(),native);
     if(resolved) return c->io(resolved);
+    if(p->config.flags&DKNET_UDP_DIRECT_PATH) {
+      if(!p->outgoing_interface.empty() && value==p->outgoing_interface)return DKNET_OK;
+      if(!p->outgoing_interface.empty())return DKNET_STATE;
+      if(value.empty())return DKNET_INVALID;
+      if(p->stats.pending_datagrams || p->stats.sent_datagrams)return DKNET_BUSY;
+      std::vector<libnet::detail::LanPath> paths;
+      if(libnet::detail::ListLanPaths(value.c_str(),32,paths)!=DKNET_OK || paths.empty())return c->io(UV_ENODEV);
+      p->direct_path=paths.front();
+      const int status=p->prepare_path();if(status){p->close();return c->io(status);}
+    }
     const auto r=c->io(uv_udp_set_multicast_interface(&p->handle,native.empty()?nullptr:native.c_str()));
     if(!r) p->outgoing_interface=std::move(value); return r;
   });

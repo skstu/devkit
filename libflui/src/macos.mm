@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <memory>
+#include <cstdio>
 #include <libflui/desktop.h>
 #include <libflui/flui.h>
 
@@ -713,22 +715,32 @@ flui_status flui_file_dialog(uint32_t kind, flui_string title,
     return FLUI_INVALID_ARGUMENT;
   return FLUI_OK;
 }
-flui_status flui_file_dialog_async(uint32_t kind, flui_string title,
+static bool filePickerPending = false;
+static flui_status fileDialog(uint32_t kind, flui_string title, flui_string initial,
                                   flui_file_callback callback, void *user) {
   if (![NSThread isMainThread]) return FLUI_WRONG_THREAD;
   NSString *t = string(title);
-  if (!callback || !t || (kind != FLUI_FILE_OPEN && kind != FLUI_FILE_DIRECTORY))
+  NSString *name = string(initial);
+  if (!callback || !t || !name || [name rangeOfString:@"/"].location != NSNotFound ||
+      [name rangeOfString:@"\\"].location != NSNotFound ||
+      (kind != FLUI_FILE_OPEN && kind != FLUI_FILE_SAVE && kind != FLUI_FILE_DIRECTORY))
     return FLUI_INVALID_ARGUMENT;
-  static bool pending = false;
-  if (pending) return FLUI_BUSY;
-  pending = true;
-  NSOpenPanel *panel = [NSOpenPanel openPanel];
+  if (filePickerPending) return FLUI_BUSY;
+  NSSavePanel *panel;
+  if (kind == FLUI_FILE_SAVE) {
+    panel = [NSSavePanel savePanel];
+    panel.nameFieldStringValue = name;
+  } else {
+    NSOpenPanel *open = [NSOpenPanel openPanel];
+    open.allowsMultipleSelection = NO;
+    open.canChooseFiles = kind == FLUI_FILE_OPEN;
+    open.canChooseDirectories = kind == FLUI_FILE_DIRECTORY;
+    panel = open;
+  }
   panel.title = t;
-  panel.allowsMultipleSelection = NO;
-  panel.canChooseFiles = kind == FLUI_FILE_OPEN;
-  panel.canChooseDirectories = kind == FLUI_FILE_DIRECTORY;
+  filePickerPending = true;
   [panel beginWithCompletionHandler:^(NSModalResponse response) {
-    pending = false;
+    filePickerPending = false;
     NSData *bytes = [(response == NSModalResponseOK ? panel.URL.path : @"") dataUsingEncoding:NSUTF8StringEncoding];
     ++callbackDepth;
     try { callback(FLUI_OK, {(const char*)bytes.bytes, bytes.length}, user); } catch (...) {}
@@ -736,6 +748,73 @@ flui_status flui_file_dialog_async(uint32_t kind, flui_string title,
   }];
   return FLUI_OK;
 }
+flui_status flui_file_dialog_async(uint32_t kind, flui_string title,
+                                  flui_file_callback callback, void *user) {
+  return fileDialog(kind, title, {nullptr, 0}, callback, user);
+}
+flui_status flui_file_save_async(flui_string title, flui_string initial,
+                               flui_file_callback callback, void *user) {
+  return fileDialog(FLUI_FILE_SAVE, title, initial, callback, user);
+}
+// Generic local-file actions; business ownership is checked by the consumer SDK.
+static void fileActionComplete(flui_file_callback callback, void* user, flui_status status, NSString* path) {
+  filePickerPending = false;
+  NSData* bytes = [path dataUsingEncoding:NSUTF8StringEncoding];
+  ++callbackDepth;
+  try { callback(status,{(const char*)bytes.bytes,bytes.length},user); } catch(...) {}
+  --callbackDepth;
+}
+static void copyAndPresent(NSString* source, NSString* target, bool view,
+                           flui_file_callback callback, void* user) {
+  filePickerPending = true;
+  dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY,0), ^{
+    NSFileManager* manager = [NSFileManager new];
+    NSString* temp = [target.stringByDeletingLastPathComponent stringByAppendingPathComponent:
+                     [@".libflui-" stringByAppendingString:NSUUID.UUID.UUIDString]];
+    BOOL ok = ![source isEqualToString:target] && [manager copyItemAtPath:source toPath:temp error:nil];
+    if(ok) ok = ::rename(temp.fileSystemRepresentation,target.fileSystemRepresentation)==0;
+    if(!ok) [manager removeItemAtPath:temp error:nil];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      if(!ok) { fileActionComplete(callback,user,FLUI_RUNTIME_ERROR,@"");return; }
+      if(view) {
+        NSWorkspaceOpenConfiguration* config = [NSWorkspaceOpenConfiguration configuration];
+        [NSWorkspace.sharedWorkspace openURL:[NSURL fileURLWithPath:target] configuration:config
+                           completionHandler:^(NSRunningApplication* app,NSError* error) {
+          (void)app;
+          dispatch_async(dispatch_get_main_queue(), ^{
+            fileActionComplete(callback,user,error?FLUI_RUNTIME_ERROR:FLUI_OK,error?@"":target);
+          });
+        }];
+      } else fileActionComplete(callback,user,FLUI_OK,target);
+    });
+  });
+}
+struct FileExport { NSString* source; flui_file_callback callback; void* user; };
+flui_status flui_file_action_async(uint32_t action, flui_string source,
+    flui_string title, flui_string initial, flui_file_callback callback, void* user) {
+  if(!NSThread.isMainThread)return FLUI_WRONG_THREAD;
+  NSString* path=string(source),*name=string(initial),*caption=string(title);
+  if(!callback || !path.length || !path.isAbsolutePath || !name.length || !caption ||
+     [name rangeOfString:@"/"].location!=NSNotFound || [name rangeOfString:@"\\"].location!=NSNotFound ||
+     (action!=FLUI_FILE_VIEW && action!=FLUI_FILE_EXPORT))return FLUI_INVALID_ARGUMENT;
+  if(filePickerPending)return FLUI_BUSY;
+  BOOL directory=NO;
+  if(![NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&directory] || directory)return FLUI_INVALID_ARGUMENT;
+  if(action==FLUI_FILE_VIEW) {
+    NSString* root=[[NSTemporaryDirectory() stringByAppendingPathComponent:@"libflui-open"]
+                    stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+    if(![NSFileManager.defaultManager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:nil])return FLUI_RUNTIME_ERROR;
+    copyAndPresent(path,[root stringByAppendingPathComponent:name],true,callback,user);return FLUI_OK;
+  }
+  auto context=std::make_unique<FileExport>(FileExport{path,callback,user});
+  const auto status=flui_file_save_async(title,initial,[](flui_status status,flui_string selected,void* opaque) {
+    std::unique_ptr<FileExport> context(static_cast<FileExport*>(opaque));
+    if(status || !selected.size){fileActionComplete(context->callback,context->user,status,@"");return;}
+    copyAndPresent(context->source,string(selected),false,context->callback,context->user);
+  },context.get());
+  if(!status)context.release();return status;
+}
+
 flui_status flui_executable_path(flui_text_callback callback, void *user) {
   if (!callback)
     return FLUI_INVALID_ARGUMENT;

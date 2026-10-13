@@ -49,3 +49,6 @@ _dknet_udp_multicast_interface
 _dknet_udp_rebind
 _dknet_udp_close
 _dknet_udp_statistics
+_dknet_create_lan
+_dknet_path_for_peer
+_dknet_android_initialize

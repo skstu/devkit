@@ -327,3 +327,11 @@ without changing geometry. `selected` is exposed as an optional semantic state.
 An explicit user activation on a control with `copytext` copies that text through
 the host clipboard and emits `copyresult` (`ok` or `failed`). Rendering, focusing
 and disabled controls do not write the clipboard. No URI launch is implied.
+
+## Content height and disabled surfaces
+
+`autoheight="true"` lets labels and vertical groups in scrollable forms use their content height, including font scaling. Such groups must contain fixed-height or content-height children rather than flexible fillers. Existing fixed-height layouts are unchanged.
+
+`disabledbkcolor` optionally specifies a disabled control background. It changes appearance only; existing input and callback gates remain enforced. When omitted, the previous background behavior is retained.
+
+移动宿主的系统返回：在 Window 绑定 `back`（`event_back=true`）时，宿主保留当前路由并经公开事件回调通知消费者。消费者按当前页面执行原返回操作；根页关闭该标志时保留平台默认退出行为。键盘的第一次返回仍由系统收起键盘。

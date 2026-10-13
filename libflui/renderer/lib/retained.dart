@@ -81,6 +81,8 @@ const retainedAttributes = {
   'defaultfontcolor',
   'disabledfontcolor',
   'disabledtextcolor',
+  'disabledbkcolor',
+  'autoheight',
   'nativebkcolor',
   'bordercolor',
   'bordersize',
@@ -172,6 +174,7 @@ const retainedAttributes = {
   'measure',
 };
 const retainedEvents = {
+  'back',
   'click',
   'copyresult',
   'enter',
@@ -679,56 +682,66 @@ class _RetainedAppState extends State<RetainedApp> with WidgetsBindingObserver {
                     seedColor: palette.color(palette.tokens['accent']!),
                   ),
                 ),
-                home: AnnotatedRegion<SystemUiOverlayStyle>(
-                  // Edge-to-edge system bars use the window's actual surface,
-                  // including explicit palette overrides and theme changes.
-                  value: SystemUiOverlayStyle(
-                    statusBarColor: Colors.transparent,
-                    statusBarIconBrightness: darkBackground
-                        ? Brightness.light
-                        : Brightness.dark,
-                    statusBarBrightness: darkBackground
-                        ? Brightness.dark
-                        : Brightness.light,
-                    systemNavigationBarColor: background,
-                    systemNavigationBarIconBrightness: darkBackground
-                        ? Brightness.light
-                        : Brightness.dark,
-                  ),
-                  child: Scaffold(
-                    backgroundColor: background,
-                    body: SafeArea(
-                      top: root.flag("safe_area"),
-                      bottom: root.flag("safe_area"),
-                      child: DefaultTextStyle(
-                        style: TextStyle(
-                          fontFamily: root.text(
-                            'font',
-                            palette.tokens['font']!,
-                          ),
-                          fontSize: root.number('fontsize', 13),
-                          color: palette.color(
-                            root.text(
-                              'defaultfontcolor',
-                              palette.tokens['text']!,
+                home: PopScope<void>(
+                  canPop: !root.flag('event_back') || !model.interactive(root),
+                  onPopInvokedWithResult: (didPop, _) {
+                    if (!didPop &&
+                        root.flag('event_back') &&
+                        model.interactive(root)) {
+                      model.emit(root, 'back', '');
+                    }
+                  },
+                  child: AnnotatedRegion<SystemUiOverlayStyle>(
+                    // Edge-to-edge system bars use the window's actual surface,
+                    // including explicit palette overrides and theme changes.
+                    value: SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: darkBackground
+                          ? Brightness.light
+                          : Brightness.dark,
+                      statusBarBrightness: darkBackground
+                          ? Brightness.dark
+                          : Brightness.light,
+                      systemNavigationBarColor: background,
+                      systemNavigationBarIconBrightness: darkBackground
+                          ? Brightness.light
+                          : Brightness.dark,
+                    ),
+                    child: Scaffold(
+                      backgroundColor: background,
+                      body: SafeArea(
+                        top: root.flag("safe_area"),
+                        bottom: root.flag("safe_area"),
+                        child: DefaultTextStyle(
+                          style: TextStyle(
+                            fontFamily: root.text(
+                              'font',
+                              palette.tokens['font']!,
                             ),
+                            fontSize: root.number('fontsize', 13),
+                            color: palette.color(
+                              root.text(
+                                'defaultfontcolor',
+                                palette.tokens['text']!,
+                              ),
+                            ),
+                            height: 1.1,
                           ),
-                          height: 1.1,
-                        ),
-                        child: CallbackShortcuts(
-                          bindings: {
-                            if (root.flag('dialog'))
-                              const SingleActivator(
-                                LogicalKeyboardKey.escape,
-                              ): () =>
-                                  model.action('0:close', ''),
-                          },
-                          child: Focus(
-                            autofocus: true,
-                            child: TreeView(
-                              node: root,
-                              model: model,
-                              palette: palette,
+                          child: CallbackShortcuts(
+                            bindings: {
+                              if (root.flag('dialog'))
+                                const SingleActivator(
+                                  LogicalKeyboardKey.escape,
+                                ): () =>
+                                    model.action('0:close', ''),
+                            },
+                            child: Focus(
+                              autofocus: true,
+                              child: TreeView(
+                                node: root,
+                                model: model,
+                                palette: palette,
+                              ),
                             ),
                           ),
                         ),
@@ -1424,7 +1437,7 @@ class _TreeViewState extends State<TreeView> {
           child: view,
         );
       final extent = c.number(vertical ? 'height' : 'width');
-      if (extent <= 0)
+      if (extent <= 0 && !c.flag('autoheight'))
         view = Expanded(
           flex: math.max(1, c.number('weight', 1).round()),
           child: view,
@@ -1433,6 +1446,7 @@ class _TreeViewState extends State<TreeView> {
     }
     return Flex(
       direction: vertical ? Axis.vertical : Axis.horizontal,
+      mainAxisSize: n.flag('autoheight') ? MainAxisSize.min : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children,
     );
@@ -1782,6 +1796,8 @@ class _TreeViewState extends State<TreeView> {
     final activeBackground =
         interactive && focused && n.text('focusbkcolor').isNotEmpty
         ? n.text('focusbkcolor')
+        : !n.flag('enabled', true) && n.text('disabledbkcolor').isNotEmpty
+        ? n.text('disabledbkcolor')
         : interactive && hovered && n.text('hotbkcolor').isNotEmpty
         ? n.text('hotbkcolor')
         : '';
@@ -1878,10 +1894,10 @@ class _TreeViewState extends State<TreeView> {
         child: result,
       );
     final width = n.number('width'), height = n.number('height');
-    if (width > 0 || height > 0)
+    if (width > 0 || (height > 0 && !n.flag('autoheight')))
       result = SizedBox(
         width: width > 0 ? width : null,
-        height: height > 0 ? height : null,
+        height: height > 0 && !n.flag('autoheight') ? height : null,
         child: result,
       );
     result = Padding(padding: edges(n.text('padding', '0')), child: result);
@@ -1912,7 +1928,10 @@ class _TreeViewState extends State<TreeView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final c in n.children.where((c) => c.flag('visible', true)))
-                SizedBox(height: c.number('height', 40), child: child(c)),
+                SizedBox(
+                  height: c.flag('autoheight') ? null : c.number('height', 40),
+                  child: child(c),
+                ),
             ],
           ),
         );
@@ -2153,10 +2172,12 @@ class _TreeViewState extends State<TreeView> {
           'Container',
           'VerticalLayout',
           'HorizontalLayout',
+          'WrapLayout',
           'Pane',
           'TabLayout',
         }.contains(n.tag) ||
-        n.flag('measure'))
+        n.flag('measure') ||
+        n.flag('autoheight'))
       result = Measure(
         onSize: (rect) {
           emit(

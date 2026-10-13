@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:xml/xml.dart';
 
 import 'retained.dart';
+import 'file_actions.dart';
 
 final class Span extends Struct {
   external Pointer<Utf8> data;
@@ -184,8 +185,16 @@ class NativeHost {
     String path = '';
     try {
       final kind = command['kind'] as int;
-      if (kind == 3 && (Platform.isAndroid || Platform.isIOS)) {
-        status = 10; // FLUI_UNSUPPORTED: directory grants need a separate adapter.
+      if(command['op']=='file_action') {
+        final result=await localFileAction(command);status=result.status;path=result.path;
+      } else
+      if ((kind == 2 || kind == 3) && (Platform.isAndroid || Platform.isIOS)) {
+        status = 10; // FLUI_UNSUPPORTED: mobile save/directory grants need export adapters.
+      } else if (kind == 2) {
+        path = (await getSaveLocation(
+          suggestedName: command['initialName'] as String?,
+          confirmButtonText: command['title'] as String,
+        ))?.path ?? '';
       } else if (kind == 3) {
         path = await getDirectoryPath(confirmButtonText: command['title'] as String) ?? '';
       } else {
@@ -212,7 +221,7 @@ class NativeHost {
         if (op == 'create') {
           window = cmd['window'] as int;
           emit(1);
-        } else if (op == 'file') {
+        } else if (op == 'file' || op == 'file_action') {
           unawaited(pickFile(cmd));
         } else if (op == 'dispatch') {
           invoke(cmd['id'] as int, 1);

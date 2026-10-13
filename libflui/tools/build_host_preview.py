@@ -23,8 +23,13 @@ p.add_argument('--runtime-dir', action='append', type=Path, default=[], help='Co
 p.add_argument('--android-sources', action='append', type=Path, default=[], help='Consumer/platform Kotlin or Java source root')
 p.add_argument('--android-proguard', action='append', type=Path, default=[], help='Dependency-owned JNI/R8 keep rules, included in optimized release builds')
 p.add_argument('--android-manifest', type=Path, help='Consumer uses-permission and application privacy declarations')
+p.add_argument('--android-apkanalyzer', type=Path, help='Android SDK apkanalyzer for mandatory final manifest verification')
 p.add_argument('--android-initializer', help='Consumer platform initialization class with initialize(Context)')
 a=p.parse_args()
+if a.platform=='android':
+    from android_manifest import resolve_overlay, merge as merge_android_manifest, find_analyzer, verify_apk
+    try:a.android_manifest=resolve_overlay(a.client,a.android_manifest)
+    except (ValueError,OSError) as error:p.error(str(error))
 component=Path(__file__).resolve().parents[1]
 repo=component.parent
 work=a.work.resolve(); work.mkdir(parents=True,exist_ok=True)
@@ -86,9 +91,11 @@ manifest={'schema_version':1,'sdk':'libflui','channel':'unreleased-device-previe
 (prefix/'sdk-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 sdklock=work/'native.lock.json'
 sdklock.write_text(json.dumps({'source_commit':commit,'component_dirty':True,'manifest_sha256':sha(prefix/'sdk-manifest.json')},indent=2)+'\n')
+# Flutter takes the package version from this exact copied pubspec.
+app_version=next(line.split(':',1)[1].strip().split('+',1)[0] for line in (host/'pubspec.yaml').read_text().splitlines() if line.startswith('version:'))
 clientbuild=work/'client'
 run(['cmake','-S',a.client.resolve(),'-B',clientbuild,'-DZHIYU_PORTABLE_HOST=ON',
-     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),*flags,*a.client_cmake_arg])
+     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),'-DZHIYU_BUILD_NUMBER='+str(a.build_number),'-DZHIYU_APP_VERSION='+app_version,*flags,*a.client_cmake_arg])
 run(['cmake','--build',clientbuild,'--config','Release','--parallel','4'])
 if a.platform=='android':
     jni=host/'android/app/src/main/jniLibs/arm64-v8a';jni.mkdir(parents=True,exist_ok=True)
@@ -97,28 +104,48 @@ if a.platform=='android':
     copy_runtimes(jni)
     for directory in a.android_sources:
         shutil.copytree(directory,host/'android/app/src/main/java',dirs_exist_ok=True)
-    if a.android_initializer:
-        import re
-        if not re.fullmatch(r'[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+',a.android_initializer):p.error('Invalid Android initializer class')
-        activities=list((host/'android/app/src/main/kotlin').rglob('MainActivity.kt'))
-        if len(activities)!=1:p.error('Expected one SDK-owned Android activity')
-        activity=activities[0]
-        package=re.search(r'^package ([\w.]+)',activity.read_text(),re.M).group(1)
-        activity.write_text('package '+package+'\nimport android.os.Bundle\nimport android.content.Context\nimport io.flutter.embedding.android.FlutterActivity\nimport io.flutter.embedding.engine.FlutterEngine\nimport io.flutter.embedding.engine.dart.DartExecutor\n'
-            'class MainActivity: FlutterActivity() {\n'
-            ' companion object { private var retainedEngine: FlutterEngine? = null }\n'
-            ' // Native callbacks and consumer workers live for the process lifetime.\n'
-            ' // Retain their Dart isolate when Android recreates an Activity.\n'
-            ' override fun provideFlutterEngine(context: Context): FlutterEngine {\n'
-            '  return retainedEngine ?: FlutterEngine(context.applicationContext).also {\n'
-            '   retainedEngine = it\n'
-            '   it.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())\n'
-            '  }\n }\n'
-            ' override fun shouldDestroyEngineWithHost(): Boolean = false\n'
-            ' override fun onCreate(savedInstanceState: Bundle?) {\n  '
-            +a.android_initializer+'.initialize(this)\n  super.onCreate(savedInstanceState)\n }\n'
-            +' override fun onRequestPermissionsResult(code: Int, permissions: Array<out String>, results: IntArray) {\n  super.onRequestPermissionsResult(code, permissions, results)\n  '
-            +a.android_initializer+'.permissionResult(code, permissions, results)\n }\n}\n')
+    import re
+    if a.android_initializer and not re.fullmatch(r'[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)+',a.android_initializer):p.error('Invalid Android initializer class')
+    activities=list((host/'android/app/src/main/kotlin').rglob('MainActivity.kt'))
+    if len(activities)!=1:p.error('Expected one SDK-owned Android activity')
+    activity=activities[0]
+    package=re.search(r'^package ([\w.]+)',activity.read_text(),re.M).group(1)
+    init=(a.android_initializer+'.initialize(this)') if a.android_initializer else ''
+    permissions=(a.android_initializer+'.permissionResult(code, permissions, results)') if a.android_initializer else ''
+    activity.write_text('package '+package+"\n"+f"""
+import android.os.Bundle
+import android.content.Context
+import android.content.Intent
+import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.plugin.common.MethodChannel
+import org.skstu.libflui.FluiFiles
+class MainActivity: FlutterActivity() {{
+ companion object {{ private var retainedEngine: FlutterEngine? = null }}
+ override fun provideFlutterEngine(context: Context): FlutterEngine {{
+  return retainedEngine ?: FlutterEngine(context.applicationContext).also {{
+   retainedEngine=it
+   it.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
+  }}
+ }}
+ override fun shouldDestroyEngineWithHost(): Boolean = false
+ override fun configureFlutterEngine(engine: FlutterEngine) {{
+  super.configureFlutterEngine(engine)
+  FluiFiles.attach(this,MethodChannel(engine.dartExecutor.binaryMessenger,"devkit.libflui/files"))
+ }}
+ override fun onCreate(state: Bundle?) {{ {init};super.onCreate(state) }}
+ override fun onRequestPermissionsResult(code:Int,permissions:Array<out String>,results:IntArray) {{
+  super.onRequestPermissionsResult(code,permissions,results);{permissions}
+ }}
+ override fun onActivityResult(code:Int,result:Int,data:Intent?) {{
+  if(!FluiFiles.result(code,result,data))super.onActivityResult(code,result,data)
+ }}
+}}
+""")
+    destination=host/'android/app/src/main/kotlin/org/skstu/libflui/FluiFiles.kt'
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(component/'platform/android/FluiFiles.kt',destination)
     gradle=host/'android/app/build.gradle.kts';s=gradle.read_text()
     import re
     s=re.sub(r'applicationId = "[^"]+"','applicationId = "'+a.bundle_id+'"',s)
@@ -140,21 +167,18 @@ if a.platform=='android':
     gradle.write_text(s)
     manifestxml=host/'android/app/src/main/AndroidManifest.xml'
     if a.android_manifest:
-        import xml.etree.ElementTree as ET
-        ET.register_namespace('android','http://schemas.android.com/apk/res/android')
-        tree=ET.parse(manifestxml); consumer=ET.parse(a.android_manifest).getroot(); node=tree.getroot()
-        android='{http://schemas.android.com/apk/res/android}'
-        for permission in consumer:
-            if permission.tag=='uses-permission':
-                for old in list(node.findall('uses-permission')):
-                    if old.get(android+'name')==permission.get(android+'name'):node.remove(old)
-                node.insert(0,permission)
-            elif permission.tag=='application':
-                allowed={android+'allowBackup',android+'usesCleartextTraffic'}
-                if not set(permission.attrib)<=allowed or len(permission):p.error('Unsupported Android application overlay')
-                node.find('application').attrib.update(permission.attrib)
-            else:p.error('Only permissions and application privacy flags are accepted')
-        tree.write(manifestxml,encoding='unicode')
+        merge_android_manifest(manifestxml,a.android_manifest)
+    import xml.etree.ElementTree as ET
+    ET.register_namespace('android','http://schemas.android.com/apk/res/android')
+    tree=ET.parse(manifestxml);android='{http://schemas.android.com/apk/res/android}';application=tree.getroot().find('application')
+    authority=a.bundle_id+'.libflui.files'
+    for old in list(application.findall('provider')):
+        if old.get(android+'authorities')==authority:application.remove(old)
+    provider=ET.SubElement(application,'provider',{android+'name':'androidx.core.content.FileProvider',android+'authorities':authority,android+'exported':'false',android+'grantUriPermissions':'true'})
+    ET.SubElement(provider,'meta-data',{android+'name':'android.support.FILE_PROVIDER_PATHS',android+'resource':'@xml/libflui_files'})
+    tree.write(manifestxml,encoding='unicode')
+    resource=host/'android/app/src/main/res/xml/libflui_files.xml';resource.parent.mkdir(parents=True,exist_ok=True)
+    resource.write_text('<paths><cache-path name="open-copy" path="libflui-open/"/></paths>')
     from xml.sax.saxutils import escape
     manifestxml.write_text(manifestxml.read_text().replace('android:label="libflui_host"','android:label="@string/app_name"'),encoding='utf-8')
     names={'values':a.display_name}
@@ -165,8 +189,17 @@ if a.platform=='android':
     if a.logo_dir:
         for folder in (a.logo_dir/'android').iterdir():
             if folder.is_dir():shutil.copytree(folder,host/'android/app/src/main/res'/folder.name,dirs_exist_ok=True)
+    verification=work/'android-package-verification.json'
+    if a.android_manifest:
+        # Fail before Gradle if the binary-manifest inspector is unavailable.
+        analyzer=a.android_apkanalyzer or find_analyzer(host)
+        verification.write_text(json.dumps({'passed':False,'state':'building'})+'\n')
     run([flutter,'--suppress-analytics','--no-version-check','build','apk','--debug' if a.development_host else '--release','--build-number',str(a.build_number),'--target-platform','android-arm64','--no-pub'],host)
-    print('APK:',host/'build/app/outputs/flutter-apk'/('app-debug.apk' if a.development_host else 'app-release.apk'))
+    apk=host/'build/app/outputs/flutter-apk'/('app-debug.apk' if a.development_host else 'app-release.apk')
+    if a.android_manifest:
+        report=verify_apk(apk,a.android_manifest,analyzer,a.bundle_id,a.build_number,a.development_host,env)
+        verification.write_text(json.dumps(report,indent=2)+'\n')
+    print('APK:',apk)
 elif a.platform=='linux':
     runner=host/'linux/CMakeLists.txt'
     text=runner.read_text()

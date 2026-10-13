@@ -54,6 +54,23 @@ these files into the release ProGuard configuration while retaining R8
 optimization. `--android-sources` alone does not protect Java/Kotlin methods
 looked up only by native code. libble supplies these rules alongside its Kotlin
 sources; use both from the same verified dependency package.
+
+Android consumers declare permissions and privacy flags in
+`resources/android-permissions.xml`. The host builder now loads that file
+automatically when present, so omitting `--android-manifest` cannot silently
+produce a package without the consumer's declarations. An explicit
+`--android-manifest` selects a different overlay; a missing or unsupported
+overlay fails before building. UI-only consumers without an overlay gain no
+permissions. Permissions and privacy policy remain consumer-owned.
+
+For an overlay build, the producer checks the **finished APK**, using Android
+SDK `apkanalyzer`, for declared permissions (including SDK caps and flags),
+privacy flags, requested application ID, build number and debuggable state.
+The command fails if these differ. `android-package-verification.json` contains
+the checked APK and overlay hashes; a build does not print a successful APK
+result until verification passes. Set `ANDROID_SDK_ROOT` and a working Java
+runtime, or provide `--android-apkanalyzer`. For an independent pre-install
+check, use `tools/android_manifest.py --help`; no device is accessed.
 The current harness builds the Zhiyu C++ sample and an SDK-owned
 host in the work directory. Consumer CMake receives a binary SDK prefix and an
 exact manifest lock; it does not compile Flutter.

@@ -535,6 +535,7 @@ struct UdpSocket::State {
   UdpSocket *owner = nullptr;
   Endpoint bound_endpoint;
   unsigned bind_flags = 0;
+  std::function<bool(std::uintptr_t)> prepare;
   bool receiving = false;
   bool rebind = false;
   DatagramHandler data;
@@ -561,14 +562,32 @@ UdpSocket::~UdpSocket() {
 
 bool UdpSocket::Bind(uv_loop_t *loop, const Endpoint &endpoint,
                      unsigned flags) {
+  return BindPrepared(loop,endpoint,flags,{});
+}
+bool UdpSocket::BindPrepared(uv_loop_t *loop,const Endpoint &endpoint,unsigned flags,
+                            std::function<bool(std::uintptr_t)> prepare) {
   if (loop == nullptr || !endpoint.valid() || state_ != nullptr)
     return false;
   auto state = std::make_unique<State>();
-  if (uv_udp_init(loop, &state->handle) != 0)
+  if (uv_udp_init_ex(loop, &state->handle,
+        endpoint.family()==AddressFamily::ipv4?AF_INET:AF_INET6) != 0)
     return false;
   state->owner = this;
   state->handle.data = state.get();
   state_ = state.release();
+  state_->prepare=std::move(prepare);
+  // Force creation of the owned descriptor before bind without sending traffic.
+  if (state_->prepare) {
+    // Binding a zero-port wildcard first would expose a system-routed socket.
+    // uv_udp_init_ex creates the requested family without binding it.
+    uv_os_fd_t descriptor;
+    if(uv_fileno(reinterpret_cast<uv_handle_t*>(&state_->handle),&descriptor)!=0 ||
+#ifdef _WIN32
+       !state_->prepare(reinterpret_cast<std::uintptr_t>(descriptor))) { Close();return false; }
+#else
+       !state_->prepare(static_cast<std::uintptr_t>(descriptor))) { Close();return false; }
+#endif
+  }
   if (uv_udp_bind(&state_->handle, endpoint.sockaddr_ptr(), flags) != 0) {
     Close();
     return false;
@@ -714,6 +733,7 @@ void UdpSocket::OnClosed(uv_handle_t *handle) {
   const bool receiving = state->receiving;
   const auto endpoint = state->bound_endpoint;
   const auto flags = state->bind_flags;
+  auto prepare=std::move(state->prepare);
   auto *loop = handle->loop;
   auto data = std::move(state->data);
   auto error = std::move(state->error);
@@ -724,7 +744,7 @@ void UdpSocket::OnClosed(uv_handle_t *handle) {
   if (rebind) {
     if (owner == nullptr) {
       status = UV_ECANCELED;
-    } else if (!owner->Bind(loop, endpoint, flags) ||
+    } else if (!owner->BindPrepared(loop, endpoint, flags, std::move(prepare)) ||
                (receiving && !owner->StartReceive(std::move(data), std::move(error)))) {
       owner->Close();
       status = UV_EIO;

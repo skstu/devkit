@@ -31,6 +31,7 @@ extern "C" {
  * before destroy; shutdown may race wake while the context still exists.
  * Accepted sends are copied; acceptance is not delivery or persistence. */
 typedef struct dknet_context dknet_context;
+typedef struct dknet_interface dknet_interface;
 typedef struct dknet_endpoint { char address[64]; uint16_t port; uint16_t reserved; } dknet_endpoint;
 enum { DKNET_DATAGRAM=1, DKNET_WAKE=2, DKNET_TIMER=3, DKNET_QUIC_TICK=4,
        DKNET_REBOUND=5, DKNET_WRITABLE=6, DKNET_ERROR=7, DKNET_QUIC_EVENTS=8 };
@@ -89,6 +90,27 @@ DKNET_API int32_t DKNET_CALL dknet_endpoint_parse(const char *, uint16_t, dknet_
 /* Creates a dual-stack listener, IPv4 required and IPv6 additive; no thread is
  * spawned. Failed creation leaves *output null, with all handles drained. */
 DKNET_API int32_t DKNET_CALL dknet_create(const dknet_config *, dknet_context **output);
+/* Additive LAN data-path API. Existing dknet_create and structures are unchanged.
+ * Every selected output owns an immutable source/interface socket, sharing the
+ * listener port. No proxy settings, system routes, STUN, relay or TCP are changed.
+ * On-link routes (including a real VPN subnet) win; otherwise a usable physical
+ * interface is chosen. Synthetic DNS addresses are never advertised/selected.
+ * Explicit interface_address admits a tunnel and forbids fallback to another
+ * interface. Address changes require rebind; stale selections fail closed.
+ * Maximum_paths bounds both the snapshot and extra sockets (1..32). */
+#define DKNET_LAN_PATH_VERSION 1u
+typedef struct dknet_lan_path_config {
+  uint32_t struct_size, version, maximum_paths, reserved;
+  const char *interface_address; /* optional numeric local IP, copied */
+} dknet_lan_path_config;
+DKNET_API int32_t DKNET_CALL dknet_create_lan(const dknet_config *, const dknet_lan_path_config *, dknet_context **);
+/* Local diagnostic only; does not prove reachability or peer authentication. */
+DKNET_API int32_t DKNET_CALL dknet_path_for_peer(dknet_context *, const dknet_endpoint *, dknet_interface *);
+/* Android host setup before create_lan: JNI environment and Application Context
+ * as opaque borrowed handles. Retains an application-only reference; valid JNI
+ * environment plus null context releases it. Queries non-VPN Networks and binds individual sockets, never the
+ * process. Other OS returns STATE. Existing system-routed API needs no setup. */
+DKNET_API int32_t DKNET_CALL dknet_android_initialize(void *jni_environment, void *application_context);
 DKNET_API int32_t DKNET_CALL dknet_local_endpoint(dknet_context *, uint32_t family, dknet_endpoint *);
 DKNET_API int32_t DKNET_CALL dknet_run(dknet_context *);
 DKNET_API int32_t DKNET_CALL dknet_shutdown(dknet_context *);
@@ -138,8 +160,13 @@ enum { DKNET_LAN_DATAGRAM=1, DKNET_LAN_SENT=2, DKNET_LAN_WRITABLE=3,
        DKNET_LAN_ERROR=4, DKNET_LAN_CLOSED=5, DKNET_LAN_INTERFACES=6,
        DKNET_LAN_WAKE=7, DKNET_LAN_TIMER=8, DKNET_LAN_REBOUND=9 };
 enum { DKNET_UDP_REUSE_ADDRESS=1u, DKNET_UDP_IPV6_ONLY=2u,
-       DKNET_UDP_BROADCAST=4u };
-enum { DKNET_INTERFACE_INTERNAL=1u, DKNET_INTERFACE_LINK_LOCAL=2u };
+       DKNET_UDP_BROADCAST=4u, DKNET_UDP_DIRECT_PATH=8u };
+/* DIRECT_PATH binds Android discovery sockets to a non-VPN Network. Explicit
+ * multicast_interface fixes the output path on every supported OS and is
+ * immutable after selection. Binding failure never falls back to a VPN.
+ * The path is reapplied on rebind; no process-wide network binding. */
+enum { DKNET_INTERFACE_INTERNAL=1u, DKNET_INTERFACE_LINK_LOCAL=2u,
+       DKNET_INTERFACE_TUNNEL=4u, DKNET_INTERFACE_UP=8u };
 typedef struct dknet_interface {
   uint32_t struct_size, family, index, scope_id, flags, reserved;
   char name[256], address[64], netmask[64], broadcast[64];

@@ -64,9 +64,12 @@ def main():
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--platform', choices=['android', 'linux', 'windows'], required=True)
     p.add_argument('--android-serial')
+    p.add_argument('--offline-cross-preview', action='store_true', help='Android development candidate only; runtime tests explicitly not run')
     p.add_argument('--adb', default='adb')
     p.add_argument('--allow-dirty', action='store_true')
     a = p.parse_args()
+    if a.offline_cross_preview and (a.platform != 'android' or a.android_serial or not a.allow_dirty):
+        p.error('--offline-cross-preview requires Android, --allow-dirty and no device serial')
     root = Path(__file__).resolve().parents[1]
     build = a.build.resolve()
     cache = (build / 'CMakeCache.txt').read_text()
@@ -156,7 +159,9 @@ def main():
             minimum = 'glibc ' + max(versions, key=lambda v: tuple(map(int, v.split('.'))))
     if exports != expected or not expected:
         raise ValueError(f'ABI mismatch: missing={expected-exports}, extra={exports-expected}')
-    if a.platform == 'android':
+    if a.offline_cross_preview:
+        test_record = {'executor': 'none', 'result': 'not-run', 'reason': 'offline cross-compiled candidate; device validation required'}
+    elif a.platform == 'android':
         if not a.android_serial:
             p.error('Cross-built packages require tests on --android-serial')
         adb = [a.adb, '-s', a.android_serial]

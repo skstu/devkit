@@ -53,7 +53,9 @@ FLUI_API flui_status FLUI_CALL flui_file_dialog(uint32_t kind,
                                                 flui_string initial_name,
                                                 flui_string extensions,
                                                 flui_text_callback, void *user);
-/* Additive asynchronous picker. UI thread; accepts OPEN or DIRECTORY.
+/* Additive asynchronous picker. UI thread; accepts OPEN, SAVE or DIRECTORY.
+ * SAVE selects a destination, it does not write file contents. Mobile hosts
+ * without path-based save return FLUI_UNSUPPORTED; use a platform export grant.
  * FLUI_OK transfers callback ownership until exactly one completion on the UI
  * thread. A successful cancellation returns FLUI_OK with an empty path.
  * Nonzero immediate status means no callback. Result bytes are borrowed only
@@ -63,6 +65,23 @@ FLUI_API flui_status FLUI_CALL flui_file_dialog(uint32_t kind,
 typedef void(FLUI_CALL *flui_file_callback)(flui_status, flui_string path, void *user);
 FLUI_API flui_status FLUI_CALL flui_file_dialog_async(uint32_t kind,
     flui_string title, flui_file_callback, void *user);
+/* Named asynchronous SAVE; initial_name is a basename, never a path.
+ * Same ownership, cancellation and one-outstanding-request contract. */
+FLUI_API flui_status FLUI_CALL flui_file_save_async(flui_string title,
+    flui_string initial_name, flui_file_callback, void *user);
+#define FLUI_FILE_VIEW 4u
+#define FLUI_FILE_EXPORT 5u
+/* Generic asynchronous local-file action. VIEW opens a temporary copy;
+ * success means the OS accepted the viewer request, not that the user read it.
+ * EXPORT copies to a user-selected destination; success follows copy completion.
+ * Cancellation returns OK/empty. The source remains untouched. A mobile result
+ * can be a content URI, not a filesystem path. Same UI-thread, exactly-once,
+ * borrowed-result, immediate-failure and single-outstanding contracts as picker.
+ * Caller owns source lifetime until completion; library cannot be unloaded.
+ * iOS export is currently unsupported. Never pass business identifiers here. */
+FLUI_API flui_status FLUI_CALL flui_file_action_async(uint32_t action,
+    flui_string source, flui_string title, flui_string initial_name,
+    flui_file_callback, void* user);
 FLUI_API flui_status FLUI_CALL flui_executable_path(flui_text_callback,
                                                     void *user);
 /* Atomic binary data write, at most 64 MiB; path is UTF-8. */

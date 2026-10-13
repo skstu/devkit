@@ -68,7 +68,7 @@ def main():
     if exports != expected:
         raise SystemExit(f"Unexpected ABI exports: extra={exports-expected} missing={expected-exports}")
     dependencies = [line.strip().split(" (")[0] for line in capture("otool", "-L", binary).splitlines()[1:]]
-    allowed = {"@rpath/libdevkit_net.1.dylib", "/usr/lib/libSystem.B.dylib", "/usr/lib/libc++.1.dylib"}
+    allowed = {"@rpath/libdevkit_net.1.dylib", "/usr/lib/libSystem.B.dylib", "/usr/lib/libc++.1.dylib", "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation", "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration"}
     if set(dependencies) != allowed or capture("lipo", "-archs", binary) != "arm64":
         raise SystemExit("Unexpected dynamic dependency or architecture: " + repr(dependencies))
     library = ctypes.CDLL(str(binary))

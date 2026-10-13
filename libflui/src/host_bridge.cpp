@@ -156,15 +156,36 @@ flui_status flui_timer_destroy(flui_timer id) {
 }
 flui_status flui_window_set_tick(flui_window,uint32_t){return FLUI_UNSUPPORTED;}
 flui_status flui_file_dialog(uint32_t,flui_string,flui_string,flui_string,flui_text_callback,void*) {return FLUI_UNSUPPORTED;}
-flui_status flui_file_dialog_async(uint32_t kind,flui_string title,flui_file_callback cb,void* user) {
+static flui_status fileDialog(uint32_t kind,flui_string title,flui_string initial,flui_file_callback cb,void* user) {
  if(!ui())return FLUI_WRONG_THREAD;
- if(!cb||!valid(title)||(kind!=FLUI_FILE_OPEN && kind!=FLUI_FILE_DIRECTORY))return FLUI_INVALID_ARGUMENT;
+ if(!cb||!valid(title)||!valid(initial)||(kind!=FLUI_FILE_OPEN && kind!=FLUI_FILE_SAVE && kind!=FLUI_FILE_DIRECTORY))return FLUI_INVALID_ARGUMENT;
+ if(str(initial).find_first_of("/\\")!=std::string::npos)return FLUI_INVALID_ARGUMENT;
  if(picker.id)return FLUI_BUSY;
  uint64_t id;
  {std::lock_guard<std::mutex> lock(mutex);id=nextCallback++;}
  picker={id,cb,user};
- try {queue("{\"op\":\"file\",\"id\":"+std::to_string(id)+",\"kind\":"+std::to_string(kind)+",\"title\":"+json(str(title))+"}");}
+ try {queue("{\"op\":\"file\",\"id\":"+std::to_string(id)+",\"kind\":"+std::to_string(kind)+",\"title\":"+json(str(title))+",\"initialName\":"+json(str(initial))+"}");}
  catch(...) {picker={};return FLUI_RUNTIME_ERROR;}
+ return FLUI_OK;
+}
+flui_status flui_file_dialog_async(uint32_t kind,flui_string title,flui_file_callback cb,void* user) {
+ return fileDialog(kind,title,{nullptr,0},cb,user);
+}
+flui_status flui_file_save_async(flui_string title,flui_string initial,flui_file_callback cb,void* user) {
+ return fileDialog(FLUI_FILE_SAVE,title,initial,cb,user);
+}
+flui_status flui_file_action_async(uint32_t action,flui_string source,flui_string title,
+                                  flui_string initial,flui_file_callback cb,void* user) {
+ if(!ui())return FLUI_WRONG_THREAD;
+ if(!cb||!valid(source)||!source.size||!valid(title)||!valid(initial)||!initial.size||
+    str(initial).find_first_of("/\\")!=std::string::npos||
+    (action!=FLUI_FILE_VIEW&&action!=FLUI_FILE_EXPORT))return FLUI_INVALID_ARGUMENT;
+ if(picker.id)return FLUI_BUSY;
+ uint64_t id;{std::lock_guard<std::mutex> lock(mutex);id=nextCallback++;}
+ picker={id,cb,user};
+ try {queue("{\"op\":\"file_action\",\"id\":"+std::to_string(id)+",\"kind\":"+std::to_string(action)+
+            ",\"source\":"+json(str(source))+",\"title\":"+json(str(title))+",\"initialName\":"+json(str(initial))+"}");}
+ catch(...){picker={};return FLUI_RUNTIME_ERROR;}
  return FLUI_OK;
 }
 FLUI_API void FLUI_CALL flui_host_file_result(uint64_t id,int32_t status,const char* path) {
