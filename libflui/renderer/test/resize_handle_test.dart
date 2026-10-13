@@ -14,6 +14,44 @@ Map<String, Object> node(
 ]) => {'id': id, 'tag': tag, 'attrs': attrs, 'children': children};
 
 void main() {
+  testWidgets('open and reopen a variable-height chat at its actual end', (tester) async {
+    final m = RetainedModel((_, _) {});
+    Map<String, Object> tree(String request, {int lastHeight = 30}) => node('1', 'Window', {}, [
+      node('2', 'VerticalLayout', {}, [
+        node('3', 'List', {'height': '220', 'showheader': 'false', 'scrollanchor': 'bottom', 'scroll': request}, [
+          for (var i = 0; i < 80; i++)
+            node('${100 + i}', 'ListRow', {'height': '${i == 79 ? lastHeight : 30 + i % 4 * 17}'}, [
+              node('${200 + i}', 'Label', {'text': 'row $i'}),
+            ]),
+        ]),
+        node('4', 'Control', {}),
+      ]),
+    ]);
+    m.setTree(jsonEncode(tree('end:1')));
+    await tester.pumpWidget(RetainedApp(model: m));
+    await tester.pumpAndSettle();
+    final position = tester.state<ScrollableState>(find.byType(Scrollable)).position;
+    expect(position.pixels, closeTo(position.maxScrollExtent, .01));
+    // A late row-height measurement keeps the already-visible end in view.
+    m.setTree(jsonEncode(tree('end:1', lastHeight: 170)));
+    await tester.pumpAndSettle();
+    expect(position.pixels, closeTo(position.maxScrollExtent, .01));
+    position.jumpTo(150);
+    await tester.pumpAndSettle();
+    m.setTree(jsonEncode(tree('end:1', lastHeight: 200)));
+    await tester.pumpAndSettle();
+    expect(position.pixels, closeTo(150, .01));
+    m.patch(jsonEncode([{'id': '3', 'attrs': {...m.nodes['3']!.attrs, 'scroll': 'end:2'}}]));
+    await tester.pumpAndSettle();
+    expect(position.pixels, closeTo(position.maxScrollExtent, .01));
+    final listRect = tester.getRect(find.byKey(const ValueKey('3')));
+    final lastRect = tester.getRect(find.byKey(const ValueKey('279')));
+    expect(lastRect.bottom, lessThanOrEqualTo(listRect.bottom + .01));
+    expect(lastRect.bottom, greaterThan(listRect.top));
+    expect(tester.takeException(), isNull);
+  });
+
+
   testWidgets(
     'shrinking message viewport keeps latest or viewed history above composer',
     (tester) async {

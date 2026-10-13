@@ -558,6 +558,7 @@ class List : public Container {
   int count_ = 0, rowHeight_ = 24, scroll_ = 0, selection_ = -1, first_ = -1,
       visibleCount_ = 0;
   bool virtual_ = false;
+  uint64_t endScrollRevision_ = 0;
   std::function<std::shared_ptr<Control>(int)> factory_;
   std::map<int, std::shared_ptr<Control>> materialized_;
   void Materialize(int first, int count) {
@@ -684,6 +685,11 @@ public:
   Rect GetItemViewportRect() const {
     return {0, 0, rect_.width,
             std::max(0, rect_.height - (header_ ? header_->GetHeight() : 0))};
+  }
+  // Resolve the end after the renderer has laid out the current rows. Repeated
+  // requests also work after a user has scrolled back through the same list.
+  void ScrollToEnd() {
+    SetAttribute("scroll", "end:" + std::to_string(++endScrollRevision_));
   }
   void RestoreListScrollPos(int n) {
     scroll_ = std::clamp(n, 0, GetListScrollRange());

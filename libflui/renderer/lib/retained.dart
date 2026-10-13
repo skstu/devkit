@@ -83,6 +83,8 @@ const retainedAttributes = {
   'disabledtextcolor',
   'disabledbkcolor',
   'autoheight',
+  'autowidth',
+  'maxwidth',
   'nativebkcolor',
   'bordercolor',
   'bordersize',
@@ -929,8 +931,8 @@ class PlainLabelRender extends RenderBox {
 
 // Preserve the content at the visible bottom edge when a neighbouring pane
 // changes viewport height. The correction is applied during layout, before paint.
-// Content-only changes keep the usual scroll policy; this never forces a reader
-// of history to the end of the list.
+// Follow content changes only when already at the end; readers of history keep
+// their current position.
 class VisibleEndScrollPhysics extends ScrollPhysics {
   const VisibleEndScrollPhysics({super.parent});
   @override
@@ -943,6 +945,10 @@ class VisibleEndScrollPhysics extends ScrollPhysics {
     required bool isScrolling,
     required double velocity,
   }) {
+    if (!isScrolling &&
+        newPosition.pixels >= oldPosition.maxScrollExtent - .5) {
+      return newPosition.maxScrollExtent;
+    }
     if (oldPosition.viewportDimension != newPosition.viewportDimension) {
       return (oldPosition.pixels +
               oldPosition.viewportDimension -
@@ -1124,7 +1130,7 @@ class _TreeViewState extends State<TreeView> {
   Map<String, String> previous = {};
   List<int> viewport = [];
   bool reportPending = false;
-  String textMeasurement = '';
+  String textMeasurement = '', endScrollRequest = '';
   bool hovered = false, focused = false;
   @override
   void initState() {
@@ -1205,7 +1211,9 @@ class _TreeViewState extends State<TreeView> {
             focus!.nextFocus();
         }
       });
-    if (scroll != null && previous['scroll'] != n.attrs['scroll'])
+    if (scroll != null &&
+        previous['scroll'] != n.attrs['scroll'] &&
+        !n.text('scroll').startsWith('end:'))
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && scroll!.hasClients)
           scroll!.jumpTo(
@@ -1264,6 +1272,11 @@ class _TreeViewState extends State<TreeView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       reportPending = false;
       if (!mounted || !scroll!.hasClients) return;
+      final request = n.text('scroll');
+      if (request.startsWith('end:') && request != endScrollRequest) {
+        endScrollRequest = request;
+        scroll!.jumpTo(scroll!.position.maxScrollExtent);
+      }
       final row = n.number('row_height', 24).clamp(1, 8192);
       final offset = scroll!.offset;
       n.scrollOffset = offset;
@@ -1447,19 +1460,20 @@ class _TreeViewState extends State<TreeView> {
           child: view,
         );
       final extent = c.number(vertical ? 'height' : 'width');
-      if (extent <= 0 && !c.flag('autoheight'))
+      if (extent <= 0 && !c.flag('autoheight') && !(!vertical && c.flag('autowidth')))
         view = Expanded(
           flex: math.max(1, c.number('weight', 1).round()),
           child: view,
         );
       children.add(view);
     }
-    return Flex(
+    final result = Flex(
       direction: vertical ? Axis.vertical : Axis.horizontal,
       mainAxisSize: n.flag('autoheight') ? MainAxisSize.min : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: children,
     );
+    return !vertical && n.flag('autoheight') ? IntrinsicHeight(child: result) : result;
   }
 
   Widget list() {
@@ -1519,15 +1533,16 @@ class _TreeViewState extends State<TreeView> {
 
     final view = LayoutBuilder(
       builder: (_, constraints) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) reportViewport();
-        });
+        reportViewport();
         return ListView.builder(
           controller: scroll,
           physics: n.text('scrollanchor') == 'bottom'
               ? const VisibleEndScrollPhysics()
               : null,
           itemExtent: virtual ? n.number('row_height', 24) : null,
+          itemExtentBuilder: virtual || rows.any((r) => r.flag('autoheight'))
+              ? null
+              : (index, _) => rows[index].number('height', 24),
           itemCount: virtual ? count : rows.length,
           scrollCacheExtent: const ScrollCacheExtent.pixels(0),
           itemBuilder: (_, i) {
@@ -1536,7 +1551,7 @@ class _TreeViewState extends State<TreeView> {
             return SizedBox(
               height: virtual
                   ? n.number('row_height', 24)
-                  : r.number('height', 24),
+                  : r.flag('autoheight') ? null : r.number('height', 24),
               child: row(r, i),
             );
           },
@@ -1964,6 +1979,12 @@ class _TreeViewState extends State<TreeView> {
         child: result,
       );
     result = Padding(padding: edges(n.text('padding', '0')), child: result);
+    if (n.flag('autowidth')) result = IntrinsicWidth(child: result);
+    if (n.number('maxwidth') > 0)
+      result = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: n.number('maxwidth')),
+        child: result,
+      );
     return result;
   }
 
