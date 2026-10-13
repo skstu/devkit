@@ -214,6 +214,8 @@ elif a.platform=='linux':
         name='(g_str_has_prefix(g_get_language_names()[0], "zh") ? '+json.dumps(a.chinese_display_name,ensure_ascii=False)+' : '+name+')'
     text=main.read_text().replace('"libflui_host"',name)
     main.write_text(text,encoding='utf-8')
+    from desktop_files import install as install_desktop_files
+    install_desktop_files(host,'linux')
     run([flutter,'--suppress-analytics','--no-version-check','build','linux','--release','--no-pub'],host)
     output=host/'build/linux/x64/release/bundle'
     shutil.copy2(prefix/'lib/libflui.so',output/'lib/libflui.so')
@@ -233,6 +235,8 @@ elif a.platform=='windows':
         name='(PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_CHINESE ? L'+json.dumps(a.chinese_display_name,ensure_ascii=False)+' : '+name+')'
     main.write_text(main.read_text().replace('L"libflui_host"',name),encoding='utf-8')
     if a.logo_dir:shutil.copy2(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
+    from desktop_files import install as install_desktop_files
+    install_desktop_files(host,'windows')
     run([flutter,'--suppress-analytics','--no-version-check','build','windows','--release','--no-pub'],host)
     output=host/'build/windows/x64/runner/Release'
     shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
@@ -241,6 +245,7 @@ elif a.platform=='windows':
     print('Windows app:',output/'libflui_host.exe')
 else:
     import re,plistlib
+    shutil.copy2(component/'platform/ios/AppDelegate.swift',host/'ios/Runner/AppDelegate.swift')
     project=host/'ios/Runner.xcodeproj/project.pbxproj'
     s=project.read_text()
     s=re.sub(r'PRODUCT_BUNDLE_IDENTIFIER = [^;]+;', 'PRODUCT_BUNDLE_IDENTIFIER = '+a.bundle_id+';',s)

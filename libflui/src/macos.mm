@@ -11,10 +11,29 @@
 #include <libflui/desktop.h>
 #include <libflui/flui.h>
 
-@interface FLUINativeWindow : NSWindow
+@interface FLUINativeWindow : NSWindow <NSDraggingDestination>
 @property(nonatomic) BOOL popup;
+@property(nonatomic) BOOL fileDropEnabled;
+@property(nonatomic, copy) void (^onFileDrop)(NSArray<NSString*>*);
 @end
 @implementation FLUINativeWindow
+- (NSDragOperation)draggingEntered:(id<NSDraggingInfo>)sender {
+  return self.fileDropEnabled && !self.popup && (sender.draggingSourceOperationMask & NSDragOperationCopy) &&
+    [sender.draggingPasteboard canReadObjectForClasses:@[NSURL.class] options:@{NSPasteboardURLReadingFileURLsOnlyKey:@YES}]
+    ? NSDragOperationCopy : NSDragOperationNone;
+}
+- (BOOL)performDragOperation:(id<NSDraggingInfo>)sender {
+  if(!self.fileDropEnabled || !self.onFileDrop)return NO;
+  NSArray<NSURL*>* urls=[sender.draggingPasteboard readObjectsForClasses:@[NSURL.class]
+    options:@{NSPasteboardURLReadingFileURLsOnlyKey:@YES}];
+  NSMutableArray<NSString*>* paths=[NSMutableArray array];
+  if(!urls.count || urls.count>32){self.onFileDrop(paths);return YES;}
+  for(NSURL* url in urls) {
+    if(!url.isFileURL || !url.path.isAbsolutePath || (url.host.length && ![url.host isEqualToString:@"localhost"]))return NO;
+    [paths addObject:url.path];
+  }
+  self.onFileDrop(paths);return YES;
+}
 - (BOOL)canBecomeKeyWindow { return self.popup || [super canBecomeKeyWindow]; }
 - (BOOL)canBecomeMainWindow { return !self.popup && [super canBecomeMainWindow]; }
 @end
@@ -176,8 +195,13 @@ static void closePopupChildren(FLUIWindow *parent) {
   [self.timer invalidate];
   [self emit:FLUI_EVENT_CLOSED request:0 status:FLUI_OK name:@"" value:@""];
 }
+- (void)windowDidBecomeKey:(NSNotification *)note {
+  (void)note;
+  [self emit:FLUI_EVENT_ACTION request:0 status:FLUI_OK name:@"0:active" value:@"true"];
+}
 - (void)windowDidResignKey:(NSNotification *)note {
   (void)note;
+  [self emit:FLUI_EVENT_ACTION request:0 status:FLUI_OK name:@"0:active" value:@"false"];
   if (self.popupParent && !self.closed) flui_window_request_close(self.handle);
 }
 - (void)windowDidMove:(NSNotification *)note {
@@ -299,6 +323,13 @@ flui_status flui_window_create(const flui_window_options *o, flui_window *out) {
                     backing:NSBackingStoreBuffered
                       defer:NO];
     w.window.releasedWhenClosed = NO;
+    [w.window registerForDraggedTypes:@[NSPasteboardTypeFileURL]];
+    w.window.onFileDrop=^(NSArray<NSString*>* paths) {
+      FLUIWindow* owner=weak;if(!owner || owner.closed)return;
+      NSData* data=[NSJSONSerialization dataWithJSONObject:paths options:0 error:nil];
+      NSString* value=data.length<=65536?[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]:@"[]";
+      if(value)[owner emit:FLUI_EVENT_ACTION request:0 status:FLUI_OK name:@"0:dropfiles" value:value];
+    };
     w.window.title = title;
     w.window.contentViewController = view;
     // Attaching the initially zero-sized Flutter view may resize its NSWindow.
@@ -494,6 +525,14 @@ flui_status flui_window_property(flui_window h, flui_string key,
     return FLUI_INVALID_ARGUMENT;
   if ([k isEqualToString:@"title"])
     w.window.title = v;
+  else if ([k isEqualToString:@"dropfiles"]) {
+    if(![v isEqualToString:@"true"] && ![v isEqualToString:@"false"])return FLUI_INVALID_ARGUMENT;
+    w.window.fileDropEnabled=[v isEqualToString:@"true"];
+  }
+  else if ([k isEqualToString:@"badge"]) {
+    if ([v length] > 32) return FLUI_INVALID_ARGUMENT;
+    NSApp.dockTile.badgeLabel = v.length ? v : nil;
+  }
   else if ([k isEqualToString:@"popup"]) {
     id json = [NSJSONSerialization JSONObjectWithData:[v dataUsingEncoding:NSUTF8StringEncoding] options:0 error:nil];
     if (![json isKindOfClass:[NSDictionary class]] || [json count] != 3)
@@ -719,6 +758,7 @@ static bool filePickerPending = false;
 static flui_status fileDialog(uint32_t kind, flui_string title, flui_string initial,
                                   flui_file_callback callback, void *user) {
   if (![NSThread isMainThread]) return FLUI_WRONG_THREAD;
+  if (kind == FLUI_FILE_MEDIA || kind == FLUI_FILE_MEDIA_MULTIPLE) return FLUI_UNSUPPORTED;
   NSString *t = string(title);
   NSString *name = string(initial);
   if (!callback || !t || !name || [name rangeOfString:@"/"].location != NSNotFound ||
@@ -764,6 +804,26 @@ static void fileActionComplete(flui_file_callback callback, void* user, flui_sta
   try { callback(status,{(const char*)bytes.bytes,bytes.length},user); } catch(...) {}
   --callbackDepth;
 }
+// Keep a stable URL for repeat opens of an unchanged file. External viewers can
+// reuse their document; SDK-owned source bytes are never opened for editing.
+static NSString* previewCopyPath(NSString* source, NSString* name) {
+  static NSMutableDictionary<NSArray*,NSString*>* copies = [NSMutableDictionary new];
+  NSDictionary* attributes=[NSFileManager.defaultManager attributesOfItemAtPath:source error:nil];
+  NSArray* key=nil;
+  if([attributes[NSFileType] isEqual:NSFileTypeRegular] && attributes[NSFileSize] && attributes[NSFileModificationDate])
+    key=@[source,name,attributes[NSFileSize],attributes[NSFileModificationDate]];
+  NSString* existing=key?copies[key]:nil;
+  NSDictionary* copied=existing?[NSFileManager.defaultManager attributesOfItemAtPath:existing error:nil]:nil;
+  if(copied && [copied[NSFileType] isEqual:NSFileTypeRegular] &&
+     [copied[NSFileSize] isEqual:attributes[NSFileSize]] &&
+     [copied[NSFileModificationDate] isEqual:attributes[NSFileModificationDate]])return existing;
+  NSString* root=[[NSTemporaryDirectory() stringByAppendingPathComponent:@"libflui-open"]
+                  stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
+  if(![NSFileManager.defaultManager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:nil])return nil;
+  NSString* target=[root stringByAppendingPathComponent:name];
+  if(key)copies[key]=target;
+  return target;
+}
 static void copyAndPresent(NSString* source, NSString* target, bool view,
                            flui_file_callback callback, void* user) {
   filePickerPending = true;
@@ -771,8 +831,14 @@ static void copyAndPresent(NSString* source, NSString* target, bool view,
     NSFileManager* manager = [NSFileManager new];
     NSString* temp = [target.stringByDeletingLastPathComponent stringByAppendingPathComponent:
                      [@".libflui-" stringByAppendingString:NSUUID.UUID.UUIDString]];
-    BOOL ok = ![source isEqualToString:target] && [manager copyItemAtPath:source toPath:temp error:nil];
-    if(ok) ok = ::rename(temp.fileSystemRepresentation,target.fileSystemRepresentation)==0;
+    const BOOL reuse = view && [manager fileExistsAtPath:target];
+    BOOL ok = reuse || (![source isEqualToString:target] && [manager copyItemAtPath:source toPath:temp error:nil]);
+    if(ok && !reuse) {
+      BOOL directory=NO;[manager fileExistsAtPath:temp isDirectory:&directory];
+      // A directory export never merges with or replaces an existing tree.
+      ok=directory?[manager moveItemAtPath:temp toPath:target error:nil]:
+        ::rename(temp.fileSystemRepresentation,target.fileSystemRepresentation)==0;
+    }
     if(!ok) [manager removeItemAtPath:temp error:nil];
     dispatch_async(dispatch_get_main_queue(), ^{
       if(!ok) { fileActionComplete(callback,user,FLUI_RUNTIME_ERROR,@"");return; }
@@ -799,12 +865,11 @@ flui_status flui_file_action_async(uint32_t action, flui_string source,
      (action!=FLUI_FILE_VIEW && action!=FLUI_FILE_EXPORT))return FLUI_INVALID_ARGUMENT;
   if(filePickerPending)return FLUI_BUSY;
   BOOL directory=NO;
-  if(![NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&directory] || directory)return FLUI_INVALID_ARGUMENT;
+  if(![NSFileManager.defaultManager fileExistsAtPath:path isDirectory:&directory])return FLUI_INVALID_ARGUMENT;
   if(action==FLUI_FILE_VIEW) {
-    NSString* root=[[NSTemporaryDirectory() stringByAppendingPathComponent:@"libflui-open"]
-                    stringByAppendingPathComponent:NSUUID.UUID.UUIDString];
-    if(![NSFileManager.defaultManager createDirectoryAtPath:root withIntermediateDirectories:YES attributes:nil error:nil])return FLUI_RUNTIME_ERROR;
-    copyAndPresent(path,[root stringByAppendingPathComponent:name],true,callback,user);return FLUI_OK;
+    NSString* target=previewCopyPath(path,name);
+    if(!target)return FLUI_RUNTIME_ERROR;
+    copyAndPresent(path,target,true,callback,user);return FLUI_OK;
   }
   auto context=std::make_unique<FileExport>(FileExport{path,callback,user});
   const auto status=flui_file_save_async(title,initial,[](flui_status status,flui_string selected,void* opaque) {

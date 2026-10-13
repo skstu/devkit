@@ -117,7 +117,11 @@ flui_status flui_window_property(flui_window h,flui_string k,flui_string v) {
  if(!valid(k)||!valid(v))return FLUI_INVALID_ARGUMENT;
  const auto key=str(k);
  if(key=="managed_close")windows[h].managed=str(v)=="true";
- else if(key=="title" || key=="size" || key=="minimum" || key=="titlebar" || key=="popup")return FLUI_UNSUPPORTED;
+ else if(key=="dropfiles") {
+   if(str(v)!="true" && str(v)!="false")return FLUI_INVALID_ARGUMENT;
+   queue("{\"op\":\"dropfiles\",\"enabled\":"+str(v)+"}");
+ }
+ else if(key=="title" || key=="size" || key=="minimum" || key=="titlebar" || key=="popup" || key=="badge")return FLUI_UNSUPPORTED;
  else return FLUI_INVALID_ARGUMENT;
  return FLUI_OK;
 }
@@ -158,7 +162,7 @@ flui_status flui_window_set_tick(flui_window,uint32_t){return FLUI_UNSUPPORTED;}
 flui_status flui_file_dialog(uint32_t,flui_string,flui_string,flui_string,flui_text_callback,void*) {return FLUI_UNSUPPORTED;}
 static flui_status fileDialog(uint32_t kind,flui_string title,flui_string initial,flui_file_callback cb,void* user) {
  if(!ui())return FLUI_WRONG_THREAD;
- if(!cb||!valid(title)||!valid(initial)||(kind!=FLUI_FILE_OPEN && kind!=FLUI_FILE_SAVE && kind!=FLUI_FILE_DIRECTORY))return FLUI_INVALID_ARGUMENT;
+ if(!cb||!valid(title)||!valid(initial)||(kind!=FLUI_FILE_OPEN && kind!=FLUI_FILE_SAVE && kind!=FLUI_FILE_DIRECTORY&&kind!=FLUI_FILE_MEDIA&&kind!=FLUI_FILE_MEDIA_MULTIPLE))return FLUI_INVALID_ARGUMENT;
  if(str(initial).find_first_of("/\\")!=std::string::npos)return FLUI_INVALID_ARGUMENT;
  if(picker.id)return FLUI_BUSY;
  uint64_t id;

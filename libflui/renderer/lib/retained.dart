@@ -174,6 +174,8 @@ const retainedAttributes = {
   'measure',
 };
 const retainedEvents = {
+  'active',
+  'dropfiles',
   'back',
   'click',
   'copyresult',
@@ -1116,6 +1118,7 @@ class _TreeViewState extends State<TreeView> {
   RetainedModel get m => widget.model;
   UiPalette get palette => widget.palette;
   TextEditingController? editor;
+  GlobalKey? editKey;
   FocusNode? focus;
   ScrollController? scroll;
   Map<String, String> previous = {};
@@ -1129,6 +1132,8 @@ class _TreeViewState extends State<TreeView> {
     n.addListener(updated);
     previous = Map.of(n.attrs);
     if (n.tag == 'Edit') {
+      editKey = GlobalKey();
+      scroll = ScrollController();
       editor = EmojiEditingController(
         text: n.text('text'),
         emojiScale: n.number('emojiscale', 1),
@@ -1174,7 +1179,12 @@ class _TreeViewState extends State<TreeView> {
         n.attrs['focus'] != null &&
         previous['focus'] != n.attrs['focus'])
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) focus!.requestFocus();
+        if (!mounted) return;
+        if (n.text('focus').startsWith('blur:')) {
+          focus!.unfocus();
+        } else {
+          focus!.requestFocus();
+        }
       });
     if (editor != null &&
         n.attrs['select_all'] != null &&
@@ -1549,9 +1559,46 @@ class _TreeViewState extends State<TreeView> {
     );
   }
 
+  void reportEditorSize(double width) {
+    if (reportPending || !width.isFinite) return;
+    reportPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      reportPending = false;
+      if (!mounted) return;
+      RenderEditable? editable;
+      void findEditor(RenderObject object) {
+        if (object is RenderEditable) {
+          editable = object;
+        } else if (editable == null) {
+          object.visitChildren(findEditor);
+        }
+      }
+
+      final root = editKey?.currentContext?.findRenderObject();
+      if (root == null) return;
+      findEditor(root);
+      final render = editable;
+      if (render == null || !render.hasSize) return;
+      // Ask the actual editor: this includes soft wraps, trailing newlines,
+      // emoji, IME spans, font scaling and the space reserved for its caret.
+      final height = render.getMaxIntrinsicHeight(render.size.width).ceil();
+      final actualWidth = root is RenderBox && root.hasSize
+          ? root.size.width
+          : width;
+      final measurement = '${actualWidth.round()},$height';
+      final signature = '${editor!.text}\u0000$measurement';
+      if (textMeasurement != signature) {
+        textMeasurement = signature;
+        emit('textmeasure', measurement);
+      }
+    });
+  }
+
   Widget input() {
     (editor as EmojiEditingController).emojiScale = n.number('emojiscale', 1);
     Widget field = TextField(
+      key: editKey,
+      scrollController: scroll,
       controller: editor,
       focusNode: focus,
       enabled: n.flag('enabled', true),
@@ -1592,8 +1639,24 @@ class _TreeViewState extends State<TreeView> {
                 !{'enter', 'ctrl-enter'}.contains(n.text('submitkey'))))
           emit('enter');
       },
+      onTap: n.flag('event_click') ? () => emit('click') : null,
       onChanged: (v) => emit('valuechanged', v),
     );
+    if (n.flag('multiline') && n.flag('vscrollbar')) {
+      field = Scrollbar(controller: scroll, child: field);
+    }
+    if (n.flag('event_textmeasure')) {
+      final content = field;
+      field = ValueListenableBuilder<TextEditingValue>(
+        valueListenable: editor!,
+        builder: (_, value, __) => LayoutBuilder(
+          builder: (_, constraints) {
+            reportEditorSize(constraints.maxWidth);
+            return content;
+          },
+        ),
+      );
+    }
     return Focus(
       skipTraversal: true,
       onKeyEvent: (_, event) {
@@ -2095,7 +2158,7 @@ class _TreeViewState extends State<TreeView> {
         throw StateError('Unvalidated retained tag');
     }
     final clickable =
-        n.flag('event_click') ||
+        (n.tag != 'Edit' && n.flag('event_click')) ||
         n.text('copytext').isNotEmpty ||
         {'Button', 'DecimalButton'}.contains(n.tag);
     final stateBackground =

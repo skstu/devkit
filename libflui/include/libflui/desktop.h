@@ -13,7 +13,15 @@ FLUI_API flui_status FLUI_CALL flui_window_set_tree(flui_window,
 FLUI_API flui_status FLUI_CALL flui_window_patch(flui_window, flui_string json,
                                                  uint64_t request);
 #define FLUI_EVENT_CLOSE_REQUEST 7u
-/* title, size (w,h), minimum (w,h), managed_close (true/false).
+/* ACTION name "0:active", value "true"/"false": host window/app focus.
+ * Native macOS uses key-window state; portable hosts use app lifecycle.
+ * title, size (w,h), minimum (w,h), managed_close (true/false).
+ * Desktop: dropfiles (true/false, initially false) admits local file/folder drops.
+ * ACTION "0:dropfiles" carries a JSON array of absolute UTF-8 paths (<=32 paths,
+ * <=64 KiB). It selects sources only; never moves/deletes them or sends content.
+ * The consumer still validates sources and chooses the target operation.
+ * Native macOS: badge (text, empty clears) sets the application Dock badge.
+ * Other hosts return UNSUPPORTED; this does not request notification permission.
  * Native macOS: titlebar (standard/overlay), available before READY. Overlay
  * hides the drawn title and extends content behind the native titlebar while
  * retaining window buttons and dragging. The caller reserves space for them.
@@ -48,12 +56,21 @@ typedef void(FLUI_CALL *flui_text_callback)(flui_string, void *user);
 #define FLUI_FILE_OPEN 1u
 #define FLUI_FILE_SAVE 2u
 #define FLUI_FILE_DIRECTORY 3u
+#define FLUI_FILE_MEDIA 6u
+#define FLUI_FILE_MEDIA_MULTIPLE 7u
+#define FLUI_FILE_MEDIA_MAX_SELECTIONS 9u
 FLUI_API flui_status FLUI_CALL flui_file_dialog(uint32_t kind,
                                                 flui_string title,
                                                 flui_string initial_name,
                                                 flui_string extensions,
                                                 flui_text_callback, void *user);
-/* Additive asynchronous picker. UI thread; accepts OPEN, SAVE or DIRECTORY.
+/* Additive asynchronous picker. UI thread; accepts OPEN, SAVE, DIRECTORY, MEDIA or MEDIA_MULTIPLE.
+ * MEDIA: Android/iOS system photo/video picker, one selection.
+ * MEDIA_MULTIPLE: at most 9 selections; result is a UTF-8 JSON array of local
+ * paths, in selection order. Over-limit results return FLUI_INVALID_ARGUMENT.
+ * Each selected item is an app-cache copy. Cancellation keeps an empty result.
+ * Existing MEDIA callers continue to receive a single plain path.
+ * No full photo-library permission; unsupported hosts return UNSUPPORTED.
  * SAVE selects a destination, it does not write file contents. Mobile hosts
  * without path-based save return FLUI_UNSUPPORTED; use a platform export grant.
  * FLUI_OK transfers callback ownership until exactly one completion on the UI
@@ -71,14 +88,18 @@ FLUI_API flui_status FLUI_CALL flui_file_save_async(flui_string title,
     flui_string initial_name, flui_file_callback, void *user);
 #define FLUI_FILE_VIEW 4u
 #define FLUI_FILE_EXPORT 5u
-/* Generic asynchronous local-file action. VIEW opens a temporary copy;
+/* Generic asynchronous local-file action. Desktop VIEW/EXPORT also accept
+ * directories; directory export refuses an existing destination and never merges.
+ * iOS permits directory export. Unsupported directory viewers report failure.
+ * VIEW opens a temporary copy;
  * success means the OS accepted the viewer request, not that the user read it.
  * EXPORT copies to a user-selected destination; success follows copy completion.
  * Cancellation returns OK/empty. The source remains untouched. A mobile result
  * can be a content URI, not a filesystem path. Same UI-thread, exactly-once,
  * borrowed-result, immediate-failure and single-outstanding contracts as picker.
  * Caller owns source lifetime until completion; library cannot be unloaded.
- * iOS export is currently unsupported. Never pass business identifiers here. */
+ * iOS VIEW completes when preview closes; EXPORT completes on the picker result.
+ * Never pass business identifiers here. */
 FLUI_API flui_status FLUI_CALL flui_file_action_async(uint32_t action,
     flui_string source, flui_string title, flui_string initial_name,
     flui_file_callback, void* user);

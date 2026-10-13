@@ -12,6 +12,83 @@ Map<String, Object> node(
   List<Map<String, Object>> children = const [],
 ]) => {'id': id, 'tag': tag, 'attrs': attrs, 'children': children};
 void main() {
+  testWidgets('explicit edit blur hides the keyboard without changing its draft', (tester) async {
+    final model=RetainedModel((_,__){});
+    final attrs={'text':'draft 草稿','height':'48','event_valuechanged':'true'};
+    model.setTree(jsonEncode(node('1','Window',{},[node('2','Edit',attrs)])));
+    await tester.pumpWidget(RetainedApp(model:model));
+    await tester.tap(find.byType(TextField));await tester.pump();
+    final field=tester.widget<TextField>(find.byType(TextField));
+    expect(field.focusNode!.hasFocus,isTrue);
+    model.patch(jsonEncode([{'id':'2','attrs':{...attrs,'focus':'blur:1'}}]));
+    await tester.pump();await tester.pump();
+    expect(field.focusNode!.hasFocus,isFalse);
+    expect(field.controller!.text,'draft 草稿');
+    expect(tester.testTextInput.isVisible,isFalse);
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+  for (final event in ['active', 'dropfiles']) {
+    testWidgets(
+      'host window $event binding admits the first frame and patches',
+      (tester) async {
+        final model = RetainedModel((_, _) {});
+        final attrs = {'event_$event': 'true'};
+        model.setTree(
+          jsonEncode(
+            node('1', 'Window', attrs, [
+              node('2', 'Label', {
+                'text': 'Ready',
+                'height': '40',
+                'wordwrap': 'true',
+              }),
+            ]),
+          ),
+        );
+        await tester.pumpWidget(RetainedApp(model: model));
+        await tester.pump();
+        expect(find.text('Ready', findRichText: true), findsOneWidget);
+        model.patch(
+          jsonEncode([
+            {
+              'id': '1',
+              'attrs': {
+                ...attrs,
+                'event_active': 'true',
+                'event_dropfiles': 'true',
+              },
+            },
+          ]),
+        );
+        await tester.pump();
+        expect(find.text('Ready', findRichText: true), findsOneWidget);
+        // Explicit new events must not turn the attribute whitelist into a bypass.
+        final original = model.root.value;
+        expect(
+          () => model.setTree(
+            jsonEncode(node('1', 'Window', {'event_unknown': 'true'})),
+          ),
+          throwsFormatException,
+        );
+        expect(model.root.value, same(original));
+        expect(
+          () => model.patch(
+            jsonEncode([
+              {
+                'id': '1',
+                'attrs': {'event_unknown': 'true'},
+              },
+            ]),
+          ),
+          throwsFormatException,
+        );
+        expect(model.nodes['1']!.attrs['event_active'], 'true');
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   test(
     'tree and patch rejection is atomic, identities survive replacement',
     () {

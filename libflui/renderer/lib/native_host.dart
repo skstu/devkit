@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:xml/xml.dart';
 
 import 'retained.dart';
@@ -61,6 +62,8 @@ class NativeHost {
   final timers = <int, Timer>{};
   int window = 0;
   bool draining = false;
+  late final AppLifecycleListener lifecycle;
+  final desktopFiles = const MethodChannel('devkit.libflui/desktop_files');
   NativeHost() {
     final name = Platform.isWindows
         ? 'flui.dll'
@@ -96,6 +99,16 @@ class NativeHost {
         >('flui_host_attach');
     if (attach(wake.nativeFunction, parser.nativeFunction) != 0)
       throw StateError('libflui host attach failed');
+    desktopFiles.setMethodCallHandler((call) async {
+      if (call.method == 'drop' && window != 0 && call.arguments is List) {
+        final paths=(call.arguments as List).cast<String>();
+        final value=jsonEncode(paths);
+        emit(2,name:'0:dropfiles',value:paths.length<=32 && utf8.encode(value).length<=65536?value:'[]');
+      }
+    });
+    lifecycle = AppLifecycleListener(onStateChange: (state) {
+      if (window != 0) emit(2, name: '0:active', value: state == AppLifecycleState.resumed ? 'true' : 'false');
+    });
   }
   void emit(
     int kind, {
@@ -187,6 +200,8 @@ class NativeHost {
       final kind = command['kind'] as int;
       if(command['op']=='file_action') {
         final result=await localFileAction(command);status=result.status;path=result.path;
+      } else if (kind == 6 || kind == 7) {
+        final result=await pickMedia(multiple: kind == 7);status=result.status;path=result.path;
       } else
       if ((kind == 2 || kind == 3) && (Platform.isAndroid || Platform.isIOS)) {
         status = 10; // FLUI_UNSUPPORTED: mobile save/directory grants need export adapters.
@@ -221,6 +236,9 @@ class NativeHost {
         if (op == 'create') {
           window = cmd['window'] as int;
           emit(1);
+          emit(2, name: '0:active', value: WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ? 'true' : 'false');
+        } else if (op == 'dropfiles') {
+          if(Platform.isWindows || Platform.isLinux)unawaited(desktopFiles.invokeMethod<void>('set_enabled',cmd['enabled']));
         } else if (op == 'file' || op == 'file_action') {
           unawaited(pickFile(cmd));
         } else if (op == 'dispatch') {

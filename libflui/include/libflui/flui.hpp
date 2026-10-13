@@ -431,6 +431,7 @@ public:
   void Clear() { SetValueUtf8(""); }
   void SelectAll() { SetAttribute("select_all", std::to_string(++force_)); }
   void OnSetFocus() { SetAttribute("focus", std::to_string(++force_)); }
+  void OnKillFocus() { SetAttribute("focus", "blur:" + std::to_string(++force_)); }
   void OnNavigate(std::function<bool(bool)> f) {
     Bind("navigate", [this, f](const auto &e) {
       if (!f(e.strParam != "backward"))
@@ -1039,6 +1040,14 @@ inline void WindowState::Event(uint32_t kind, flui_status status,
   }
   if (kind != FLUI_EVENT_ACTION)
     return;
+  if (name == "0:dropfiles") {
+    root->Notify("dropfiles",value);
+    return;
+  }
+  if (name == "0:active") {
+    root->Notify("active",value);
+    return;
+  }
   if (name == "0:frames") {
     std::istringstream input(value);
     std::string frame;
@@ -1212,6 +1221,14 @@ public:
     Present();
   }
   void SetTitle(const std::string &s) { Property("title", s); }
+  void SetFileDropEnabled(bool enabled) {
+    const auto status=flui_window_property(state_->handle,span("dropfiles"),span(enabled?"true":"false"));
+    if(status!=FLUI_UNSUPPORTED)check(status);
+  }
+  void SetBadge(const std::string& text) {
+    const auto status=flui_window_property(state_->handle,span("badge"),span(text));
+    if(status!=FLUI_UNSUPPORTED)check(status);
+  }
   // Native macOS; reserve a top strip for native window controls when enabled.
   void SetTitlebarOverlay(bool enabled) {
     Property("titlebar", enabled ? "overlay" : "standard");

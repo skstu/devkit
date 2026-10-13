@@ -54,6 +54,10 @@ int main(){
  const flui_string popup_key{"popup",5},popup_value{"{}",2};
  assert(flui_window_property(h,popup_key,popup_value)==FLUI_UNSUPPORTED);
  while(flui_host_take()){}
+ const flui_string drop_key{"dropfiles",9};
+ assert(flui_window_property(h,drop_key,{"bad",3})==FLUI_INVALID_ARGUMENT);
+ assert(flui_window_property(h,drop_key,{"true",4})==FLUI_OK);
+ assert(std::string(flui_host_take()).find("\"enabled\":true")!=std::string::npos);
  const flui_string title{"Select",6};
  assert(flui_file_dialog_async(99,title,file_result,nullptr)==FLUI_INVALID_ARGUMENT);
  assert(flui_file_save_async(title,{"../bad",6},file_result,nullptr)==FLUI_INVALID_ARGUMENT);
@@ -97,6 +101,23 @@ int main(){
  flui_host_file_result(action_id,FLUI_OK,"content://export/result");assert(files==5&&selected=="content://export/result");
  flui_host_file_result(action_id,FLUI_OK,"late");assert(files==5);
  assert(flui_window_patch(h,input,18)==FLUI_INVALID_HANDLE);
+ const flui_string badge_key{"badge",5};
+ assert(flui_window_property(h,badge_key,{"+2",2})==FLUI_UNSUPPORTED);
+ assert(flui_file_dialog_async(FLUI_FILE_MEDIA,title,file_result,nullptr)==FLUI_OK);
+ const std::string media=flui_host_take();assert(media.find("\"kind\":6")!=media.npos);
+ const auto media_id=std::stoull(media.substr(media.find("\"id\":")+5));
+ assert(flui_file_dialog_async(FLUI_FILE_OPEN,title,file_result,nullptr)==FLUI_BUSY);
+ flui_host_file_result(media_id,FLUI_OK,"/tmp/selected.heic");assert(files==6&&selected=="/tmp/selected.heic");
+ flui_host_file_result(media_id,FLUI_OK,"duplicate");assert(files==6);
+ assert(flui_file_dialog_async(FLUI_FILE_MEDIA_MULTIPLE,title,file_result,nullptr)==FLUI_OK);
+ const std::string batch=flui_host_take();assert(batch.find("\"kind\":7")!=batch.npos);
+ const auto batch_id=std::stoull(batch.substr(batch.find("\"id\":")+5));
+ const std::string paths="[\"/tmp/one.png\",\"/tmp/two.jpg\"]";
+ flui_host_file_result(batch_id,FLUI_OK,paths.c_str());assert(files==7&&selected==paths);
+ flui_host_file_result(batch_id,FLUI_OK,"late");assert(files==7);
+ assert(flui_file_dialog_async(FLUI_FILE_MEDIA_MULTIPLE,title,file_result,nullptr)==FLUI_OK);
+ const std::string cancel=flui_host_take();const auto media_cancel_id=std::stoull(cancel.substr(cancel.find("\"id\":")+5));
+ flui_host_file_result(media_cancel_id,FLUI_OK,"");assert(files==8&&selected.empty());
  assert(flui_window_destroy(h)==FLUI_OK);
  assert(flui_window_destroy(h)==FLUI_INVALID_HANDLE);
 }
