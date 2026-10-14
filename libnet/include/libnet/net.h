@@ -139,6 +139,44 @@ DKNET_API int32_t DKNET_CALL dknet_quic_close(dknet_context *, uint64_t, const c
  * Call after QUIC operations and QUIC_TICK/QUIC_EVENTS to bound event retention. */
 DKNET_API int32_t DKNET_CALL dknet_quic_dispatch(dknet_context *, dknet_quic_event_fn, void *);
 DKNET_API int32_t DKNET_CALL dknet_quic_statistics(dknet_context *, uint64_t, dknet_quic_stats *);
+/* Additive TCP byte stream API, version 1; original ABI-1 structs unchanged.
+ * Uses the context's loop/thread and LAN output selection (when create_lan was
+ * used). No authentication, framing, retry or transport selection policy.
+ * Listener port is explicit; ACCEPTED/CONNECTED mean socket readiness only.
+ * DATA is borrowed until return. Reads use one fixed 16 KiB buffer per socket;
+ * pause stops reads without dropping bytes. Sends copy into a context-wide
+ * bounded budget; BUSY accepts nothing. SENT is OS completion, not delivery.
+ * IDs are never reused. Close cancels writes, returns their credits, then emits
+ * CLOSED exactly once. Shutdown silences all callbacks and destroy drains closes.
+ * Calls/callback restrictions are identical to dknet_config; no callback throws.
+ * Immediate failures expose the original libuv code via last_native_error.
+ * IPv4 and IPv6 listeners are explicit (IPv6 is v6-only); no implicit NAT/proxy.
+ */
+#define DKNET_TCP_VERSION 1u
+enum { DKNET_TCP_ACCEPTED=1, DKNET_TCP_CONNECTED=2, DKNET_TCP_DATA=3,
+       DKNET_TCP_SENT=4, DKNET_TCP_WRITABLE=5, DKNET_TCP_CLOSED=6 };
+typedef struct dknet_tcp_event {
+  uint32_t struct_size, type;
+  uint64_t connection;
+  int32_t status, native_status;
+  dknet_endpoint peer;
+  const uint8_t *data;
+  size_t size;
+} dknet_tcp_event;
+typedef void (DKNET_CALL *dknet_tcp_event_fn)(void *, const dknet_tcp_event *);
+typedef struct dknet_tcp_config {
+  uint32_t struct_size, version, maximum_connections, maximum_pending_writes;
+  size_t maximum_pending_bytes;
+  dknet_tcp_event_fn on_event;
+  void *user;
+} dknet_tcp_config;
+DKNET_API int32_t DKNET_CALL dknet_tcp_configure(dknet_context *, const dknet_tcp_config *);
+DKNET_API int32_t DKNET_CALL dknet_tcp_listen(dknet_context *, const dknet_endpoint *);
+DKNET_API int32_t DKNET_CALL dknet_tcp_connect(dknet_context *, const dknet_endpoint *, uint64_t *);
+DKNET_API int32_t DKNET_CALL dknet_tcp_send(dknet_context *, uint64_t, const uint8_t *, size_t);
+DKNET_API int32_t DKNET_CALL dknet_tcp_pause(dknet_context *, uint64_t, uint32_t paused);
+DKNET_API int32_t DKNET_CALL dknet_tcp_close(dknet_context *, uint64_t);
+DKNET_API int32_t DKNET_CALL dknet_tcp_last_native_error(dknet_context *);
 /* Additive LAN API, version 1. Original ABI-1 structures/functions are unchanged.
  * A LAN context owns its loop and requires no QUIC listener or ALPN. All calls
  * except lan_wake are owner-thread only. Callbacks execute only during lan_run;

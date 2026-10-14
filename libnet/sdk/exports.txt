@@ -52,3 +52,10 @@ _dknet_udp_statistics
 _dknet_create_lan
 _dknet_path_for_peer
 _dknet_android_initialize
+_dknet_tcp_configure
+_dknet_tcp_listen
+_dknet_tcp_connect
+_dknet_tcp_send
+_dknet_tcp_pause
+_dknet_tcp_close
+_dknet_tcp_last_native_error

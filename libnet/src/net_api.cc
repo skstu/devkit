@@ -2,7 +2,9 @@
 #include "libnet_quic.h"
 #include "libnet_uv.h"
 #include "lan_paths.h"
+#include "tcp_streams.h"
 #include <map>
+#include <cerrno>
 #include <chrono>
 #include <openssl/crypto.h>
 #include <ngtcp2/version.h>
@@ -66,6 +68,7 @@ struct dknet_context {
   int32_t rebind_status=DKNET_OK;
   libnet::UdpSocket socket4, socket6;
   libnet::QuicProvider quic;
+  libnet::detail::TcpStreams tcp;
   bool lan_paths=false;
   size_t maximum_paths=0;
   std::string explicit_interface;
@@ -221,6 +224,7 @@ struct dknet_context {
     if (closing) return;
     { std::lock_guard lock(gate); wake_open=false; pending_wakes=0; }
     closing=true;
+    tcp.shutdown();
     quic.Stop();
     outputs.clear();
     socket4.Close(); socket6.Close();
@@ -237,6 +241,85 @@ struct dknet_context {
 };
 
 extern "C" {
+int32_t DKNET_CALL dknet_tcp_configure(dknet_context* c,const dknet_tcp_config* config) {
+  return protect([&]()->int32_t{
+    if(!c || !config || config->struct_size!=sizeof(*config) || config->version!=DKNET_TCP_VERSION ||
+       !config->on_event || !config->maximum_connections || config->maximum_connections>256 ||
+       !config->maximum_pending_writes || config->maximum_pending_writes>65536 ||
+       !config->maximum_pending_bytes || config->maximum_pending_bytes>64*1024*1024)return DKNET_INVALID;
+    if(!c->live() || c->tcp.configured())return DKNET_STATE;
+    c->tcp.configure(&c->loop,*config,[c,callback=config->on_event,user=config->user](const dknet_tcp_event& event){
+      if(c->closing)return;
+      ++c->callback_depth;
+      try {callback(user,&event);}catch(...){c->callback_failed=true;}
+      --c->callback_depth;
+      if(c->callback_failed)c->shutdown();
+    });return DKNET_OK;
+  });
+}
+int32_t DKNET_CALL dknet_tcp_listen(dknet_context* c,const dknet_endpoint* bind) {
+  return protect([&]()->int32_t{
+    const auto p=endpoint(bind);if(!c || !p || !p->port())return DKNET_INVALID;
+    if(!c->live() || !c->tcp.configured())return DKNET_STATE;
+    return c->tcp.listen(*p);
+  });
+}
+int32_t DKNET_CALL dknet_tcp_connect(dknet_context* c,const dknet_endpoint* peer,uint64_t* id) {
+  if(id)*id=0;
+  return protect([&]()->int32_t{
+    const auto p=endpoint(peer);if(!c || !p || !p->port() || !id)return DKNET_INVALID;
+    if(!c->live() || !c->tcp.configured())return DKNET_STATE;
+    std::optional<libnet::detail::LanPath> path;
+    if(c->lan_paths && !(c->explicit_interface.empty() && (p->address()=="127.0.0.1" || p->address()=="::1"))) {
+      const int status=c->refresh_paths();if(status)return status;
+      const auto* selected=libnet::detail::SelectLanPath(c->paths,*p);if(!selected)return DKNET_NOT_FOUND;
+      path=*selected;
+    }
+    return c->tcp.connect(*p,*id,[path](uv_tcp_t* socket){
+      if(!path)return 0;
+      std::string address=path->row.address;
+      if(path->row.family==6 && (path->row.flags&DKNET_INTERFACE_LINK_LOCAL))address+="%"+std::to_string(path->row.index);
+      auto local=libnet::Endpoint::Parse(address,0);if(!local)return static_cast<int>(UV_EINVAL);
+      uv_os_fd_t fd{};int code=uv_fileno(reinterpret_cast<uv_handle_t*>(socket),&fd);if(code)return code;
+      errno=0;
+      if(!libnet::detail::PrepareLanSocket(*path,
+#ifdef _WIN32
+          reinterpret_cast<uintptr_t>(fd)
+#else
+          static_cast<uintptr_t>(fd)
+#endif
+          )) {
+#ifdef _WIN32
+        const int error=WSAGetLastError();
+#else
+        const int error=errno;
+#endif
+        return error?uv_translate_sys_error(error):static_cast<int>(UV_ENETUNREACH);
+      }
+      return uv_tcp_bind(socket,local->sockaddr_ptr(),0);
+    });
+  });
+}
+int32_t DKNET_CALL dknet_tcp_send(dknet_context* c,uint64_t id,const uint8_t* data,size_t size) {
+  return protect([&]()->int32_t{
+    if(!c || !id || !data || !size || size>64*1024*1024)return DKNET_INVALID;
+    if(!c->live() || !c->tcp.configured())return DKNET_STATE;
+    return c->tcp.send(id,data,size);
+  });
+}
+int32_t DKNET_CALL dknet_tcp_pause(dknet_context* c,uint64_t id,uint32_t paused) {
+  if(!c || paused>1)return DKNET_INVALID;
+  if(!c->live() || !c->tcp.configured())return DKNET_STATE;
+  return c->tcp.pause(id,paused!=0);
+}
+int32_t DKNET_CALL dknet_tcp_close(dknet_context* c,uint64_t id) {
+  if(!c)return DKNET_INVALID;
+  if(!c->live() || !c->tcp.configured())return DKNET_STATE;
+  return c->tcp.close(id);
+}
+int32_t DKNET_CALL dknet_tcp_last_native_error(dknet_context* c) {
+  return c && c->affine()?c->tcp.last_error:DKNET_STATE;
+}
 int32_t DKNET_CALL dknet_quic_probe(const char *alpn,const uint8_t *data,size_t n,uint32_t timeout,dknet_probe_result *out) {
   return protect([&]()->int32_t{
     if (!out || out->struct_size!=sizeof(*out) || !alpn || !*alpn || std::strlen(alpn)>255 ||
