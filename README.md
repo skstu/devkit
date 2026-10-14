@@ -1,5 +1,18 @@
 # devkit
 
+**2026-10-14 构建存储约定：固定 Debug／Release 槽位，重复构建覆盖，不保存回滚包。**
+Flutter 生产者按消费者、平台、配置复用 `.build/work/libflui/<consumer>/<platform>/<debug|release>/`；
+SDK 打包器复用包含组件、平台、架构、配置的固定目录，libflui Mac 归档名固定为
+`libflui-macos-arm64-release.tar.gz`，来源指纹与校验继续保留在清单内。
+不得复制整套源码或宿主到日期／版本目录，也不得把二进制副本留在交接文档目录。
+
+本机 Flutter SDK、Pub／Dart／Gradle／CocoaPods 缓存、Android SDK／模拟器及临时文件集中在
+`/Users/martell/Developer/`；共享缓存为 `/Users/martell/Developer/.cache/flutter/`，旧默认位置只作兼容链接。
+生产者在写入前校验 SDK 和输出目录，并显式设置共享缓存；Xcode、Android Studio 沿用系统安装位置。
+本轮清理再释放约 22.5 GiB，结束时可用约 141 GiB；历史 Flutter 符号与重复运行库已清理。
+必要的 SDK、源码、身份数据与签名证书保留。离线覆盖与入口检查通过，未重建或部署正常 App。
+执行约束见 [AGENTS.md](AGENTS.md)；直予三端构建使用相邻 SovKit 仓库的 `scripts/build_zhiyu.py`，详见其 BUILD.md。
+
 Current development handoff (2026-10-11): [source checkpoint, exact packages,
 validation and consumer boundaries](docs/HANDOFF_20261011.md).
 

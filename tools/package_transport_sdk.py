@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+from package_directory import package_directory
 
 ROOT = Path(__file__).resolve().parents[1]
 UPSTREAM_SHA512 = "770b7123949a644ab8df01020abb2c8744496e1e486c91292252bb309a8c38239ae2a6c369b4eb0c028f6ac0ea78e5da09922d0ddf8446e50b4eb299cf1dabca"
@@ -26,7 +27,7 @@ def run(*args, cwd=None):
 
 def inputs(component):
     paths = list((ROOT / component).rglob("*"))
-    paths += [ROOT / x for x in ("VERSION", "cmake/NativeLibsBuild.cmake", "tools/package_transport_sdk.py")]
+    paths += [ROOT / x for x in ("VERSION", "cmake/NativeLibsBuild.cmake", "tools/package_transport_sdk.py", "tools/package_directory.py")]
     if component == "libice":
         paths += list((ROOT / "cmake/vcpkg/ports/libjuice").rglob("*"))
         paths += [ROOT / "libnet" / x for x in (
@@ -141,7 +142,7 @@ def main(component):
     run("cmake", "--build", build, "--parallel", "4")
     run("ctest", "--test-dir", build, "--output-on-failure")
     args.output.mkdir(parents=True, exist_ok=True)
-    package = Path(tempfile.mkdtemp(prefix=component + "-macos-arm64-", dir=args.output.resolve()))
+    package = package_directory(args.output, component + "-macos-arm64-release", build)
     run("cmake", "--install", build, "--prefix", package)
     short = component.removeprefix("lib")
     binary = next(p for p in (package / "lib").glob(f"libdevkit_{short}.*.dylib") if not p.is_symlink())

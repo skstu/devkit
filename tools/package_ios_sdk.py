@@ -4,6 +4,7 @@ The consumer signs and embeds it. This tool never labels cross-compilation as de
 """
 import argparse, hashlib, json, re, shutil, subprocess, tempfile
 from pathlib import Path
+from package_directory import package_directory
 ROOT = Path(__file__).resolve().parents[1]
 def capture(*args):
     return subprocess.check_output([str(x) for x in args], text=True).strip()
@@ -25,11 +26,11 @@ def main():
         p.error('Require standalone Release / arm64 / iOS 15.0 build')
     if a.component!='libble' and (not dep or Path(setting('VCPKG_INSTALLED_DIR'))/setting('VCPKG_TARGET_TRIPLET')!=dep):
         p.error('Provider directory must match the configured build')
-    inputs=list((ROOT/a.component).rglob('*'))+[ROOT/'VERSION',ROOT/'cmake/NativeLibsBuild.cmake',Path(__file__).resolve()]
+    inputs=list((ROOT/a.component).rglob('*'))+[ROOT/'VERSION',ROOT/'cmake/NativeLibsBuild.cmake',Path(__file__).resolve(),ROOT/'tools/package_directory.py']
     files={str(f.relative_to(ROOT)):digest(f) for f in inputs if f.is_file() and '__pycache__' not in f.parts}
     subprocess.run(['cmake','--build',str(build),'--parallel','4'],check=True)
     a.output.mkdir(parents=True,exist_ok=True)
-    dest=Path(tempfile.mkdtemp(prefix=a.component+'-ios-arm64-',dir=a.output.resolve()))
+    dest=package_directory(a.output,a.component+'-ios-arm64-release',build,dep)
     subprocess.run(['cmake','--install',str(build),'--prefix',str(dest)],check=True)
     name={'libcrypt':'DevkitCrypt','libnet':'DevkitNet','libble':'DevkitBle'}[a.component]
     binary=dest/'lib'/(name+'.framework')/name
@@ -57,7 +58,7 @@ def main():
     for f in sorted(dest.rglob('*')):
         if f.is_symlink():payload[str(f.relative_to(dest))]={'symlink':str(f.readlink())}
         elif f.is_file():payload[str(f.relative_to(dest))]={'sha256':digest(f),'size':f.stat().st_size}
-    dirty=bool(capture('git','-C',ROOT,'status','--porcelain','--',a.component,'cmake/NativeLibsBuild.cmake','VERSION','tools/package_ios_sdk.py'))
+    dirty=bool(capture('git','-C',ROOT,'status','--porcelain','--',a.component,'cmake/NativeLibsBuild.cmake','VERSION','tools/package_ios_sdk.py','tools/package_directory.py'))
     manifest={'schemaVersion':1,'component':a.component,'version':(ROOT/'VERSION').read_text().strip(),'abiVersion':1,
       'kind':'development-preview','platform':'ios','architecture':'arm64','minimumOS':'15.0','configuration':'Release',
       'runtime':str(binary.relative_to(dest)),'soname':soname,'sourceCommit':capture('git','-C',ROOT,'rev-parse','HEAD'),

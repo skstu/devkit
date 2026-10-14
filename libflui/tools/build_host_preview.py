@@ -8,7 +8,8 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--platform',choices=['android','ios','windows','linux'],required=True)
 p.add_argument('--flutter-sdk',type=Path,required=True)
 p.add_argument('--client',type=Path,required=True)
-p.add_argument('--work',type=Path,required=True)
+p.add_argument('--work',type=Path,help='Reusable build directory; defaults to a fixed consumer/platform/configuration slot')
+p.add_argument('--configuration',choices=['Debug','Release'])
 p.add_argument('--android-ndk',type=Path)
 p.add_argument('--bundle-id',required=True)
 p.add_argument('--development-host', action='store_true', help='Debuggable owned-device test host; never a normal distribution build')
@@ -32,7 +33,25 @@ if a.platform=='android':
     except (ValueError,OSError) as error:p.error(str(error))
 component=Path(__file__).resolve().parents[1]
 repo=component.parent
-work=a.work.resolve(); work.mkdir(parents=True,exist_ok=True)
+configuration=a.configuration or ('Debug' if a.development_host else 'Release')
+if a.development_host and configuration!='Debug':p.error('--development-host requires Debug')
+a.development_host=configuration=='Debug'
+consumer=hashlib.sha256(str(a.client.resolve()).encode()).hexdigest()[:12]
+work=(a.work or repo/'.build/work/libflui'/consumer/a.platform/configuration.lower()).resolve()
+env=dict(os.environ,CI='true',FLUTTER_SUPPRESS_ANALYTICS='true')
+# Keep this Mac's Flutter dependencies and temporary files under Developer.
+if __import__('sys').platform == 'darwin':
+    developer = Path.home() / 'Developer'
+    for directory in (work, a.flutter_sdk):
+        if not directory.resolve().is_relative_to(developer.resolve()):
+            raise SystemExit('Flutter SDK and build outputs must be inside ' + str(developer))
+    cache = developer / '.cache/flutter'
+    for key, name in [('PUB_CACHE','pub'), ('GRADLE_USER_HOME','gradle'), ('TMPDIR','tmp')]:
+        location = cache / name
+        location.mkdir(parents=True, exist_ok=True)
+        env[key] = str(location)
+
+work.mkdir(parents=True,exist_ok=True)
 if a.platform=='linux':
     import platform
     release=dict(line.split('=',1) for line in Path('/etc/os-release').read_text().splitlines() if '=' in line)
@@ -44,7 +63,6 @@ lock=json.loads((component/'flutter.lock.json').read_text())
 version=json.loads((a.flutter_sdk/'bin/cache/flutter.version.json').read_text())
 for key in ['frameworkRevision','engineRevision','dartSdkVersion']:
     if version[key]!=lock[key]:p.error('Flutter does not match flutter.lock.json: '+key)
-env=dict(os.environ,CI='true',FLUTTER_SUPPRESS_ANALYTICS='true')
 def run(args,cwd=None):
     subprocess.run([str(x) for x in args],cwd=cwd,env=env,check=True)
 def copy_runtimes(destination):
@@ -62,7 +80,7 @@ for name in ['pubspec.yaml','pubspec.lock']:shutil.copy2(component/'renderer'/na
 shutil.copytree(component/'renderer/lib',host/'lib',dirs_exist_ok=True)
 run([flutter,'--suppress-analytics','--no-version-check','pub','get','--offline','--enforce-lockfile'],host)
 native=work/'native'; prefix=work/'sdk'
-flags=['-DCMAKE_BUILD_TYPE=Release']
+flags=['-DCMAKE_BUILD_TYPE='+configuration]
 if a.platform=='android':
     if not a.android_ndk:p.error('--android-ndk required')
     flags+=['-DCMAKE_TOOLCHAIN_FILE='+str(a.android_ndk/'build/cmake/android.toolchain.cmake'),
@@ -74,8 +92,8 @@ elif a.platform=='ios':
     flags+=['-DCMAKE_SYSTEM_NAME=iOS','-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0',
             '-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO']
 run(['cmake','-S',component,'-B',native,'-DLIBFLUI_PORTABLE_HOST=ON','-DBUILD_TESTING=OFF',*flags])
-run(['cmake','--build',native,'--config','Release','--parallel','4'])
-run(['cmake','--install',native,'--config','Release','--prefix',prefix])
+run(['cmake','--build',native,'--config',configuration,'--parallel','4'])
+run(['cmake','--install',native,'--config',configuration,'--prefix',prefix])
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 if (repo/'source-provenance.json').exists():
     provenance=json.loads((repo/'source-provenance.json').read_text())
@@ -96,7 +114,7 @@ app_version=next(line.split(':',1)[1].strip().split('+',1)[0] for line in (host/
 clientbuild=work/'client'
 run(['cmake','-S',a.client.resolve(),'-B',clientbuild,'-DZHIYU_PORTABLE_HOST=ON',
      '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),'-DZHIYU_BUILD_NUMBER='+str(a.build_number),'-DZHIYU_APP_VERSION='+app_version,*flags,*a.client_cmake_arg])
-run(['cmake','--build',clientbuild,'--config','Release','--parallel','4'])
+run(['cmake','--build',clientbuild,'--config',configuration,'--parallel','4'])
 if a.platform=='android':
     jni=host/'android/app/src/main/jniLibs/arm64-v8a';jni.mkdir(parents=True,exist_ok=True)
     shutil.copy2(prefix/'lib/libflui.so',jni/'libflui.so')
@@ -216,8 +234,8 @@ elif a.platform=='linux':
     main.write_text(text,encoding='utf-8')
     from desktop_files import install as install_desktop_files
     install_desktop_files(host,'linux')
-    run([flutter,'--suppress-analytics','--no-version-check','build','linux','--release','--no-pub'],host)
-    output=host/'build/linux/x64/release/bundle'
+    run([flutter,'--suppress-analytics','--no-version-check','build','linux','--'+configuration.lower(),'--no-pub'],host)
+    output=host/('build/linux/x64/'+configuration.lower()+'/bundle')
     shutil.copy2(prefix/'lib/libflui.so',output/'lib/libflui.so')
     shutil.copy2(clientbuild/'libflui_client.so',output/'lib/libflui_client.so')
     copy_runtimes(output/'lib')
@@ -237,10 +255,10 @@ elif a.platform=='windows':
     if a.logo_dir:shutil.copy2(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
     from desktop_files import install as install_desktop_files
     install_desktop_files(host,'windows')
-    run([flutter,'--suppress-analytics','--no-version-check','build','windows','--release','--no-pub'],host)
-    output=host/'build/windows/x64/runner/Release'
+    run([flutter,'--suppress-analytics','--no-version-check','build','windows','--'+configuration.lower(),'--no-pub'],host)
+    output=host/('build/windows/x64/runner/'+configuration)
     shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
-    shutil.copy2(clientbuild/'Release/flui_client.dll',output/'flui_client.dll')
+    shutil.copy2(clientbuild/configuration/'flui_client.dll',output/'flui_client.dll')
     copy_runtimes(output)
     print('Windows app:',output/'libflui_host.exe')
 else:
@@ -259,7 +277,7 @@ else:
         data.update(overlay)
     plist.write_bytes(plistlib.dumps(data))
     if a.logo_dir:shutil.copytree(a.logo_dir/'apple/ios/AppIcon.appiconset',host/'ios/Runner/Assets.xcassets/AppIcon.appiconset',dirs_exist_ok=True)
-    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--release','--build-number',str(a.build_number),'--no-codesign','--no-pub'],host)
+    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-codesign','--no-pub'],host)
     app=host/'build/ios/iphoneos/Runner.app'
     if a.chinese_display_name:
         for locale,name in [('en',a.display_name),('zh-Hans',a.chinese_display_name),('zh-Hant',a.chinese_display_name)]:

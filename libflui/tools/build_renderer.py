@@ -21,13 +21,25 @@ version = json.loads((a.sdk / 'bin/cache/flutter.version.json').read_text())
 for key in ('frameworkRevision', 'engineRevision', 'dartSdkVersion'):
     if version[key] != lock[key]:
         raise SystemExit(f'Flutter {key} differs from flutter.lock.json; upgrade and validate the complete SDK together')
+env = dict(os.environ, FLUTTER_SUPPRESS_ANALYTICS='true', CI='true')
+# Keep this Mac's Flutter dependencies and temporary files under Developer.
+if __import__('sys').platform == 'darwin':
+    developer = Path.home() / 'Developer'
+    for directory in (a.work, a.sdk, a.output):
+        if not directory.resolve().is_relative_to(developer.resolve()):
+            raise SystemExit('Flutter SDK and build outputs must be inside ' + str(developer))
+    cache = developer / '.cache/flutter'
+    for key, name in [('PUB_CACHE','pub'), ('GRADLE_USER_HOME','gradle'), ('TMPDIR','tmp')]:
+        location = cache / name
+        location.mkdir(parents=True, exist_ok=True)
+        env[key] = str(location)
+
 a.work.mkdir(parents=True, exist_ok=True)
 for name in ('pubspec.yaml', 'pubspec.lock'):
     if (a.source / name).exists(): shutil.copy2(a.source / name, a.work / name)
 for name in ('lib', 'test'):
     shutil.copytree(a.source / name, a.work / name, dirs_exist_ok=True)
 shutil.copy2(a.source.parent / 'examples/quotes/flui.xml', a.work / 'test/quotes.xml')
-env = dict(os.environ, FLUTTER_SUPPRESS_ANALYTICS='true', CI='true')
 flutter = str(a.sdk / 'bin/flutter')
 def run(*cmd):
     subprocess.run(cmd, cwd=a.work, env=env, check=True)

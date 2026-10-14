@@ -14,7 +14,7 @@ import re
 import shlex
 import shutil
 import subprocess
-import tempfile
+from package_directory import package_directory
 
 
 def capture(*args):
@@ -49,7 +49,7 @@ def sources(root, component):
     files = inventory(root / component)
     result = {component + '/' + k: v for k, v in files.items()}
     for name in ['VERSION', 'vcpkg.json', 'vcpkg-configuration.json',
-                 'cmake/NativeLibsBuild.cmake', 'tools/package_portable_sdk.py']:
+                 'cmake/NativeLibsBuild.cmake', 'tools/package_portable_sdk.py', 'tools/package_directory.py']:
         path = root / name
         if path.is_file():
             result[name] = {'sha256': sha(path), 'size': path.stat().st_size}
@@ -100,13 +100,13 @@ def main():
     before = sources(root, a.component)
     dirty = bool(capture('git', '-C', root, 'status', '--porcelain', '--',
                          a.component, 'VERSION', 'vcpkg.json', 'vcpkg-configuration.json',
-                         'cmake/NativeLibsBuild.cmake', 'tools/package_portable_sdk.py'))
+                         'cmake/NativeLibsBuild.cmake', 'tools/package_portable_sdk.py', 'tools/package_directory.py'))
     if dirty and not a.allow_dirty:
         p.error('Pass --allow-dirty to package uncommitted development inputs')
     commit = capture('git', '-C', root, 'rev-parse', 'HEAD')
     run('cmake', '--build', build, '--config', 'Release', '--parallel', '4')
     a.output.mkdir(parents=True, exist_ok=True)
-    package = Path(tempfile.mkdtemp(prefix=f'{a.component}-{a.platform}-{architecture}-', dir=a.output.resolve()))
+    package = package_directory(a.output, f'{a.component}-{a.platform}-{architecture}-release', build, a.dependencies)
     run('cmake', '--install', build, '--config', 'Release', '--prefix', package)
     suffix = a.component.removeprefix('lib')
     binaries = list((package / ('bin' if a.platform == 'windows' else 'lib')).glob(

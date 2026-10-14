@@ -61,7 +61,7 @@ def main():
     lock = json.loads((component / 'flutter.lock.json').read_text())
     run('cmake', '--build', str(build), '--config', 'Release', '--target', 'libflui')
     output.mkdir(parents=True, exist_ok=True)
-    name = f'libflui-{version}-preview-macos-arm64-{revision[:12]}' + ('-dirty' if dirty else '')
+    name = 'libflui-macos-arm64-release'
     archive = output / (name + '.tar.gz')
     with tempfile.TemporaryDirectory(prefix='libflui-package-') as temp:
         prefix = Path(temp) / 'libflui-sdk'
