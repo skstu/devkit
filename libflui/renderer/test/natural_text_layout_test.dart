@@ -42,4 +42,33 @@ void main(){
     expect(tester.getRect(header),before);expect(find.text('Back',findRichText:true),findsOneWidget);expect(tester.takeException(),isNull);
     await tester.pumpWidget(const SizedBox());
   });
+  testWidgets('read position uses rendered row extent and identifies current content', (tester) async {
+    final metrics=<List<int>>[], legacy=<String>[];
+    final model=RetainedModel((event,value) {
+      if(event=='2:scroll')metrics.add(value.split(',').map(int.parse).toList());
+      if(event=='2:viewport')legacy.add(value);
+    });
+    Map<String,Object> tree(int count)=>n('1','Window',{},[n('3','VerticalLayout',{},[
+      n('2','List',{'height':'160','showheader':'false','event_scroll':'true','scroll':'end:$count'},[
+        for(var i=0;i<count;i++)n('${10+i}','ListRow',{'height':'100','autoheight':'true'},[
+          n('${100+i}','Label',{'text':'short $i','autoheight':'true','wordwrap':'true','fontsize':'16'})])]),n('4','Control',{})])]);
+    model.setTree(jsonEncode(tree(10)));
+    await tester.pumpWidget(RetainedApp(model:model));await tester.pumpAndSettle();
+    final position=tester.state<ScrollableState>(find.byType(Scrollable)).position;
+    expect(metrics,isNotEmpty);expect(legacy,isNotEmpty);
+    expect(legacy.last.split(',').length,3); // Existing viewport contract stays intact.
+    expect(metrics.last,[position.pixels.round(),position.maxScrollExtent.round(),10,19]);
+    expect(metrics.last[0],metrics.last[1]);
+    expect(metrics.last[1],isNot(100*10-position.viewportDimension.round()));
+    model.setTree(jsonEncode(tree(11)));await tester.pumpAndSettle();
+    expect(metrics.last.sublist(2),[11,20]);expect(metrics.last[0],metrics.last[1]);
+    // A re-layout at the same scroll extent must still confirm the new frame.
+    final before=metrics.length;
+    model.patch(jsonEncode([{'id':'2','attrs':{'height':'160','showheader':'false','event_scroll':'true','scroll':'end:again'}}]));
+    await tester.pumpAndSettle();expect(metrics.length,greaterThan(before));
+    position.jumpTo(0);await tester.pumpAndSettle();
+    expect(metrics.last[0],0);expect(metrics.last[1],greaterThan(0));
+    expect(tester.takeException(),isNull);await tester.pumpWidget(const SizedBox());
+  });
+
 }

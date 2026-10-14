@@ -1289,6 +1289,13 @@ class _TreeViewState extends State<TreeView> {
         viewport = v;
         emit('viewport', v.join(','));
       }
+      // Reading completion needs actual layout, not native fixed-row estimates.
+      // Keep the legacy viewport payload; identify the rendered rows separately
+      // so a consumer can reject an old frame after replacing/appending content.
+      if (n.flag('event_scroll')) {
+        emit('scroll', '${offset.round()},${scroll!.position.maxScrollExtent.round()},'
+            '${n.children.length},${n.children.isEmpty ? '0' : n.children.last.id}');
+      }
     });
   }
 
