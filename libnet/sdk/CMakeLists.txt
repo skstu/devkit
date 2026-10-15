@@ -25,6 +25,9 @@ elseif(WIN32)
 endif()
 native_libs_set_warnings(devkit_net)
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(DEVKIT_PRIVACY_MANIFEST "${CMAKE_CURRENT_LIST_DIR}/../apple/PrivacyInfo.xcprivacy")
+  target_sources(devkit_net PRIVATE "${DEVKIT_PRIVACY_MANIFEST}")
+  set_source_files_properties("${DEVKIT_PRIVACY_MANIFEST}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   set_target_properties(devkit_net PROPERTIES FRAMEWORK TRUE OUTPUT_NAME DevkitNet
     MACOSX_FRAMEWORK_IDENTIFIER com.skstu.devkit.libnet
     MACOSX_FRAMEWORK_BUNDLE_VERSION "${NATIVE_LIBS_VERSION}"

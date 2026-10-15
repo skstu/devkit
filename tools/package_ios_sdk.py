@@ -34,6 +34,13 @@ def main():
     subprocess.run(['cmake','--install',str(build),'--prefix',str(dest)],check=True)
     name={'libcrypt':'DevkitCrypt','libnet':'DevkitNet','libble':'DevkitBle'}[a.component]
     binary=dest/'lib'/(name+'.framework')/name
+    if a.component in ('libcrypt','libnet'):
+        import plistlib
+        privacy=binary.parent/'PrivacyInfo.xcprivacy'
+        if not privacy.is_file():raise SystemExit('SDK must carry its own PrivacyInfo.xcprivacy: '+str(privacy))
+        value=plistlib.loads(privacy.read_bytes())
+        if not isinstance(value.get('NSPrivacyTracking'),bool) or not isinstance(value.get('NSPrivacyAccessedAPITypes'),list):
+            raise SystemExit('Invalid SDK privacy manifest: '+str(privacy))
     metadata=capture('xcrun','vtool','-show-build',binary)
     if not re.search(r'platform\s+IOS\b',metadata) or not re.search(r'minos\s+15\.0\b',metadata) or capture('lipo','-archs',binary)!='arm64':
         raise SystemExit('Wrong Mach-O platform, minimum OS or architecture')

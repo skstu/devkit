@@ -57,6 +57,9 @@ target_compile_definitions(devkit_crypt PRIVATE DEVKIT_CRYPT_BUILD=1)
 target_include_directories(devkit_crypt PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 set_target_properties(devkit_crypt PROPERTIES EXPORT_NAME crypt OUTPUT_NAME devkit_crypt VERSION ${NATIVE_LIBS_VERSION} SOVERSION 1)
 if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(DEVKIT_PRIVACY_MANIFEST "${CMAKE_CURRENT_SOURCE_DIR}/apple/PrivacyInfo.xcprivacy")
+  target_sources(devkit_crypt PRIVATE "${DEVKIT_PRIVACY_MANIFEST}")
+  set_source_files_properties("${DEVKIT_PRIVACY_MANIFEST}" PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
   set_target_properties(devkit_crypt PROPERTIES FRAMEWORK TRUE OUTPUT_NAME DevkitCrypt
     MACOSX_FRAMEWORK_IDENTIFIER com.skstu.devkit.libcrypt
     MACOSX_FRAMEWORK_BUNDLE_VERSION "${NATIVE_LIBS_VERSION}"

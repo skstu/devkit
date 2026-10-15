@@ -22,12 +22,14 @@ void main() {
         calls.add(call);
         return {'status': 0, 'path': 'file:///selected/photo.png'};
       });
-      for (final kind in [4, 5]) {
-        final result = await localFileAction({'kind': kind, 'source': '/private/fixture', 'initialName': 'photo.png'});
+      final names = ['photo.png', '应用.APK', 'setup.exe', 'disk.img'];
+      for (final name in names) for (final kind in [4, 5]) {
+        final result = await localFileAction({'kind': kind, 'source': '/private/fixture', 'initialName': name});
         expect(result, (status: 0, path: 'file:///selected/photo.png'));
       }
-      expect(calls.map((call) => call.method), ['view', 'export']);
-      expect(calls.every((call) => mapEquals(call.arguments as Map, {'source': '/private/fixture', 'name': 'photo.png'})), isTrue);
+      expect(calls.map((call) => call.method), [for (final _ in names) ...['view', 'export']]);
+      expect(calls.map((call) => call.arguments['name']), [for (final name in names) ...[name, name]]);
+      expect(calls.every((call) => call.arguments['source'] == '/private/fixture'), isTrue);
     });
   }
   test('repeat preview reuses a copy; distinct sources and changed bytes remain separate', () async {

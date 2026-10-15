@@ -19,6 +19,7 @@ p.add_argument('--chinese-display-name', help='Optional consumer name for Chines
 p.add_argument('--logo-dir', type=Path, help='Consumer-generated platform icon directory')
 p.add_argument('--client-cmake-arg', action='append', default=[])
 p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background declarations, merged into SDK-owned host')
+p.add_argument('--ios-privacy-manifest', type=Path, help='Consumer PrivacyInfo.xcprivacy; defaults to client/resources/PrivacyInfo.xcprivacy')
 p.add_argument('--embed-framework', action='append', type=Path, default=[])
 p.add_argument('--runtime-dir', action='append', type=Path, default=[], help='Consumer SDK runtime directories; copied into the host bundle')
 p.add_argument('--android-sources', action='append', type=Path, default=[], help='Consumer/platform Kotlin or Java source root')
@@ -279,6 +280,12 @@ else:
     if a.logo_dir:shutil.copytree(a.logo_dir/'apple/ios/AppIcon.appiconset',host/'ios/Runner/Assets.xcassets/AppIcon.appiconset',dirs_exist_ok=True)
     run([flutter,'--suppress-analytics','--no-version-check','build','ios','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-codesign','--no-pub'],host)
     app=host/'build/ios/iphoneos/Runner.app'
+    privacy=a.ios_privacy_manifest or a.client/'resources/PrivacyInfo.xcprivacy'
+    if privacy.is_file():
+        value=plistlib.loads(privacy.read_bytes())
+        if not isinstance(value.get('NSPrivacyTracking'),bool):p.error('Invalid consumer privacy manifest')
+        shutil.copy2(privacy,app/'PrivacyInfo.xcprivacy')
+    elif a.ios_privacy_manifest:p.error('Consumer privacy manifest does not exist')
     if a.chinese_display_name:
         for locale,name in [('en',a.display_name),('zh-Hans',a.chinese_display_name),('zh-Hant',a.chinese_display_name)]:
             folder=app/(locale+'.lproj');folder.mkdir(exist_ok=True)

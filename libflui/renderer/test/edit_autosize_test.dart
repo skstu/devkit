@@ -13,6 +13,62 @@ Map<String, Object> node(
 ]) => {'id': id, 'tag': tag, 'attrs': attrs, 'children': children};
 
 void main() {
+  testWidgets('single-line editors center text inside their background', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 240);
+    for (final platform in [
+      TargetPlatform.android,
+      TargetPlatform.iOS,
+      TargetPlatform.macOS,
+    ]) {
+      debugDefaultTargetPlatformOverride = platform;
+      for (final height in [36, 40, 56]) {
+        for (final readOnly in [false, true]) {
+          final model = RetainedModel((_, __) {});
+          model.setTree(
+            jsonEncode(
+              node('1', 'Window', {}, [
+                node('2', 'VerticalLayout', {}, [
+                  node('3', 'Edit', {
+                    'height': '$height',
+                    'inset': '8,6,8,6',
+                    'fontsize': '14',
+                    'text': 'Device 123',
+                    'readonly': '$readOnly',
+                    'bkcolor': '#FFFFFFFF',
+                  }),
+                  node('4', 'Control', {}),
+                ]),
+              ]),
+            ),
+          );
+          await tester.pumpWidget(RetainedApp(model: model));
+          await tester.pumpAndSettle();
+          final editable = tester
+              .state<EditableTextState>(find.byType(EditableText))
+              .renderEditable;
+          final caret = editable.getLocalRectForCaret(
+            const TextPosition(offset: 0),
+          );
+          final center = editable.localToGlobal(caret.center).dy;
+          final background = tester.getRect(find.byKey(const ValueKey('3')));
+          expect(
+            center,
+            closeTo(background.center.dy, 1.5),
+            reason: '$platform height=$height readonly=$readOnly',
+          );
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        }
+      }
+    }
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   for (final platform in [
     TargetPlatform.android,
     TargetPlatform.iOS,

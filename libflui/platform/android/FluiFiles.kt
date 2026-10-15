@@ -1,6 +1,7 @@
 package org.skstu.libflui
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -9,6 +10,7 @@ import androidx.core.content.FileProvider
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Executors
 
@@ -32,7 +34,8 @@ object FluiFiles {
             val current=activity.get()
             if(current==null){result.success(mapOf("status" to 7,"path" to ""));return@setMethodCallHandler}
             pending=result;source=file
-            val mime=MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.',""))?:"application/octet-stream"
+            val mime=if(name.endsWith(".apk",ignoreCase=true)) "application/vnd.android.package-archive"
+                else MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.',"").lowercase(Locale.ROOT))?:"application/octet-stream"
             if(call.method=="export") {
                 try {
                     current.startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
@@ -49,7 +52,8 @@ object FluiFiles {
                         current.runOnUiThread {
                             try {
                                 activity.get()?.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri,mime);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    setDataAndType(uri,mime);clipData=ClipData.newRawUri(name,uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 })?:throw IllegalStateException()
                                 complete(0,uri.toString())
                             } catch(_:android.content.ActivityNotFoundException){complete(10,"")}

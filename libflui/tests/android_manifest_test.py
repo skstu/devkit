@@ -16,6 +16,7 @@ class AndroidManifestTest(unittest.TestCase):
         self.overlay.parent.mkdir()
         self.overlay.write_text('''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
           <uses-permission android:name="android.permission.INTERNET"/>
+          <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
           <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30"/>
           <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
           <application android:allowBackup="false" android:usesCleartextTraffic="false"/>
@@ -35,12 +36,15 @@ class AndroidManifestTest(unittest.TestCase):
         self.assertIn('existing.Provider', before)
         report = verify_xml(before, self.overlay, 'org.example.client', 24)
         self.assertIn('android.permission.INTERNET', report['permissions'])
+        self.assertIn('android.permission.REQUEST_INSTALL_PACKAGES', report['permissions'])
         self.assertEqual(report['privacy']['allowBackup'], 'false')
 
     def test_missing_permissions_and_privacy_are_rejected(self):
         with self.assertRaisesRegex(ValueError, 'android.permission.INTERNET'):
             verify_xml(self.host.read_text(), self.overlay)
         merge(self.host, self.overlay)
+        with self.assertRaisesRegex(ValueError, 'REQUEST_INSTALL_PACKAGES'):
+            verify_xml(self.host.read_text().replace('android.permission.REQUEST_INSTALL_PACKAGES', 'removed.permission'), self.overlay)
         with self.assertRaisesRegex(ValueError, 'allowBackup'):
             verify_xml(self.host.read_text().replace('android:allowBackup="false"', ''), self.overlay)
 

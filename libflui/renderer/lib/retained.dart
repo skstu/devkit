@@ -1661,6 +1661,7 @@ class _TreeViewState extends State<TreeView> {
         _ => TextAlignVertical.center,
       },
       decoration: InputDecoration(
+        visualDensity: n.flag('multiline') ? null : VisualDensity.standard,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
         border: InputBorder.none,
@@ -1681,6 +1682,16 @@ class _TreeViewState extends State<TreeView> {
       onTap: n.flag('event_click') ? () => emit('click') : null,
       onChanged: (v) => emit('valuechanged', v),
     );
+    if (!n.flag('multiline')) {
+      field = Align(
+        alignment: Alignment(0, switch (n.text('valign')) {
+          'top' => -1,
+          'bottom' => 1,
+          _ => 0,
+        }),
+        child: field,
+      );
+    }
     if (n.flag('multiline') && n.flag('vscrollbar')) {
       field = Scrollbar(controller: scroll, child: field);
     }
