@@ -329,7 +329,11 @@ class _EmojiPickerSurfaceState extends State<EmojiPickerSurface> {
     ],
   );
 
-  Widget overlay(BuildContext context) => LayoutBuilder(
+  // Scaffold removes IME insets from its body. Read the actual view metrics for
+  // the overlay and keep them reactive while the software keyboard animates.
+  Widget overlay(BuildContext context) => MediaQuery.fromView(
+    view: View.of(context),
+    child: LayoutBuilder(
     builder: (context, constraints) {
       final box = anchor.currentContext?.findRenderObject() as RenderBox?;
       final overlay =
@@ -337,9 +341,14 @@ class _EmojiPickerSurfaceState extends State<EmojiPickerSurface> {
       if (box == null || overlay == null || !box.hasSize)
         return const SizedBox.shrink();
       final rect = box.localToGlobal(Offset.zero, ancestor: overlay) & box.size;
+      final media = MediaQuery.of(context);
+      final origin = overlay.localToGlobal(Offset.zero);
+      final usableTop = math.max(0.0, media.padding.top - origin.dy);
+      final usableBottom = math.min(constraints.maxHeight,
+          media.size.height - math.max(media.viewInsets.bottom, media.padding.bottom) - origin.dy);
       final width = math.min(440.0, math.max(0.0, constraints.maxWidth - 16));
-      final above = math.max(0.0, rect.top - 16);
-      final below = math.max(0.0, constraints.maxHeight - rect.bottom - 16);
+      final above = math.max(0.0, rect.top - usableTop - 16);
+      final below = math.max(0.0, usableBottom - rect.bottom - 16);
       final upwards = above >= 350 || above >= below;
       final available = upwards ? above : below;
       final height = math.min(350.0, math.max(0.0, available));
@@ -414,6 +423,7 @@ class _EmojiPickerSurfaceState extends State<EmojiPickerSurface> {
         ],
       );
     },
+    ),
   );
 
   Widget pageTab(String label, bool value) => Expanded(

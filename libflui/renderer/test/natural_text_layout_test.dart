@@ -5,6 +5,26 @@ import 'package:devkit_flui_renderer/retained.dart';
 
 Map<String,Object> n(String id,String tag,Map<String,String> attrs,[List<Map<String,Object>> children=const []])=>{'id':id,'tag':tag,'attrs':attrs,'children':children};
 void main(){
+  testWidgets('scroll form separates visible rows using childpadding', (tester) async {
+    tester.view.physicalSize=const Size(320,568);tester.view.devicePixelRatio=1;
+    addTearDown(tester.view.reset);
+    final model=RetainedModel((_,__){});
+    model.setTree(jsonEncode(n('1','Window',{},[
+      n('2','ScrollLayout',{'childpadding':'12','inset':'16'},[
+        n('3','HorizontalLayout',{'height':'44'},[n('4','Edit',{'readonly':'true','text':'sdid_example'})]),
+        n('5','Label',{'height':'80','visible':'false','text':'hidden'}),
+        n('6','HorizontalLayout',{'height':'44'},[n('7','Edit',{'text':'remark'})]),
+        n('8','Label',{'autoheight':'true','wordwrap':'true','text':'Connected'})])])));
+    await tester.pumpWidget(RetainedApp(model:model));
+    Rect rect(String id)=>tester.getRect(find.byKey(ValueKey(id)));
+    expect(rect('6').top-rect('3').bottom,12);
+    expect(rect('8').top-rect('6').bottom,12);
+    model.patch(jsonEncode([{'id':'2','attrs':{'inset':'16'}}]));
+    await tester.pump();
+    expect(rect('6').top-rect('3').bottom,0);
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
   for(final text in ['hello','中文消息 👩‍👩‍👧‍👦','long message '*30]){
     testWidgets('intrinsic text bubble has final geometry on first paint: $text',(tester) async {
       final events=<String>[];final model=RetainedModel((event,value){events.add(event);});

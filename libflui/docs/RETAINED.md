@@ -335,3 +335,7 @@ and disabled controls do not write the clipboard. No URI launch is implied.
 `disabledbkcolor` optionally specifies a disabled control background. It changes appearance only; existing input and callback gates remain enforced. When omitted, the previous background behavior is retained.
 
 移动宿主的系统返回：在 Window 绑定 `back`（`event_back=true`）时，宿主保留当前路由并经公开事件回调通知消费者。消费者按当前页面执行原返回操作；根页关闭该标志时保留平台默认退出行为。键盘的第一次返回仍由系统收起键盘。
+
+### Optional context action
+
+A control may provide `context` (plain text) or `contextkey` (translation key) and bind the `context` event. Secondary click or long press opens a single-action popup; choosing it emits `context`, while dismissing it does nothing. No row activation is synthesized. Disabled/hidden/detached controls cannot complete a pending action. The consumer owns the action and any confirmation; this renderer does not delete data or change selection. This additive retained-protocol feature requires a renderer rebuilt with these attributes/events; no C ABI function or structure changes.

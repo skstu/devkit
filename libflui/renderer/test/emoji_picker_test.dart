@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,6 +49,55 @@ RetainedModel model(List<(String, String)> events) {
 }
 
 void main() {
+  testWidgets('focused iOS editor opens picker above the software keyboard', (tester) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final events = <(String, String)>[];
+    final m = RetainedModel((name, value) => events.add((name, value)));
+    m.setTree(jsonEncode(node('1', 'Window', {'safe_area': 'true'}, [
+      node('2', 'VerticalLayout', {}, [
+        node('3', 'Control', {}),
+        node('6', 'HorizontalLayout', {'height': '64'}, [
+          node('4', 'Edit', {...edit, 'height': '64'}),
+          node('5', 'EmojiPicker', {...picker, 'width': '48', 'height': '64'}),
+        ]),
+        node('7', 'Control', {'height': '64'}),
+      ]),
+    ])));
+    await tester.pumpWidget(RetainedApp(model: m));
+    await tester.showKeyboard(find.byType(TextField));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 260);
+    await tester.pumpAndSettle();
+    final field = tester.widget<TextField>(find.byType(TextField));
+    field.controller!.selection = const TextSelection(baseOffset: 7, extentOffset: 9);
+    await tester.tap(find.byType(EmojiPickerSurface));
+    await tester.pumpAndSettle();
+    expect(find.text('All emoji'), findsOneWidget);
+    expect(field.focusNode!.hasFocus, isTrue);
+    final popup = tester.getRect(find.byType(SingleChildScrollView));
+    expect(popup.height, greaterThan(40));
+    expect(popup.top, greaterThanOrEqualTo(0));
+    expect(popup.bottom, lessThanOrEqualTo(568 - 260));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 280);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(SingleChildScrollView)).bottom, lessThanOrEqualTo(568 - 280));
+    await tester.tap(find.text('😀'));
+    await tester.pumpAndSettle();
+    expect(field.controller!.text, 'before 😀 after');
+    expect(events.where((e) => e.$1 == '5:itemselect').length, 1);
+    expect(field.focusNode!.hasFocus, isTrue);
+    field.focusNode!.unfocus();
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(EmojiPickerSurface));
+    await tester.pumpAndSettle();
+    expect(find.text('All emoji'), findsOneWidget);
+    expect(tester.getRect(find.byType(SingleChildScrollView)).bottom, lessThanOrEqualTo(568));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
   testWidgets(
     'picker replaces selection, preserves caret, updates draft and recent',
     (tester) async {

@@ -61,6 +61,8 @@ const retainedAttributes = {
   'name',
   'text',
   'hint',
+  'context',
+  'contextkey',
   'visible',
   'enabled',
   'width',
@@ -180,6 +182,7 @@ const retainedEvents = {
   'dropfiles',
   'back',
   'click',
+  'context',
   'copyresult',
   'enter',
   'valuechanged',
@@ -1248,6 +1251,20 @@ class _TreeViewState extends State<TreeView> {
   }
 
   void emit(String event, [String value = '']) => m.emit(n, event, value);
+  Future<void> showContextMenu(Offset position) async {
+    final target = n;
+    final title = palette.text(target, 'context');
+    if (!m.interactive(target) || !target.flag('event_context') || title.isEmpty) return;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final point = overlay.globalToLocal(position);
+    final choice = await showMenu<bool>(
+      context: context,
+      position: RelativeRect.fromRect(Rect.fromLTWH(point.dx, point.dy, 0, 0), Offset.zero & overlay.size),
+      items: [PopupMenuItem(value: true, child: Text(title))],
+    );
+    // A row may disappear/rebuild while the menu is open. Never act on its replacement.
+    if (choice == true && mounted && n == target && m.interactive(target)) emit('context');
+  }
   Future<void> performAction() async {
     if (!m.interactive(n)) return;
     final text = n.text('copytext');
@@ -2014,15 +2031,19 @@ class _TreeViewState extends State<TreeView> {
               .toList(),
         );
       case 'ScrollLayout':
+        final rows = n.children.where((c) => c.flag('visible', true)).toList();
         result = SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final c in n.children.where((c) => c.flag('visible', true)))
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0 && n.number('childpadding') > 0)
+                  SizedBox(height: n.number('childpadding')),
                 SizedBox(
-                  height: c.flag('autoheight') ? null : c.number('height', 40),
-                  child: child(c),
+                  height: rows[i].flag('autoheight') ? null : rows[i].number('height', 40),
+                  child: child(rows[i]),
                 ),
+              ],
             ],
           ),
         );
@@ -2256,6 +2277,14 @@ class _TreeViewState extends State<TreeView> {
     if (!n.flag('enabled', true))
       result = ExcludeFocus(child: IgnorePointer(child: result));
     if (!stateBackground) result = decorate(result);
+    if (n.flag('event_context') && n.flag('mouse', true) && m.interactive(n)) {
+      result = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onSecondaryTapUp: (details) => showContextMenu(details.globalPosition),
+        onLongPressStart: (details) => showContextMenu(details.globalPosition),
+        child: result,
+      );
+    }
     if ({
           'Window',
           'PaneCanvas',
