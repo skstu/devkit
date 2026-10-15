@@ -67,6 +67,7 @@ def main():
     p.add_argument('--offline-cross-preview', action='store_true', help='Android development candidate only; runtime tests explicitly not run')
     p.add_argument('--adb', default='adb')
     p.add_argument('--allow-dirty', action='store_true')
+    p.add_argument('--package-only', action='store_true', help='Build and verify package bytes without running runtime tests; recorded as not-run')
     a = p.parse_args()
     if a.offline_cross_preview and (a.platform != 'android' or a.android_serial or not a.allow_dirty):
         p.error('--offline-cross-preview requires Android, --allow-dirty and no device serial')
@@ -159,7 +160,9 @@ def main():
             minimum = 'glibc ' + max(versions, key=lambda v: tuple(map(int, v.split('.'))))
     if exports != expected or not expected:
         raise ValueError(f'ABI mismatch: missing={expected-exports}, extra={exports-expected}')
-    if a.offline_cross_preview:
+    if a.package_only:
+        test_record = {'executor': 'none', 'result': 'not-run', 'reason': 'package-only requested; runtime validation remains pending'}
+    elif a.offline_cross_preview:
         test_record = {'executor': 'none', 'result': 'not-run', 'reason': 'offline cross-compiled candidate; device validation required'}
     elif a.platform == 'android':
         if not a.android_serial:
