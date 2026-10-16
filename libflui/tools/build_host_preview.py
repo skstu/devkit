@@ -294,4 +294,13 @@ else:
         target=app/'Frameworks'/source.name
         if target.exists():shutil.rmtree(target)
         shutil.copytree(source,target,symlinks=True)
+        info_path=target/'Info.plist'
+        info=plistlib.loads(info_path.read_bytes())
+        binary=target/info['CFBundleExecutable']
+        metadata=subprocess.check_output(['xcrun','vtool','-show-build',str(binary)],text=True)
+        minimum=re.search(r'minos\s+(\d+\.\d+(?:\.\d+)?)',metadata)
+        if not re.search(r'platform\s+IOS\b',metadata) or not minimum:p.error('Not an iOS device framework: '+str(source))
+        if tuple(map(int,minimum[1].split('.')))>(15,0,0):p.error('Framework requires a newer iOS version: '+str(source))
+        info.update(MinimumOSVersion=minimum[1],CFBundleSupportedPlatforms=['iPhoneOS'])
+        info_path.write_bytes(plistlib.dumps(info))
     print('Unsigned app:',app)

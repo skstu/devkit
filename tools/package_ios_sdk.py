@@ -44,6 +44,11 @@ def main():
     metadata=capture('xcrun','vtool','-show-build',binary)
     if not re.search(r'platform\s+IOS\b',metadata) or not re.search(r'minos\s+15\.0\b',metadata) or capture('lipo','-archs',binary)!='arm64':
         raise SystemExit('Wrong Mach-O platform, minimum OS or architecture')
+    import plistlib
+    info_path=binary.parent/'Info.plist'
+    info=plistlib.loads(info_path.read_bytes())
+    info.update(MinimumOSVersion='15.0',CFBundleSupportedPlatforms=['iPhoneOS'])
+    info_path.write_bytes(plistlib.dumps(info))
     short=a.component.removeprefix('lib')
     expected=set(re.findall(r'DK'+short.upper()+r'_CALL\s+(dk'+short+r'_\w+)\(', (dest/'include'/a.component/(short+'.h')).read_text()))
     exports={s.split()[-1].removeprefix('_') for s in capture('nm','-gU',binary).splitlines()}
