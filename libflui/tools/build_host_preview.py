@@ -235,7 +235,7 @@ elif a.platform=='linux':
     main.write_text(text,encoding='utf-8')
     from desktop_files import install as install_desktop_files
     install_desktop_files(host,'linux')
-    run([flutter,'--suppress-analytics','--no-version-check','build','linux','--'+configuration.lower(),'--no-pub'],host)
+    run([flutter,'--suppress-analytics','--no-version-check','build','linux','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-pub'],host)
     output=host/('build/linux/x64/'+configuration.lower()+'/bundle')
     shutil.copy2(prefix/'lib/libflui.so',output/'lib/libflui.so')
     shutil.copy2(clientbuild/'libflui_client.so',output/'lib/libflui_client.so')
@@ -256,7 +256,7 @@ elif a.platform=='windows':
     if a.logo_dir:shutil.copy2(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
     from desktop_files import install as install_desktop_files
     install_desktop_files(host,'windows')
-    run([flutter,'--suppress-analytics','--no-version-check','build','windows','--'+configuration.lower(),'--no-pub'],host)
+    run([flutter,'--suppress-analytics','--no-version-check','build','windows','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-pub'],host)
     output=host/('build/windows/x64/runner/'+configuration)
     shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
     shutil.copy2(clientbuild/configuration/'flui_client.dll',output/'flui_client.dll')
