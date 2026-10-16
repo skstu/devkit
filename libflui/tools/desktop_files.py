@@ -6,6 +6,7 @@ def install(host: Path, platform: str):
     component=Path(__file__).resolve().parent.parent
     runner=host/platform/'runner'
     def replace(text,old,new):
+        while new in text: text=text.replace(new,old)
         if text.count(old)!=1: raise ValueError(f'Desktop runner template changed: {old}')
         return text.replace(old,new)
     if platform=='windows':
