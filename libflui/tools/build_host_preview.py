@@ -19,6 +19,8 @@ p.add_argument('--chinese-display-name', help='Optional consumer name for Chines
 p.add_argument('--logo-dir', type=Path, help='Consumer-generated platform icon directory')
 p.add_argument('--client-cmake-arg', action='append', default=[])
 p.add_argument('--ios-info-plist', type=Path, help='Consumer privacy/background declarations, merged into SDK-owned host')
+p.add_argument('--ios-simulator', action='store_true', help='Isolated Debug iOS simulator host; never an App Store binary')
+p.add_argument('--ios-simulator-team', default='', help='Simulator application-identifier prefix; no device provisioning or credentials')
 p.add_argument('--ios-privacy-manifest', type=Path, help='Consumer PrivacyInfo.xcprivacy; defaults to client/resources/PrivacyInfo.xcprivacy')
 p.add_argument('--embed-framework', action='append', type=Path, default=[])
 p.add_argument('--runtime-dir', action='append', type=Path, default=[], help='Consumer SDK runtime directories; copied into the host bundle')
@@ -28,6 +30,7 @@ p.add_argument('--android-manifest', type=Path, help='Consumer uses-permission a
 p.add_argument('--android-apkanalyzer', type=Path, help='Android SDK apkanalyzer for mandatory final manifest verification')
 p.add_argument('--android-initializer', help='Consumer platform initialization class with initialize(Context)')
 a=p.parse_args()
+if a.ios_simulator and (a.platform!='ios' or a.configuration!='Debug'):p.error('--ios-simulator requires --platform ios --configuration Debug')
 if a.platform=='android':
     from android_manifest import resolve_overlay, merge as merge_android_manifest, find_analyzer, verify_apk
     try:a.android_manifest=resolve_overlay(a.client,a.android_manifest)
@@ -91,7 +94,7 @@ elif a.platform=='linux':
             '-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON','-DCMAKE_INSTALL_RPATH=$ORIGIN']
 elif a.platform=='ios':
     flags+=['-DCMAKE_SYSTEM_NAME=iOS','-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=15.0',
-            '-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO']
+            '-DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO','-DCMAKE_OSX_SYSROOT='+('iphonesimulator' if a.ios_simulator else 'iphoneos')]
 run(['cmake','-S',component,'-B',native,'-DLIBFLUI_PORTABLE_HOST=ON','-DBUILD_TESTING=OFF',*flags])
 run(['cmake','--build',native,'--config',configuration,'--parallel','4'])
 run(['cmake','--install',native,'--config',configuration,'--prefix',prefix])
@@ -104,7 +107,7 @@ if (repo/'source-provenance.json').exists():
 else:
     commit=subprocess.check_output(['git','-C',repo,'rev-parse','HEAD'],text=True).strip()
 manifest={'schema_version':1,'sdk':'libflui','channel':'unreleased-device-preview','source_commit':commit,
-    'component_dirty':True,'platform':a.platform,'architecture':('x86_64' if a.platform in ('windows','linux') else 'arm64'),'runtime':lock,
+    'component_dirty':True,'platform':('ios-simulator' if a.ios_simulator else a.platform),'architecture':('x86_64' if a.platform in ('windows','linux') else 'arm64'),'runtime':lock,
     'source_files':{str(p.relative_to(repo)):sha(p) for p in component.rglob('*') if p.is_file() and not {'__pycache__','.dart_tool','build'}.intersection(p.parts)},
     'files':{str(p.relative_to(prefix)):sha(p) for p in prefix.rglob('*') if p.is_file() and p.name!='sdk-manifest.json'}}
 (prefix/'sdk-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
@@ -278,8 +281,14 @@ else:
         data.update(overlay)
     plist.write_bytes(plistlib.dumps(data))
     if a.logo_dir:shutil.copytree(a.logo_dir/'apple/ios/AppIcon.appiconset',host/'ios/Runner/Assets.xcassets/AppIcon.appiconset',dirs_exist_ok=True)
-    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-codesign','--no-pub'],host)
-    app=host/'build/ios/iphoneos/Runner.app'
+    run([flutter,'--suppress-analytics','--no-version-check','build','ios','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-codesign','--no-pub',*(['--simulator'] if a.ios_simulator else [])],host)
+    app=host/('build/ios/'+('iphonesimulator' if a.ios_simulator else 'iphoneos')+'/Runner.app')
+    if a.ios_simulator:
+        derived=work/'xcode-simulator'
+        run(['xcodebuild','-workspace','Runner.xcworkspace','-scheme','Runner','-configuration','Debug','-sdk','iphonesimulator','-destination','generic/platform=iOS Simulator','-derivedDataPath',derived,'-arch','arm64','ONLY_ACTIVE_ARCH=YES','CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','DEVELOPMENT_TEAM='+a.ios_simulator_team,'build'],host/'ios')
+        generated=derived/'Build/Products/Debug-iphonesimulator/Runner.app'
+        for name in ['Runner','Runner.debug.dylib','__preview.dylib']:
+            if (generated/name).exists():shutil.copy2(generated/name,app/name)
     privacy=a.ios_privacy_manifest or a.client/'resources/PrivacyInfo.xcprivacy'
     if privacy.is_file():
         value=plistlib.loads(privacy.read_bytes())
@@ -299,8 +308,12 @@ else:
         binary=target/info['CFBundleExecutable']
         metadata=subprocess.check_output(['xcrun','vtool','-show-build',str(binary)],text=True)
         minimum=re.search(r'minos\s+(\d+\.\d+(?:\.\d+)?)',metadata)
-        if not re.search(r'platform\s+IOS\b',metadata) or not minimum:p.error('Not an iOS device framework: '+str(source))
+        expected_platform='IOSSIMULATOR' if a.ios_simulator else 'IOS'
+        if not re.search(r'platform\s+'+expected_platform+r'\b',metadata) or not minimum:p.error('Framework platform does not match the host: '+str(source))
         if tuple(map(int,minimum[1].split('.')))>(15,0,0):p.error('Framework requires a newer iOS version: '+str(source))
-        info.update(MinimumOSVersion=minimum[1],CFBundleSupportedPlatforms=['iPhoneOS'])
+        info.update(MinimumOSVersion=minimum[1],CFBundleSupportedPlatforms=['iPhoneSimulator' if a.ios_simulator else 'iPhoneOS'])
         info_path.write_bytes(plistlib.dumps(info))
-    print('Unsigned app:',app)
+    if a.ios_simulator:
+        for framework in (app/'Frameworks').glob('*.framework'):run(['codesign','--force','--sign','-',framework])
+        run(['codesign','--force','--sign','-',app])
+    print('Simulator app:' if a.ios_simulator else 'Unsigned app:',app)

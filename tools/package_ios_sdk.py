@@ -15,13 +15,16 @@ def main():
     p.add_argument('component',choices=['libcrypt','libnet','libble'])
     p.add_argument('--build',type=Path,required=True)
     p.add_argument('--dependencies',type=Path)
+    p.add_argument('--simulator',action='store_true')
     p.add_argument('--output',type=Path,required=True)
     a=p.parse_args(); build=a.build.resolve(); dep=a.dependencies.resolve() if a.dependencies else None
+    platform='ios-simulator' if a.simulator else 'ios'
     cache=(build/'CMakeCache.txt').read_text()
     def setting(key):
         m=re.search(r'^'+re.escape(key)+r':[^=]+=(.*)$',cache,re.M)
         return m[1] if m else ''
     source=ROOT/a.component/('sdk' if a.component=='libnet' else '')
+    if ('simulator' in setting('CMAKE_OSX_SYSROOT').lower())!=a.simulator:p.error('Simulator selection must match the configured sysroot')
     if any(setting(k)!=v for k,v in {'CMAKE_HOME_DIRECTORY':str(source),'CMAKE_BUILD_TYPE':'Release','CMAKE_OSX_ARCHITECTURES':'arm64','CMAKE_OSX_DEPLOYMENT_TARGET':'15.0'}.items()):
         p.error('Require standalone Release / arm64 / iOS 15.0 build')
     if a.component!='libble' and (not dep or Path(setting('VCPKG_INSTALLED_DIR'))/setting('VCPKG_TARGET_TRIPLET')!=dep):
@@ -30,7 +33,7 @@ def main():
     files={str(f.relative_to(ROOT)):digest(f) for f in inputs if f.is_file() and '__pycache__' not in f.parts}
     subprocess.run(['cmake','--build',str(build),'--parallel','4'],check=True)
     a.output.mkdir(parents=True,exist_ok=True)
-    dest=package_directory(a.output,a.component+'-ios-arm64-release',build,dep)
+    dest=package_directory(a.output,a.component+'-'+platform+'-arm64-release',build,dep)
     subprocess.run(['cmake','--install',str(build),'--prefix',str(dest)],check=True)
     name={'libcrypt':'DevkitCrypt','libnet':'DevkitNet','libble':'DevkitBle'}[a.component]
     binary=dest/'lib'/(name+'.framework')/name
@@ -42,12 +45,12 @@ def main():
         if not isinstance(value.get('NSPrivacyTracking'),bool) or not isinstance(value.get('NSPrivacyAccessedAPITypes'),list):
             raise SystemExit('Invalid SDK privacy manifest: '+str(privacy))
     metadata=capture('xcrun','vtool','-show-build',binary)
-    if not re.search(r'platform\s+IOS\b',metadata) or not re.search(r'minos\s+15\.0\b',metadata) or capture('lipo','-archs',binary)!='arm64':
+    if not re.search(r'platform\s+'+('IOSSIMULATOR' if a.simulator else 'IOS')+r'\b',metadata) or not re.search(r'minos\s+15\.0\b',metadata) or capture('lipo','-archs',binary)!='arm64':
         raise SystemExit('Wrong Mach-O platform, minimum OS or architecture')
     import plistlib
     info_path=binary.parent/'Info.plist'
     info=plistlib.loads(info_path.read_bytes())
-    info.update(MinimumOSVersion='15.0',CFBundleSupportedPlatforms=['iPhoneOS'])
+    info.update(MinimumOSVersion='15.0',CFBundleSupportedPlatforms=['iPhoneSimulator' if a.simulator else 'iPhoneOS'])
     info_path.write_bytes(plistlib.dumps(info))
     short=a.component.removeprefix('lib')
     expected=set(re.findall(r'DK'+short.upper()+r'_CALL\s+(dk'+short+r'_\w+)\(', (dest/'include'/a.component/(short+'.h')).read_text()))
@@ -72,7 +75,7 @@ def main():
         elif f.is_file():payload[str(f.relative_to(dest))]={'sha256':digest(f),'size':f.stat().st_size}
     dirty=bool(capture('git','-C',ROOT,'status','--porcelain','--',a.component,'cmake/NativeLibsBuild.cmake','VERSION','tools/package_ios_sdk.py','tools/package_directory.py'))
     manifest={'schemaVersion':1,'component':a.component,'version':(ROOT/'VERSION').read_text().strip(),'abiVersion':1,
-      'kind':'development-preview','platform':'ios','architecture':'arm64','minimumOS':'15.0','configuration':'Release',
+      'kind':'development-preview','platform':platform,'architecture':'arm64','minimumOS':'15.0','configuration':'Release',
       'runtime':str(binary.relative_to(dest)),'soname':soname,'sourceCommit':capture('git','-C',ROOT,'rev-parse','HEAD'),
       'sourceDirty':dirty,'sourceFiles':files,'staticArchives':archives,'dynamicDependencies':dependencies,
       'exports':sorted(exports),'files':payload,'validation':'Cross-compiled and inspected; device execution must be verified by the consumer.'}
