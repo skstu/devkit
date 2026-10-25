@@ -3,15 +3,12 @@ import 'package:devkit_flui_renderer/file_actions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-  final originalSelector = FileSelectorPlatform.instance;
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;
-    FileSelectorPlatform.instance = originalSelector;
     messenger.setMockMethodCallHandler(fileActionsChannel, null);
   });
   for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
@@ -82,21 +79,28 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     expect(await pickMedia(), (status: 10, path: ''));
   });
-  test('Android media picker filters photos/videos and keeps cancellation empty', () async {
+  test('Android file selection delegates paths without reading file bytes', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final selector = MediaSelector();
-    FileSelectorPlatform.instance = selector;
-    expect(await pickMedia(), (status: 0, path: '/cache/photo.png'));
-    selector.selection = null;
-    expect(await pickMedia(), (status: 0, path: ''));
+    for (final reply in [{'status': 0, 'path': '/cache/large.mp4'}, {'status': 0, 'path': ''}, {'status': 7, 'path': ''}]) {
+      messenger.setMockMethodCallHandler(fileActionsChannel, (call) async {
+        expect(call.method, 'pick_file');expect(call.arguments, isNull);return reply;
+      });
+      expect(await pickLocalFile(), (status: reply['status'], path: reply['path']));
+    }
   });
-  test('multiple media returns every selection in order and rejects oversized batches', () async {
+  test('Android media preserves native cancellation, ordered selections and limit errors', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    final selector = MediaSelector();FileSelectorPlatform.instance = selector;
-    expect(await pickMedia(multiple: true), (status: 0, path: '["/cache/one.png","/cache/two.png"]'));
-    selector.multiple = [];expect(await pickMedia(multiple: true), (status: 0, path: ''));
-    selector.multiple = List.generate(10, (i) => XFile('/cache/$i.png'));
-    expect(await pickMedia(multiple: true), (status: 1, path: ''));
+    for (final multiple in [false, true]) {
+      final path=multiple?'["/cache/one.png","/cache/large.mp4"]':'/cache/large.mp4';
+      for(final reply in [{'status': 0, 'path': path}, {'status': 0, 'path': ''}, {'status': 1, 'path': ''}, {'status': 7, 'path': ''}]) {
+        messenger.setMockMethodCallHandler(fileActionsChannel, (call) async {
+          expect(call.method, 'pick_media');expect(call.arguments, multiple?{'multiple':true}:null);return reply;
+        });
+        expect(await pickMedia(multiple: multiple),(status:reply['status'],path:reply['path']));
+      }
+    }
+  });
+  test('iOS media selection keeps its existing native interface', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     messenger.setMockMethodCallHandler(fileActionsChannel, (call) async {
       expect(call.method, 'pick_media');expect(call.arguments, {'multiple': true});
@@ -111,18 +115,4 @@ void main() {
       expect(await localFileAction({'kind': 5, 'source': '/fixture', 'initialName': 'photo.png'}), (status: status, path: ''));
     }
   });
-}
-
-class MediaSelector extends FileSelectorPlatform {
-  XFile? selection = XFile('/cache/photo.png');
-  List<XFile> multiple = [XFile('/cache/one.png'), XFile('/cache/two.png')];
-  @override
-  Future<List<XFile>> openFiles({List<XTypeGroup>? acceptedTypeGroups, String? initialDirectory, String? confirmButtonText}) async {
-    expect(acceptedTypeGroups!.single.mimeTypes, ['image/*', 'video/*']);return multiple;
-  }
-  @override
-  Future<XFile?> openFile({List<XTypeGroup>? acceptedTypeGroups, String? initialDirectory, String? confirmButtonText}) async {
-    expect(acceptedTypeGroups!.single.mimeTypes, ['image/*', 'video/*']);
-    return selection;
-  }
 }

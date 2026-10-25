@@ -205,6 +205,8 @@ class NativeHost {
       } else
       if ((kind == 2 || kind == 3) && (Platform.isAndroid || Platform.isIOS)) {
         status = 10; // FLUI_UNSUPPORTED: mobile save/directory grants need export adapters.
+      } else if (Platform.isAndroid) {
+        final result=await pickLocalFile();status=result.status;path=result.path;
       } else if (kind == 2) {
         path = (await getSaveLocation(
           suggestedName: command['initialName'] as String?,

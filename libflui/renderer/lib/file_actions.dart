@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -58,14 +57,21 @@ Future<({int status, String path})> localFileAction(Map<String,dynamic> command)
 }
 
 // System chooser owns library access; return only the explicitly selected copy.
+Future<({int status, String path})> pickLocalFile() async {
+  if (defaultTargetPlatform != TargetPlatform.android) {
+    return (status: 0, path: (await openFile())?.path ?? '');
+  }
+  final result = await fileActionsChannel.invokeMapMethod<String, dynamic>('pick_file');
+  return (status: result?['status'] as int? ?? 7, path: result?['path'] as String? ?? '');
+}
+
 Future<({int status, String path})> pickMedia({bool multiple = false}) async {
   if (defaultTargetPlatform == TargetPlatform.android) {
-    const types = [XTypeGroup(label: 'Photos / videos', mimeTypes: ['image/*', 'video/*'])];
-    final files = multiple ? await openFiles(acceptedTypeGroups: types)
-        : [if (await openFile(acceptedTypeGroups: types) case final file?) file];
-    if (files.length > 9) return (status: 1, path: '');
-    final paths = files.map((file) => file.path).toList();
-    return (status: 0, path: paths.isEmpty ? '' : multiple ? jsonEncode(paths) : paths.single);
+    // file_selector_android returns the entire file as a platform-channel byte
+    // array. Our native importer streams to disk and sends paths only.
+    final result = await fileActionsChannel.invokeMapMethod<String, dynamic>(
+      'pick_media', multiple ? {'multiple': true} : null);
+    return (status: result?['status'] as int? ?? 7, path: result?['path'] as String? ?? '');
   }
   if (defaultTargetPlatform != TargetPlatform.iOS) return (status: 10, path: '');
   final result = await fileActionsChannel.invokeMapMethod<String, dynamic>(

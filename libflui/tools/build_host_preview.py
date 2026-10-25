@@ -168,6 +168,9 @@ class MainActivity: FlutterActivity() {{
     destination=host/'android/app/src/main/kotlin/org/skstu/libflui/FluiFiles.kt'
     destination.parent.mkdir(parents=True,exist_ok=True)
     shutil.copy2(component/'platform/android/FluiFiles.kt',destination)
+    importer=host/'android/app/src/main/java/org/skstu/libflui/FluiFileImport.java'
+    importer.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copy2(component/'platform/android/FluiFileImport.java',importer)
     gradle=host/'android/app/build.gradle.kts';s=gradle.read_text()
     import re
     s=re.sub(r'applicationId = "[^"]+"','applicationId = "'+a.bundle_id+'"',s)
