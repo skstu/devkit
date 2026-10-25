@@ -122,7 +122,11 @@ int main() {
   struct Budget { dknet_context* context=nullptr; dknet_endpoint peer{}; bool recovered=false; } budget;
   c.maximum_pending_bytes=32; c.user=&budget;
   c.on_event=[](void* user,const dknet_event* event) {
-    if(event->type!=DKNET_TIMER)return;
+    // A pre-run timer may expire before Windows drains pending IO and closes.
+    // Verify the budget only after rebind actually completes; slot 0 is a watchdog.
+    if(event->type==DKNET_TIMER)CHECK(false && "rebind did not complete");
+    if(event->type!=DKNET_REBOUND)return;
+    CHECK(event->status==DKNET_OK);
     auto& budget=*static_cast<Budget*>(user);
     const uint8_t bytes[32]{};
     CHECK(dknet_send_datagram(budget.context,&budget.peer,bytes,sizeof(bytes))==DKNET_OK);
@@ -136,7 +140,7 @@ int main() {
   const uint8_t bytes[32]{};
   CHECK(dknet_send_datagram(out,&budget.peer,bytes,sizeof(bytes))==DKNET_OK);
   CHECK(dknet_rebind(out)==DKNET_OK);
-  CHECK(dknet_timer_start(out,0,20,0)==DKNET_OK);
+  CHECK(dknet_timer_start(out,0,5000,0)==DKNET_OK);
   CHECK(dknet_run(out)==DKNET_OK && budget.recovered);
   CHECK(dknet_destroy(out)==DKNET_OK);
 
