@@ -66,7 +66,7 @@ class NativeHost {
   final desktopFiles = const MethodChannel('devkit.libflui/desktop_files');
   NativeHost() {
     final name = Platform.isWindows
-        ? 'flui.dll'
+        ? 'libflui.dll'
         : Platform.isIOS
         ? 'flui.framework/flui'
         : Platform.isLinux
@@ -178,7 +178,7 @@ class NativeHost {
 
   void start() {
     final name = Platform.isWindows
-        ? 'flui_client.dll'
+        ? 'libflui_client.dll'
         : Platform.isIOS
         ? 'FluiClient.framework/FluiClient'
         : Platform.isLinux

@@ -117,7 +117,7 @@ sdklock.write_text(json.dumps({'source_commit':commit,'component_dirty':True,'ma
 app_version=next(line.split(':',1)[1].strip().split('+',1)[0] for line in (host/'pubspec.yaml').read_text().splitlines() if line.startswith('version:'))
 clientbuild=work/'client'
 run(['cmake','-S',a.client.resolve(),'-B',clientbuild,'-DZHIYU_PORTABLE_HOST=ON',
-     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),'-DZHIYU_BUILD_NUMBER='+str(a.build_number),'-DZHIYU_APP_VERSION='+app_version,*flags,*a.client_cmake_arg])
+     '-DZHIYU_SDK_LOCK='+str(sdklock),'-Dlibflui_DIR='+str(prefix/'lib/cmake/libflui'),'-DZHIYU_BUILD_NUMBER='+str(a.build_number),'-DZHIYU_APP_VERSION='+app_version,*(['-DZHIYU_APPLICATION_ID='+a.bundle_id] if a.platform=='windows' else []),*flags,*a.client_cmake_arg])
 run(['cmake','--build',clientbuild,'--config',configuration,'--parallel','4'])
 if a.platform=='android':
     jni=host/'android/app/src/main/jniLibs/arm64-v8a';jni.mkdir(parents=True,exist_ok=True)
@@ -259,13 +259,17 @@ elif a.platform=='windows':
     if a.chinese_display_name:
         name='(PRIMARYLANGID(GetUserDefaultUILanguage()) == LANG_CHINESE ? L'+json.dumps(a.chinese_display_name,ensure_ascii=False)+' : '+name+')'
     main.write_text(main.read_text().replace('L"libflui_host"',name),encoding='utf-8')
-    if a.logo_dir:shutil.copy2(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
+    if a.logo_dir:
+        # copy2 retains the source timestamp, which can be older than an existing
+        # MSVC .res and leave the previously compiled Flutter icon in the EXE.
+        shutil.copyfile(a.logo_dir/'windows/zhiyu.ico',host/'windows/runner/resources/app_icon.ico')
+        (host/'windows/runner/Runner.rc').touch()
     from desktop_files import install as install_desktop_files
     install_desktop_files(host,'windows')
     run([flutter,'--suppress-analytics','--no-version-check','build','windows','--'+configuration.lower(),'--build-number',str(a.build_number),'--no-pub'],host)
     output=host/('build/windows/x64/runner/'+configuration)
-    shutil.copy2(prefix/'bin/flui.dll',output/'flui.dll')
-    shutil.copy2(clientbuild/configuration/'flui_client.dll',output/'flui_client.dll')
+    shutil.copy2(prefix/'bin/libflui.dll',output/'libflui.dll')
+    shutil.copy2(clientbuild/configuration/'libflui_client.dll',output/'libflui_client.dll')
     copy_runtimes(output)
     print('Windows app:',output/'libflui_host.exe')
 else:

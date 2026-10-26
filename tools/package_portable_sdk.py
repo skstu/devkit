@@ -111,7 +111,7 @@ def main():
     run('cmake', '--install', build, '--config', 'Release', '--prefix', package)
     suffix = a.component.removeprefix('lib')
     binaries = list((package / ('bin' if a.platform == 'windows' else 'lib')).glob(
-        f'devkit_{suffix}.dll' if a.platform == 'windows' else f'libdevkit_{suffix}.so*'))
+        f'lib{suffix}.dll' if a.platform == 'windows' else f'libdevkit_{suffix}.so*'))
     binary = next(x for x in binaries if not x.is_symlink())
     prefix = {'libcrypt': 'DKCRYPT', 'libnet': 'DKNET', 'libble': 'DKBLE'}[a.component]
     header = package / f'include/{a.component}/{suffix}.h'
